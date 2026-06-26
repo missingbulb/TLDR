@@ -1,0 +1,48 @@
+name: client
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ['client/**', 'shared/**', 'scripts/**', 'test/**', '.github/workflows/client.yml']
+  push:
+    branches: [main, 'claude/**']
+    paths: ['client/**', 'shared/**', 'scripts/**', 'test/**', '.github/workflows/client.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      # Cross-cutting checks: the URL-normalizer corpus + the shared drift guard.
+      - name: Cross-cutting tests
+        run: npm test
+
+      - name: Validate manifest.json is parseable
+        run: node -e "JSON.parse(require('fs').readFileSync('client/manifest.json'))"
+
+      - name: Client tests (logic + manifest/packaging guards)
+        working-directory: client
+        run: npm test
+
+      # The chrome.* glue can't run under node; syntax-check it so a typo can't ship.
+      - name: Syntax-check extension modules
+        run: |
+          for f in client/src/*.mjs client/config.mjs; do node --check "$f"; done
+
+      - name: Build the extension zip
+        working-directory: client
+        run: npm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tldr-extension
+          path: client/dist/tldr-extension.zip
+          if-no-files-found: error

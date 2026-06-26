@@ -1,0 +1,68 @@
+name: release
+
+# Packages the extension and publishes a GitHub Release. Bumping client/manifest.json's version on
+# main is the release trigger (the "bump version" command). The zip is attached to the release; the
+# Chrome Web Store publish is a separate, manual step (publish-chrome-store.yml).
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - client/manifest.json
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Resolve and guard version
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="$(node -p "require('./client/manifest.json').version")"
+          if ! echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "client/manifest.json version '$version' is not X.Y.Z." >&2
+            exit 1
+          fi
+          pkg_version="$(node -p "require('./client/package.json').version")"
+          if [ "$pkg_version" != "$version" ]; then
+            echo "client/package.json ($pkg_version) and client/manifest.json ($version) disagree — bump both together." >&2
+            exit 1
+          fi
+          if git rev-parse "v$version" >/dev/null 2>&1 \
+             || { [ -n "$(gh release view "v$version" --json tagName -q .tagName 2>/dev/null)" ]; }; then
+            echo "v$version is already released; nothing to do." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "release=true" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "Releasing v$version" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Test
+        if: steps.version.outputs.release == 'true'
+        working-directory: client
+        run: npm test
+
+      - name: Build the extension zip
+        if: steps.version.outputs.release == 'true'
+        working-directory: client
+        run: npm run build
+
+      - name: Publish GitHub Release
+        if: steps.version.outputs.release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          files: client/dist/tldr-extension.zip
+          generate_release_notes: true

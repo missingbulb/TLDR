@@ -1,0 +1,74 @@
+name: deploy
+
+# Deploys the server app stack to AWS via GitHub OIDC (no stored keys). The job is GATED on the
+# repository VARIABLE AWS_DEPLOY_ROLE_ARN: until the owner sets it (and GOOGLE_CLIENT_ID), the job is
+# SKIPPED (gray) — never a red failure. (A variable, not a secret, because secrets aren't readable in
+# a job-level `if:`, so a secret gate can't skip cleanly. The role ARN is not sensitive.)
+
+on:
+  push:
+    branches: [main]
+    paths: ['server/**', 'shared/**', '.github/workflows/deploy.yml']
+  workflow_dispatch:
+    inputs:
+      deploy_cdn:
+        description: 'Also deploy the CDN stack (CloudFront — slow, ~15-20 min)'
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write # assume the AWS role via OIDC
+  contents: read
+
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ vars.AWS_DEPLOY_ROLE_ARN != '' && vars.GOOGLE_CLIENT_ID != '' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install server deps
+        working-directory: server
+        run: npm ci
+
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: il-central-1
+
+      - name: sam build
+        working-directory: server
+        run: sam build
+
+      - name: sam deploy (app stack)
+        working-directory: server
+        run: |
+          sam deploy \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides "GoogleClientId=${{ vars.GOOGLE_CLIENT_ID }} AllowedExtensionOrigin=${{ vars.ALLOWED_EXTENSION_ORIGIN || '*' }}"
+
+      - name: sam deploy (CDN stack, on request)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_cdn }}
+        working-directory: server
+        run: |
+          API_DOMAIN="$(aws cloudformation describe-stacks --stack-name tldr-app \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiDomain'].OutputValue" --output text)"
+          echo "Origin: $API_DOMAIN"
+          sam deploy --config-env cdn --template cdn-template.yaml \
+            --no-confirm-changeset --no-fail-on-empty-changeset \
+            --parameter-overrides "ApiDomain=${API_DOMAIN} PriceClass=${{ vars.CDN_PRICE_CLASS || 'PriceClass_100' }}"
