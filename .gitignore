@@ -1,2 +1,18 @@
 .claudinite/
 .claudinite.new/
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.aws-sam/
+*.zip
+
+# Local, owner-specific config (never committed)
+client/config.local.json
+
+# Logs / coverage / OS cruft
+*.log
+coverage/
+.DS_Store
