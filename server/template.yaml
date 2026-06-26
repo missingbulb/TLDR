@@ -1,0 +1,168 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  TLDR backend (app stack) — HTTP API v2 + Google JWT authorizer, one Lambda, DynamoDB single table.
+  The CDN (CloudFront) lives in a SEPARATE stack (cdn-template.yaml) so its ~15-20 min propagation
+  never slows this fast-iterating stack.
+
+Parameters:
+  GoogleClientId:
+    Type: String
+    # Intentionally no default: an empty JWT-authorizer audience would accept ID tokens minted for
+    # ANY Google app. This MUST be the Google Cloud OAuth "Web application" client id.
+    Description: Google OAuth "Web application" client id — the JWT authorizer audience (also the extension's auth client_id).
+    AllowedPattern: '.+'
+    ConstraintDescription: GoogleClientId must be provided.
+  AllowedExtensionOrigin:
+    Type: String
+    Default: '*'
+    Description: >
+      CORS allowed origin. Default '*' lets the API work before the extension id is known; tighten to
+      chrome-extension://<your-extension-id> once it is fixed.
+  CommentsTableName:
+    Type: String
+    Default: tldr-comments
+    Description: Explicit table name so a KeySchema change fails loudly instead of silently swapping in an empty table.
+  RateLimitPerMinute:
+    Type: Number
+    Default: 10
+    Description: Max comments one author may post per minute (enforced by a TTL'd DynamoDB counter). 0 disables.
+  MaxBodyBytes:
+    Type: Number
+    Default: 8192
+  QueryLimit:
+    Type: Number
+    Default: 50
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures:
+      - x86_64
+    Timeout: 10
+    MemorySize: 256
+    Environment:
+      Variables:
+        NODE_OPTIONS: --enable-source-maps
+        TABLE_NAME: !Ref CommentsTable
+        MAX_BODY_BYTES: !Ref MaxBodyBytes
+        QUERY_LIMIT: !Ref QueryLimit
+        RATE_LIMIT_PER_MINUTE: !Ref RateLimitPerMinute
+
+Resources:
+  CommentsTable:
+    Type: AWS::DynamoDB::Table
+    # The one irreplaceable-state resource. Retain on delete AND on replace; PITR for restore-to-second.
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Ref CommentsTableName
+      BillingMode: PAY_PER_REQUEST
+      # FROZEN: editing KeySchema / AttributeDefinitions REPLACES the table — a new EMPTY table; the
+      # data does NOT follow. Treat any changeset showing "Replacement: True" here as a hard stop.
+      AttributeDefinitions:
+        - AttributeName: pageId
+          AttributeType: S
+        - AttributeName: commentId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pageId
+          KeyType: HASH
+        - AttributeName: commentId
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      # Per-author rate-limit counter items carry an `expiresAt` (epoch seconds) and self-delete.
+      # Real comment items have no such attribute, so TTL never touches them.
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  CommentsApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      # API Gateway answers the CORS preflight (OPTIONS) itself, unauthenticated, before routing.
+      CorsConfiguration:
+        AllowOrigins:
+          - !Ref AllowedExtensionOrigin
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - authorization
+          - content-type
+        MaxAge: 600
+      Auth:
+        Authorizers:
+          GoogleJwt:
+            IdentitySource: $request.header.Authorization
+            JwtConfiguration:
+              issuer: https://accounts.google.com
+              audience:
+                - !Ref GoogleClientId
+        # No DefaultAuthorizer: routes opt in. GET /comments stays PUBLIC so CloudFront cache hits
+        # (which bypass the origin/authorizer entirely) are never "authenticated" only on a miss.
+
+  CommentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handler.handler
+      Events:
+        PostComment:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CommentsApi
+            Method: POST
+            Path: /comments
+            Auth:
+              Authorizer: GoogleJwt
+        GetComments:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CommentsApi
+            Method: GET
+            Path: /comments
+            # No Auth => public read.
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:Query
+                - dynamodb:UpdateItem
+              Resource: !GetAtt CommentsTable.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/handler.mjs
+        Target: node22
+        Format: cjs
+        Minify: true
+        Sourcemap: true
+        # Bundle the AWS SDK: the managed runtime does NOT ship @aws-sdk/lib-dynamodb, and its
+        # @aws-sdk minor drifts across runtime patches. Bundling makes the artifact deterministic.
+        External: []
+
+  # Pre-create the log group so we own its retention (Lambda's auto-created group never expires).
+  CommentsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${CommentsFunction}
+      RetentionInDays: 30
+
+Outputs:
+  ApiUrl:
+    Description: Base URL for the API (dev/no-CDN). Clients POST/GET <ApiUrl>/comments.
+    Value: !Sub https://${CommentsApi}.execute-api.${AWS::Region}.amazonaws.com
+  ApiDomain:
+    Description: API host only (no scheme) — pass this as ApiDomain to the CDN stack (cdn-template.yaml).
+    Value: !Sub ${CommentsApi}.execute-api.${AWS::Region}.amazonaws.com
+  CommentsTableName:
+    Value: !Ref CommentsTable

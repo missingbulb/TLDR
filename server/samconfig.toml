@@ -1,0 +1,24 @@
+# SAM deploy config. CI passes GoogleClientId/AllowedExtensionOrigin explicitly; these defaults are
+# for manual deploys. Replace the placeholder client id before deploying by hand.
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "tldr-app"
+region = "il-central-1"
+capabilities = "CAPABILITY_IAM"
+resolve_s3 = true
+confirm_changeset = true
+parameter_overrides = "GoogleClientId=\"REPLACE_WITH_GOOGLE_WEB_CLIENT_ID\" AllowedExtensionOrigin=\"*\""
+
+[default.build.parameters]
+cached = true
+parallel = true
+
+# CDN stack (deploy AFTER the app stack; pass its ApiDomain output). Invoke with:
+#   sam deploy --config-env cdn --template cdn-template.yaml --parameter-overrides ApiDomain=<app ApiDomain output>
+[cdn.deploy.parameters]
+stack_name = "tldr-cdn"
+region = "il-central-1"
+capabilities = "CAPABILITY_IAM"
+resolve_s3 = true
+confirm_changeset = true
