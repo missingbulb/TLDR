@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TLDR notes</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <header class="header">
+      <h1 class="title">TLDR</h1>
+      <p id="page" class="page" title=""></p>
+    </header>
+
+    <p id="status" class="status" hidden></p>
+
+    <ul id="comments" class="comments" aria-live="polite"></ul>
+
+    <form id="composer" class="composer" hidden>
+      <textarea
+        id="body"
+        class="body"
+        rows="3"
+        maxlength="8192"
+        placeholder="Add a tl;dr note for this page…"
+      ></textarea>
+      <div class="composer-row">
+        <span id="composer-error" class="composer-error" role="alert"></span>
+        <button id="post" type="submit" class="post">Post</button>
+      </div>
+    </form>
+
+    <script type="module" src="sidepanel.mjs"></script>
+  </body>
+</html>

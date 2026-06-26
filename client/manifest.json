@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "TLDR — community notes",
+  "version": "0.1.0",
+  "description": "Read and post community tl;dr notes attached to any web page.",
+  "minimum_chrome_version": "114",
+  "permissions": [
+    "identity",
+    "sidePanel",
+    "storage",
+    "tabs",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "https://api.tldr.example/*"
+  ],
+  "background": {
+    "service_worker": "src/service-worker.mjs",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "src/sidepanel.html"
+  },
+  "action": {
+    "default_title": "Open TLDR notes"
+  },
+  "options_ui": {
+    "page": "src/options.html",
+    "open_in_tab": false
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
