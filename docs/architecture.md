@@ -92,24 +92,29 @@ never the actual number.
 ### 4.2 Per-site deactivation (two layers)
 - **Layer 1 (non-removable code constant):** non-http(s) schemes and the Chrome Web Store (where Chrome
   blocks injection anyway). Browser-internal pages (`chrome://`, `about:`) are non-http(s), so already excluded.
-- **Layer 2 (user-editable, `chrome.storage.sync`):** seeded with `localhost`/`127.0.0.1`, host-suffix matched.
-  🔧 `google.com` is **not** seeded by default — whether to allow notes on search results is left to the user (§11.4).
+- **Layer 2 (user-editable, `chrome.storage.sync`):** seeded with `localhost`/`127.0.0.1` and the major
+  **search engines** (`google.com`, `bing.com`, `duckduckgo.com`), host-suffix matched. A user can remove any.
+  (🔧 owner decision: search engines are off by default — their result pages are personalized/ephemeral.)
 
 ### 4.3 URL normalization (single source of truth)
 The client normalizes before calling so cache keys collide for "the same page"; the server **re-normalizes**
-and never trusts the client's value (prevents poisoned cache keys). Rules (v1): lowercase scheme+host; drop
-`#fragment`; **strip the query string**; remove trailing slash → e.g. `https://example.com/articles/42`.
-http/https only.
+and never trusts the client's value (prevents poisoned cache keys). Rules: lowercase scheme+host; drop
+`#fragment`; **drop only known tracking params** (`utm_*`, `fbclid`, `gclid`, …) while **keeping the rest,
+sorted by key**; remove trailing slash → e.g. `https://example.com/articles/42` and
+`https://www.youtube.com/watch?v=ABC`. http/https only.
+
+🔧 **Decision (tracker-stripping, owner-chosen):** the brief's strip-the-whole-query default collapsed pages
+whose identity lives in the query (all `youtube.com/watch?v=…` into one thread). v1 instead strips only the
+tracker set and keeps meaningful params (sorted, so `?a=1&b=2` ≡ `?b=2&a=1`). The tracker list is `utm_*` (a
+structural prefix) plus a small explicit set of non-utm trackers in `shared/normalizeUrl.mjs`.
 
 🔧 **Decision (single source):** rather than the brief's "copied constant," the rules live once in
 `shared/normalizeUrl.mjs` (WHATWG `URL`, runs in Node and the browser), vendored **byte-identically** into
 `server/` and `client/` with a CI **drift guard** (`test/shared-drift.test.mjs`). Divergent copies would make
 the client write under `pageId` A and a read look under `pageId` B — a silent data loss (§12-A6).
 
-> ⚠️ **Known limitation (flagged for the owner, §11.2):** stripping the query collapses pages whose identity
-> lives in the query — e.g. `youtube.com/watch?v=A` and `?v=B` get the **same** `pageId`; same for Google
-> results, many forums, and hash-routed SPAs. v1 ships the brief's strip-query default; see §11.2 for the
-> recommended alternative.
+> ⚠️ **Remaining limitation:** dropping the fragment still collapses hash-routed SPAs (`example.com/#/a` vs
+> `/#/b`) into one `pageId`. Acceptable for v1; revisit if a target SPA family matters.
 
 ---
 
@@ -133,11 +138,14 @@ Read page = `Query` on `pageId`. Submit = `PutItem`.
 | `body` | String | Comment text, validated before write (≤ 8 KB). |
 | `createdAt` | Number | Epoch ms, **derived from the same ULID** (one clock read, no drift). |
 | `pageUrlRaw` | String | Original URL, for debugging. Never returned in the read projection. |
+| `authorEmailHash` | String | **Salted one-way SHA-256** of the verified email. Moderation only; **never returned**. |
 | `expiresAt` | Number | *(rate-limit counter items only)* epoch seconds; DynamoDB TTL auto-deletes them. |
 
-🔧 **Decision (drop `authorEmail`):** it is **not stored and never returned** — public, CDN-cached reads
-would make any returned field world-readable, and email is unneeded PII (§12-A3). Reads use an **allowlist
-projection** so a future attribute can't leak by default.
+🔧 **Decision (email → salted hash, owner-chosen):** the **raw** email is **never stored or returned** —
+public, CDN-cached reads would make any returned field world-readable. A **salted one-way hash**
+(`authorEmailHash`, salt = the `EmailHashSalt` server secret) is stored for moderation/abuse correlation
+(equal emails hash equally) and is excluded from the **allowlist** read projection, so it can never leak
+through reads.
 
 ### 5.3 Access patterns and indexes
 | Pattern | Implementation |
@@ -301,11 +309,13 @@ email; `413` body too large; `429` per-author rate limit; `404` unknown route; `
 
 The brief's "assumptions to confirm" are **resolved** below; only the genuinely owner-dependent items remain open.
 
-| # | Topic | v1 decision (implemented) |
+| # | Topic | v1 decision (implemented) — ✅ = owner-confirmed |
 |---|-------|---------------------------|
-| 11.1 | Read auth | **Public reads**, authenticated writes (§6.4). |
+| 11.1 | Read auth | ✅ **Public reads**, authenticated writes (§6.4). |
+| 11.2 | URL → pageId | ✅ **Strip only tracking params**, keep the rest sorted (§4.3). |
 | 11.3 | Cache TTL | **30–60 s**, no per-write invalidation (§6.2). |
-| — | Email storage | **Dropped** entirely (§5.2). |
+| 11.4 | Search engines | ✅ **Off by default** (`google.com`/`bing.com`/`duckduckgo.com` seeded in the denylist, §4.2). |
+| 11.5 | Email | ✅ **Salted one-way hash** stored for moderation; raw email never stored/returned (§5.2). |
 | — | Region | **`il-central-1`** (Tel Aviv), default `*.cloudfront.net` domain (no us-east-1 ACM needed). |
 | — | Runtime / SDK | **`nodejs22.x`**, AWS SDK **bundled** (§12-A4/A5). |
 
@@ -315,12 +325,9 @@ The brief's "assumptions to confirm" are **resolved** below; only the genuinely 
 2. **Extension id / signing `key`** — fixes the `chromiumapp.org` redirect URI and the CORS origin. Confirm the
    production id (or approve a fixed manifest `key`); a dev id too if dev/prod differ.
 3. **AWS account id + GitHub repo/branch** for the OIDC trust policy `sub`. (Assumed `missingbulb/tldr` + `main`.)
-4. **`google.com` in the default denylist — in or out?** A product call; currently out.
+4. **`EmailHashSalt`** — set a long random server secret (`server/README.md`); without it the email hash is unsalted.
 5. **Throttle numbers** — the per-author rate (default 10/min) and any future edge throttle depend on the
    expected user base / cost ceiling.
-6. 🔧 **Query-string stripping (§4.3)** — confirm the v1 strip-all-query default, or adopt the recommended
-   alternative (keep the query but strip only known trackers — `utm_*`, `fbclid`, `gclid`, …) so per-item pages
-   on YouTube/forums/SPAs keep distinct `pageId`s.
 
 ---
 
@@ -333,8 +340,9 @@ Corrections that changed the build (verified against authoritative docs during t
 - **A2 — CloudFront Authorization forwarding (BLOCKER).** A custom origin-request policy naming `Authorization`
   is rejected at deploy. Use a custom CachePolicy (excludes Authorization, keys on pageUrl + Origin) + the managed
   `AllViewerExceptHostHeader` policy (forwards Authorization, strips Host).
-- **A3 — `authorEmail` PII leak (BLOCKER).** Public reads make any returned field world-readable; drop email
-  entirely and use an allowlist projection.
+- **A3 — `authorEmail` PII leak (BLOCKER).** Public reads make any returned field world-readable; the **raw**
+  email is never stored or returned, and reads use an allowlist projection. (Owner decision: keep a *salted
+  one-way hash* for moderation — see §5.2/§11.5 — still never returned.)
 - **A4 — Runtime.** `nodejs18.x`/`nodejs20.x` are EOL/EOL-soon in 2026; pin `nodejs22.x`.
 - **A5 — SDK bundling.** The managed runtime doesn't ship `@aws-sdk/lib-dynamodb` and its SDK minor drifts; bundle it.
 - **A6 — Shared normalizer.** A real single source + byte-equality drift guard, not a copied constant.

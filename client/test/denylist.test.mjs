@@ -42,6 +42,10 @@ test('the user (Layer 2) denylist blocks seeded local hosts', () => {
   assert.equal(evaluatePage('http://127.0.0.1:8080/', DEFAULT_USER_DENYLIST).reason, 'user-denylist');
 });
 
-test('google.com is NOT seeded into the default denylist (a product choice)', () => {
-  assert.equal(evaluatePage('https://www.google.com/search?q=x', DEFAULT_USER_DENYLIST).commentable, true);
+test('search engines are seeded into the default denylist (off by default)', () => {
+  assert.equal(evaluatePage('https://www.google.com/search?q=x', DEFAULT_USER_DENYLIST).reason, 'user-denylist');
+  assert.equal(evaluatePage('https://www.bing.com/search?q=x', DEFAULT_USER_DENYLIST).reason, 'user-denylist');
+  assert.equal(evaluatePage('https://duckduckgo.com/?q=x', DEFAULT_USER_DENYLIST).reason, 'user-denylist');
+  // A normal site is still commentable.
+  assert.equal(evaluatePage('https://example.com/article', DEFAULT_USER_DENYLIST).commentable, true);
 });

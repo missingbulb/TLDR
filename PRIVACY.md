@@ -9,14 +9,16 @@ pages. This policy describes what it collects and why.
 When you **post a comment**, we store:
 - your Google account's stable user id (`sub`) and display name, taken from the Google ID token you
   authorize at sign-in;
+- a **salted one-way hash** of your email address (used only for moderation/abuse handling — see below);
 - the text of your comment;
-- the normalized URL of the page you commented on (query string and fragment removed), plus the raw URL
-  for debugging.
+- the normalized URL of the page you commented on (tracking parameters and fragment removed), plus the
+  raw URL for debugging.
 
 When you **read** comments, no account information is sent — reads are anonymous and public.
 
 ## What we do NOT collect
-- **We do not store your email address.** It is not saved and is never returned to anyone.
+- **We do not store your raw email address, and never return it (or its hash) to anyone.** We keep only a
+  salted one-way hash, which cannot be shown publicly and is used solely for moderation.
 - We do not track your browsing. The extension only contacts our service for a page **while its side panel
   is open**, and never for pages on the built-in or user-configured denylist (e.g. `localhost`).
 - No advertising, no analytics, no third-party trackers.
@@ -32,7 +34,8 @@ enabled. Reads are served through Amazon CloudFront.
 
 ## Authentication
 Posting uses Google Sign-In (OpenID Connect). We receive a signed identity token containing your user id,
-name, and email-verification status; we keep the id and name as described above.
+name, email, and email-verification status; we keep the id and name, and a salted one-way hash of the
+email, as described above.
 
 ## Data removal
 v1 does not yet support editing or deleting comments in-product. To request removal of your comments,

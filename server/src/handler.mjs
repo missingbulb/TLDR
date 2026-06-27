@@ -7,6 +7,7 @@
 // The authorizer has already verified the Google ID token's signature/issuer/audience/expiry
 // before we run, so for POST we trust event.requestContext.authorizer.jwt.claims.
 
+import { createHash } from 'node:crypto';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
@@ -22,6 +23,15 @@ const MAX_BODY_BYTES = Number(process.env.MAX_BODY_BYTES ?? 8192);
 const QUERY_LIMIT = Number(process.env.QUERY_LIMIT ?? 50);
 const RATE_LIMIT_PER_MINUTE = Number(process.env.RATE_LIMIT_PER_MINUTE ?? 10);
 const RATE_LIMIT_TTL_SECONDS = 120; // rate-limit counter items self-delete via DynamoDB TTL
+const EMAIL_HASH_SALT = process.env.EMAIL_HASH_SALT ?? '';
+
+// One-way, salted hash of the verified email — stored for moderation/abuse correlation only, NEVER
+// returned in the public read projection. Emails are low-entropy, so the salt (a server secret) is
+// what keeps the stored hash from being trivially reversible. Equal emails hash equally (moderation).
+function hashEmail(email) {
+  if (!email) return undefined;
+  return createHash('sha256').update(`${EMAIL_HASH_SALT}:${String(email).trim().toLowerCase()}`).digest('hex');
+}
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
   marshallOptions: { removeUndefinedValues: true },
@@ -128,7 +138,9 @@ async function handlePost(event) {
     body: text,
     createdAt,
     pageUrlRaw: typeof input.pageUrl === 'string' ? input.pageUrl : undefined,
-    // NOTE: authorEmail is deliberately NOT stored — public reads would make it world-readable.
+    // Raw email is NEVER stored (public reads would expose it). We keep a salted one-way hash for
+    // moderation only; it is excluded from the public read projection below.
+    authorEmailHash: hashEmail(claims.email),
   };
 
   await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));

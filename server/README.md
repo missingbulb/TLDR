@@ -53,9 +53,11 @@ The deploy workflow assumes an IAM role via GitHub OIDC — no long-lived AWS ke
 cd server
 npm ci
 sam build
-sam deploy --parameter-overrides "GoogleClientId=<web-client-id> AllowedExtensionOrigin=chrome-extension://<ext-id>"
+sam deploy --parameter-overrides "GoogleClientId=<web-client-id> AllowedExtensionOrigin=chrome-extension://<ext-id> EmailHashSalt=<long-random-secret>"
 ```
 
+`EmailHashSalt` (a `NoEcho` parameter) salts the stored one-way email hash used for moderation — set a long
+random string. The CI deploy passes it from the secret `EMAIL_HASH_SALT` if present (see `deploy.yml`).
 Note the `ApiUrl` / `ApiDomain` outputs.
 
 **CDN (prod):**

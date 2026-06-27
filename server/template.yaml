@@ -33,6 +33,13 @@ Parameters:
   QueryLimit:
     Type: Number
     Default: 50
+  EmailHashSalt:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: >
+      Server secret salting the stored one-way email hash (used for moderation only; the hash is never
+      returned). Set to a long random string; rotating it disconnects old hashes from new ones.
 
 Globals:
   Function:
@@ -48,6 +55,7 @@ Globals:
         MAX_BODY_BYTES: !Ref MaxBodyBytes
         QUERY_LIMIT: !Ref QueryLimit
         RATE_LIMIT_PER_MINUTE: !Ref RateLimitPerMinute
+        EMAIL_HASH_SALT: !Ref EmailHashSalt
 
 Resources:
   CommentsTable:

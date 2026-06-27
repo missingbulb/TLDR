@@ -9,9 +9,10 @@ export const ALLOWED_SCHEMES = ['http:', 'https:'];
 export const CODE_BLOCKED_HOSTS = ['chrome.google.com', 'chromewebstore.google.com'];
 
 // Layer 2 — the seed for the user-editable denylist (stored in chrome.storage.sync). The owner may
-// add/remove entries in the options page. `google.com` is intentionally NOT seeded — whether to allow
-// notes on search results is a product call, left to the user.
-export const DEFAULT_USER_DENYLIST = ['localhost', '127.0.0.1'];
+// add/remove entries in the options page. Search engines are seeded off by default: their result
+// pages are personalized/ephemeral and (after tracker stripping) many queries still collapse, so a
+// shared notes thread there makes little sense. A user can remove any of these.
+export const DEFAULT_USER_DENYLIST = ['localhost', '127.0.0.1', 'google.com', 'bing.com', 'duckduckgo.com'];
 
 // Host-suffix match: `example.com` matches `example.com` and `www.example.com`, but not `notexample.com`.
 export function hostMatches(host, pattern) {

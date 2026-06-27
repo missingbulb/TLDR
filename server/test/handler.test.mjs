@@ -25,7 +25,7 @@ beforeEach(() => {
   ddbMock.on(QueryCommand).resolves({ Items: [] });
 });
 
-const VALID_CLAIMS = { sub: 'user-123', name: 'Ada', email_verified: 'true' };
+const VALID_CLAIMS = { sub: 'user-123', name: 'Ada', email: 'ada@example.com', email_verified: 'true' };
 
 function postEvent({ claims = VALID_CLAIMS, body, isBase64Encoded = false } = {}) {
   return {
@@ -62,7 +62,17 @@ test('POST creates a comment and echoes the authoritative record', async () => {
   assert.equal(item.authorSub, 'user-123');
   assert.equal(item.body, 'hi');
   assert.equal(item.createdAt, comment.createdAt);
-  assert.ok(!('authorEmail' in item), 'authorEmail must never be stored');
+  assert.ok(!('authorEmail' in item), 'raw authorEmail must never be stored');
+  assert.match(item.authorEmailHash, /^[0-9a-f]{64}$/, 'a salted sha256 email hash is stored');
+  assert.notEqual(item.authorEmailHash, 'ada@example.com', 'the stored value is a hash, not the email');
+  assert.ok(!('authorEmailHash' in comment), 'the email hash is never returned to clients');
+});
+
+test('the same email always hashes to the same value (moderation correlation)', async () => {
+  await handler(postEvent({ body: { pageUrl: 'https://e.com/1', body: 'a' } }));
+  await handler(postEvent({ body: { pageUrl: 'https://e.com/2', body: 'b' } }));
+  const puts = ddbMock.commandCalls(PutCommand);
+  assert.equal(puts[0].args[0].input.Item.authorEmailHash, puts[1].args[0].input.Item.authorEmailHash);
 });
 
 test('POST re-normalizes the pageUrl defensively (does not trust the client)', async () => {
