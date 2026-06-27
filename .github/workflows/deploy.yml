@@ -45,6 +45,10 @@ jobs:
         with:
           use-installer: true
 
+      # SAM's esbuild builder needs esbuild on PATH (its scratch install is production-only).
+      - name: Install esbuild on PATH (for SAM's esbuild builder)
+        run: npm install -g esbuild@0.24.0
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
