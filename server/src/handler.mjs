@@ -196,16 +196,20 @@ async function handleGet(event) {
 // --- entry point ------------------------------------------------------------
 
 export const handler = async (event) => {
-  const method = event.requestContext?.http?.method;
-  const path = event.requestContext?.http?.path ?? event.rawPath;
+  // Match on the stage-independent routeKey ("POST /comments"); fall back to method+path so tests
+  // and odd inputs still route. (requestContext.http.path carries a stage prefix on a named stage,
+  // so matching the raw path alone would silently 404 everything if the stage were ever renamed.)
+  const route =
+    event.requestContext?.routeKey ??
+    `${event.requestContext?.http?.method} ${event.requestContext?.http?.path ?? event.rawPath}`;
   try {
-    if (method === 'POST' && path === '/comments') return await handlePost(event);
-    if (method === 'GET' && path === '/comments') return await handleGet(event);
+    if (route === 'POST /comments') return await handlePost(event);
+    if (route === 'GET /comments') return await handleGet(event);
     return json(404, { message: 'not found' });
   } catch (err) {
     if (err instanceof HttpError) return json(err.statusCode, { message: err.message });
     // Unexpected: log with context for observability, return an opaque 500.
-    console.error('unhandled error', { method, path, error: err });
+    console.error('unhandled error', { route, error: err });
     return json(500, { message: 'internal error' });
   }
 };

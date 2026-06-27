@@ -21,7 +21,7 @@ export function randomToken(bytes = 16) {
   return Array.from(buf, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export function buildAuthUrl({ clientId, redirectUri, nonce, state, prompt = 'consent' }) {
+export function buildAuthUrl({ clientId, redirectUri, nonce, state, prompt }) {
   const params = new URLSearchParams({
     client_id: clientId,
     response_type: 'id_token',
@@ -29,8 +29,11 @@ export function buildAuthUrl({ clientId, redirectUri, nonce, state, prompt = 'co
     scope: 'openid email profile',
     nonce,
     state,
-    prompt,
   });
+  // Only the SILENT refresh sets prompt=none (Google returns a token with no UI when already
+  // consented, else an error we fall back on). The interactive flow omits prompt so Google shows
+  // login/consent only when actually needed — not on every refresh.
+  if (prompt) params.set('prompt', prompt);
   return `${GOOGLE_AUTH_ENDPOINT}?${params.toString()}`;
 }
 
@@ -82,7 +85,15 @@ async function mintToken({ interactive }) {
   const redirectUri = chrome.identity.getRedirectURL();
   const nonce = randomToken();
   const state = randomToken();
-  const authUrl = buildAuthUrl({ clientId: GOOGLE_CLIENT_ID, redirectUri, nonce, state });
+  const authUrl = buildAuthUrl({
+    clientId: GOOGLE_CLIENT_ID,
+    redirectUri,
+    nonce,
+    state,
+    // Silent refresh must use prompt=none (Google returns a token with no UI, or an error we fall
+    // back on). The interactive attempt omits prompt so consent shows only when actually needed.
+    prompt: interactive ? undefined : 'none',
+  });
 
   const redirectUrl = await chrome.identity.launchWebAuthFlow({ url: authUrl, interactive });
   if (!redirectUrl) throw new Error('auth cancelled');

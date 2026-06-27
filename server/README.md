@@ -19,7 +19,7 @@ The extension authenticates with a Google **ID token** (a JWT) obtained via `chr
 1. Google Cloud Console → APIs & Services → Credentials → Create credentials → OAuth client ID → **Web application**.
 2. Under **Authorized redirect URIs** add: `https://<EXTENSION_ID>.chromiumapp.org/`
    (the extension id is fixed by the `key` in `client/manifest.json`; see `client/README.md`).
-3. Copy the **client id**. It is both the JWT authorizer `audience` (`GoogleClientId` param here) and the extension's `GOOGLE_CLIENT_ID` (`client/src/config.mjs`).
+3. Copy the **client id**. It is both the JWT authorizer `audience` (`GoogleClientId` param here) and the extension's `GOOGLE_CLIENT_ID` (`client/config.mjs`).
 
 ### 2. GitHub → AWS deploy role (OIDC, no stored keys)
 The deploy workflow assumes an IAM role via GitHub OIDC — no long-lived AWS keys anywhere.

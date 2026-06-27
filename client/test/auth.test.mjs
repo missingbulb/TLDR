@@ -28,6 +28,13 @@ test('buildAuthUrl requests an id_token with the right scope and binding params'
   assert.equal(url.searchParams.get('state'), 's1');
 });
 
+test('buildAuthUrl omits prompt by default and sets prompt=none for a silent refresh', () => {
+  const interactive = new URL(buildAuthUrl({ clientId: 'c', redirectUri: 'r', nonce: 'n', state: 's' }));
+  assert.equal(interactive.searchParams.get('prompt'), null, 'interactive must not force prompt');
+  const silent = new URL(buildAuthUrl({ clientId: 'c', redirectUri: 'r', nonce: 'n', state: 's', prompt: 'none' }));
+  assert.equal(silent.searchParams.get('prompt'), 'none');
+});
+
 test('parseRedirectFragment extracts id_token and state from the URL fragment', () => {
   const got = parseRedirectFragment('https://abc.chromiumapp.org/#id_token=TOK&state=s1&token_type=bearer');
   assert.equal(got.idToken, 'TOK');

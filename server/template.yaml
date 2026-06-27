@@ -110,7 +110,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./
-      Handler: src/handler.handler
+      # The esbuild builder writes a single entry point to <artifact>/handler.js (the src/ prefix is
+      # stripped — esbuild's default outbase is the entry's own dir), so the Handler is handler.handler.
+      Handler: handler.handler
       Events:
         PostComment:
           Type: HttpApi
