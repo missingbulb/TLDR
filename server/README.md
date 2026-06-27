@@ -51,8 +51,7 @@ The deploy workflow assumes an IAM role via GitHub OIDC — no long-lived AWS ke
 
 ```bash
 cd server
-npm ci
-npm install -g esbuild@0.24.0   # SAM's esbuild builder needs esbuild on PATH (its scratch install is prod-only)
+npm ci   # esbuild is a (build-only) dependency so SAM's esbuild builder finds it; CI also adds it to PATH
 sam build
 sam deploy --parameter-overrides "GoogleClientId=<web-client-id> AllowedExtensionOrigin=chrome-extension://<ext-id> EmailHashSalt=<long-random-secret>"
 ```
