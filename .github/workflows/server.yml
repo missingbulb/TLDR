@@ -1,0 +1,55 @@
+name: server
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ['server/**', 'shared/**', 'scripts/**', 'test/**', '.github/workflows/server.yml']
+  push:
+    branches: [main, 'claude/**']
+    paths: ['server/**', 'shared/**', 'scripts/**', 'test/**', '.github/workflows/server.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      # Cross-cutting checks: the URL-normalizer corpus + the shared drift guard (root, no deps).
+      - name: Cross-cutting tests
+        run: npm test
+
+      - name: Install server deps
+        working-directory: server
+        run: npm ci
+
+      - name: Handler tests
+        working-directory: server
+        run: npm test
+
+      - name: Lint CloudFormation templates
+        run: |
+          pipx install cfn-lint
+          cfn-lint server/template.yaml server/cdn-template.yaml
+
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      # SAM's esbuild builder runs a PRODUCTION npm install in its scratch dir, so a devDependency
+      # esbuild is skipped ("Cannot find esbuild"). It looks for esbuild on PATH — install it globally.
+      - name: Install esbuild on PATH (for SAM's esbuild builder)
+        run: npm install -g esbuild@0.24.0
+
+      # Build validation (esbuild bundle). No deploy here — deploy.yml owns that, gated on OIDC.
+      - name: sam build
+        working-directory: server
+        run: sam build

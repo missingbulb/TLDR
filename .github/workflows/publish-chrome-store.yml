@@ -1,0 +1,70 @@
+name: publish-chrome-store
+
+# Publishes a released zip to the Chrome Web Store. Manual only. Requires four secrets (set under
+# Settings → Secrets and variables → Actions): CHROME_EXTENSION_ID, CHROME_CLIENT_ID,
+# CHROME_CLIENT_SECRET, CHROME_REFRESH_TOKEN (see https://github.com/fregante/chrome-webstore-upload-keys).
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish (blank = latest release)'
+        required: false
+        type: string
+      auto_publish:
+        description: 'Publish to users after upload (uncheck to leave it as a draft in the dashboard)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+      CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+      CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+      REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Fail early if credentials are missing
+        run: |
+          missing=
+          for v in EXTENSION_ID CLIENT_ID CLIENT_SECRET REFRESH_TOKEN; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "Missing required secret(s):$missing" >&2
+            echo "Add them under Settings → Secrets and variables → Actions (see README)." >&2
+            exit 1
+          fi
+
+      - name: Download the release zip
+        run: |
+          mkdir -p dist
+          gh release download ${{ inputs.tag }} \
+            --repo "${{ github.repository }}" \
+            --pattern "tldr-extension.zip" \
+            --dir dist
+          ls -l dist
+
+      - name: Show the version being published
+        run: echo "Publishing $(unzip -p dist/tldr-extension.zip manifest.json | grep '\"version\"')"
+
+      - name: Upload to the Chrome Web Store
+        run: |
+          flags=
+          if [ "${{ inputs.auto_publish }}" = "false" ]; then
+            echo "auto_publish is off — uploading as a draft (publish it from the dashboard)."
+          else
+            flags="--auto-publish"
+          fi
+          npx --yes chrome-webstore-upload-cli@3 upload \
+            --source dist/tldr-extension.zip \
+            $flags

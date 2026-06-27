@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  TLDR CDN stack — one CloudFront distribution in front of the HTTP API. Public GET reads are cached
+  at the edge (short TTL); POST is passed through to the origin (CloudFront never caches POST). Plain
+  CloudFormation (no SAM transform). Deploy AFTER the app stack and pass its ApiDomain output.
+
+Parameters:
+  ApiDomain:
+    Type: String
+    Description: HTTP API host (no scheme), e.g. abc123.execute-api.il-central-1.amazonaws.com — the app stack's ApiDomain output.
+    AllowedPattern: '.+'
+  PriceClass:
+    Type: String
+    Default: PriceClass_100
+    AllowedValues:
+      - PriceClass_100
+      - PriceClass_200
+      - PriceClass_All
+    Description: >
+      PriceClass_100 (NA+EU, cheapest) is the default. For an Israel/Middle-East audience, PriceClass_200
+      adds nearer edges (incl. Tel Aviv). At <10M req/mo CloudFront requests are free regardless.
+
+Resources:
+  # Cache key = pageUrl/nextToken querystring + Origin header. Authorization is EXCLUDED from the key,
+  # so every viewer shares one cached read per page. (Origin is keyed so per-origin CORS responses
+  # aren't cross-served.) This is safe ONLY because reads are public — same data for everyone.
+  CommentsCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub ${AWS::StackName}-comments-cache
+        Comment: Short-TTL public read cache, keyed on pageUrl + Origin (not Authorization).
+        DefaultTTL: 30
+        MinTTL: 0
+        MaxTTL: 60
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingGzip: true
+          EnableAcceptEncodingBrotli: true
+          HeadersConfig:
+            HeaderBehavior: whitelist
+            Headers:
+              - Origin
+          QueryStringsConfig:
+            QueryStringBehavior: whitelist
+            QueryStrings:
+              - pageUrl
+              - nextToken
+          CookiesConfig:
+            CookieBehavior: none
+
+  CommentsDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: TLDR comments API
+        PriceClass: !Ref PriceClass
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        Origins:
+          - Id: HttpApiOrigin
+            DomainName: !Ref ApiDomain
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols:
+                - TLSv1.2
+        # Only /comments exists, so the default behavior covers it: GET cached, POST passed through.
+        DefaultCacheBehavior:
+          TargetOriginId: HttpApiOrigin
+          ViewerProtocolPolicy: https-only
+          Compress: true
+          AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+          CachedMethods: [GET, HEAD]
+          CachePolicyId: !Ref CommentsCachePolicy
+          # Managed-AllViewerExceptHostHeader: forwards Authorization + querystrings to the origin but
+          # STRIPS the viewer Host header (forwarding Host to an API Gateway origin returns 403). A
+          # *custom* origin request policy is rejected if it names Authorization, so we use this managed one.
+          OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+
+Outputs:
+  DistributionDomainName:
+    Description: The CloudFront domain. Point the extension's API base URL at https://<this>.
+    Value: !GetAtt CommentsDistribution.DomainName
+  DistributionId:
+    Value: !Ref CommentsDistribution

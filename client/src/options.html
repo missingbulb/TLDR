@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>TLDR options</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <header class="header"><h1 class="title">TLDR · denylist</h1></header>
+    <p class="status" style="text-align:left">
+      One host per line. TLDR stays off on these hosts and their subdomains (e.g. <code>localhost</code>,
+      <code>google.com</code>). The Chrome Web Store is always off and can't be removed.
+    </p>
+    <form id="form" class="composer" style="display:block">
+      <textarea id="denylist" class="body" rows="10" spellcheck="false"></textarea>
+      <div class="composer-row">
+        <span id="saved" class="comment-meta"></span>
+        <button id="save" type="submit" class="post">Save</button>
+      </div>
+    </form>
+    <script type="module" src="options.mjs"></script>
+  </body>
+</html>
