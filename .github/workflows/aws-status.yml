@@ -1,0 +1,40 @@
+name: aws-status
+
+# Read-only AWS visibility, on demand. Assumes the SAME GitHub OIDC deploy role (no new credentials,
+# no long-lived keys) and runs only describe/list calls, so it can never mutate infrastructure. Use it
+# to check stack status/outputs (e.g. whether tldr-cdn is gone, the app stack's ApiUrl) from the Actions
+# tab without opening the AWS console. Gated on AWS_DEPLOY_ROLE_ARN, like deploy.yml.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write # assume the AWS role via OIDC
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    if: ${{ vars.AWS_DEPLOY_ROLE_ARN != '' }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: il-central-1
+
+      - name: Stacks named tldr-* (incl. recently deleted)
+        run: |
+          aws cloudformation list-stacks \
+            --query "StackSummaries[?starts_with(StackName, 'tldr')].[StackName,StackStatus,DeletionTime]" \
+            --output table
+
+      - name: App stack outputs (ApiUrl / ApiDomain)
+        run: |
+          aws cloudformation describe-stacks --stack-name tldr-app \
+            --query "Stacks[0].Outputs" --output table || echo "tldr-app not found"
+
+      - name: CDN stack status (if present)
+        run: |
+          aws cloudformation describe-stacks --stack-name tldr-cdn \
+            --query "Stacks[0].[StackStatus]" --output text 2>/dev/null \
+            || echo "tldr-cdn not present (deleted or never created)"
