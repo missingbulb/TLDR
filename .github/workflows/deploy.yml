@@ -41,7 +41,7 @@ jobs:
         working-directory: server
         run: npm ci
 
-      - uses: aws-actions/setup-sam@v2
+      - uses: aws-actions/setup-sam@v3
         with:
           use-installer: true
 
@@ -49,7 +49,7 @@ jobs:
       - name: Install esbuild on PATH (for SAM's esbuild builder)
         run: npm install -g esbuild@0.24.0
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: il-central-1
