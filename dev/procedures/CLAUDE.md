@@ -17,4 +17,4 @@ trigger fires; don't pre-load.
 
 - [chrome-extension.md](chrome-extension.md) — **before touching `client/`.** MV3 Google ID-token auth (`launchWebAuthFlow`, not `getAuthToken`), ES-modules-without-a-bundler, the silent-refresh `prompt`, and why `host_permissions` doesn't remove server CORS.
 - [aws-sam.md](aws-sam.md) — **before touching `server/` templates or the build.** The SAM esbuild Handler-path and esbuild-dependency traps, and CloudFront's `Authorization` / cache-key rules.
-- [ci-cd.md](ci-cd.md) — **before editing `.github/workflows/`.** Gating an optional job (e.g. deploy) so it skips cleanly instead of failing red.
+- [ci-cd.md](ci-cd.md) — **before editing `.github/workflows/`, or when reading CI status to gate a merge.** Gating an optional job (e.g. deploy) so it skips cleanly instead of failing red; reading a PR's check state with the PR-scoped MCP call instead of the context-overflowing workflow-run listing tools.
