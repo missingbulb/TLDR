@@ -133,7 +133,7 @@ GitHub → **Settings → Secrets and variables → Actions**. The deploy job st
 - [ ] **3.7 Variables:**
   - `AWS_DEPLOY_ROLE_ARN` = `<AWS_DEPLOY_ROLE_ARN>`
   - `GOOGLE_CLIENT_ID` = `<GOOGLE_CLIENT_ID>` *(from 2.6)*
-  - `ALLOWED_EXTENSION_ORIGIN` = `*` — **must be `*`.** API Gateway HTTP API v2 **rejects** `chrome-extension://` origins ("Invalid format for origin"). Safe: writes are JWT-gated, reads public, and the extension reaches the API via `host_permissions`, not browser CORS (`docs/architecture.md` §12-A9).
+  - `ALLOWED_EXTENSION_ORIGIN` — **leave unset** (`deploy.yml` defaults it to `*`), or set it to `*` explicitly. It **must resolve to `*`**: API Gateway HTTP API v2 **rejects** `chrome-extension://` origins ("Invalid format for origin"). Safe: writes are JWT-gated, reads public, and the extension reaches the API via `host_permissions`, not browser CORS (`docs/architecture.md` §12-A9).
   - *(optional)* `CDN_PRICE_CLASS` = `PriceClass_200`
 - [ ] **3.8 Secret:** `EMAIL_HASH_SALT` = a long random string (salts the stored one-way email hash; set once and don't rotate).
 
