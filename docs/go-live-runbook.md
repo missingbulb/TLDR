@@ -197,7 +197,7 @@ Open the item from Phase 1 in the [Developer Dashboard](https://chrome.google.co
     | Host permission | The single backend the extension talks to, to read/post notes. No other host. |
 
   - [ ] **Data usage:** declare **Authentication information** (Google sign-in) + **User-generated content** (note text); check the three certifications (no selling, no unrelated use, no creditworthiness use). Raw email is never stored (only a salted hash), so don't declare email collection.
-  - [ ] **Privacy policy URL** = `<PRIVACY_POLICY_URL>` (**required**, public). A ready-to-host draft is in [`docs/privacy-policy.md`](privacy-policy.md) — fill in contact + date, publish (e.g. GitHub Pages), paste the URL.
+  - [ ] **Privacy policy URL** (**required**, public). The page is rendered from [`docs/privacy-policy.md`](privacy-policy.md) and published to GitHub Pages at `/privacy/` by the **publish-privacy** workflow. One-time: **Settings → Pages → Source = "GitHub Actions"**, then the workflow runs on push to `main` (or dispatch it). Paste the live URL — shown in the workflow's `deploy` step output and under Settings → Pages (typically `https://missingbulb.github.io/TLDR/privacy/`).
 - [ ] **7.4 Submit for review** (approval: a few days to a couple of weeks).
 
 > **Don't submit until it actually works.** Without a local Chrome to "load unpacked," verify against a **draft/unlisted store install** first — a reviewer who opens a broken panel can reject under "functions as described."

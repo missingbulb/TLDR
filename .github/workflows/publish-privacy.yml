@@ -1,0 +1,62 @@
+name: publish-privacy
+
+# Publishes docs/privacy-policy.md to GitHub Pages at /privacy/ — the stable, public URL the Chrome Web
+# Store listing's Privacy tab points at. Single source: the page is rendered from the markdown at deploy
+# time, so there's no committed HTML copy to drift.
+#
+# ONE-TIME SETUP: repo Settings → Pages → Build and deployment → Source = "GitHub Actions".
+# The live URL is shown in this workflow's `deploy` step output and under Settings → Pages
+# (typically https://missingbulb.github.io/TLDR/privacy/).
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - docs/privacy-policy.md
+      - .github/workflows/publish-privacy.yml
+
+permissions:
+  pages: write
+  id-token: write
+  contents: read
+
+# One concurrent Pages deploy; don't cancel an in-flight publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Render privacy policy to /privacy/index.html
+        run: |
+          mkdir -p _site/privacy
+          {
+            echo '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+            echo '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            echo '<title>TLDR — Privacy Policy</title>'
+            echo '<style>body{max-width:42rem;margin:2rem auto;padding:0 1rem;font:16px/1.6 system-ui,-apple-system,sans-serif;color:#222}h1,h2{line-height:1.25}code{background:#f4f4f4;padding:.1em .3em;border-radius:3px}</style>'
+            echo '</head><body>'
+            npx --yes marked@12 -i docs/privacy-policy.md
+            echo '</body></html>'
+          } > _site/privacy/index.html
+          # Also serve it at the site root so the bare Pages URL isn't a 404.
+          cp _site/privacy/index.html _site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

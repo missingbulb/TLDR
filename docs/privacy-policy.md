@@ -1,13 +1,10 @@
 # TLDR — Privacy Policy
 
-_Last updated: <YYYY-MM-DD>_
+_Last updated: 2026-06-29_
 
 TLDR ("the extension") lets signed-in users read and post short community notes ("tl;dr notes")
 attached to the web page they are viewing. This policy explains exactly what the extension collects,
 why, and what it never does.
-
-> Replace `<CONTACT_EMAIL>` and the `<YYYY-MM-DD>` date before publishing, host this page at a public
-> URL (e.g. GitHub Pages), and paste that URL into the Chrome Web Store **Privacy** tab.
 
 ## What we collect, and only when you act
 
@@ -60,7 +57,7 @@ AWS `il-central-1` (Tel Aviv) region.
 
 ## Contact
 
-Questions or removal requests: **<CONTACT_EMAIL>**.
+Questions or removal requests: **legal@missingbulb.com**.
 
 ## Changes
 
