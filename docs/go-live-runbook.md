@@ -25,6 +25,14 @@ must supply is a `<PLACEHOLDER>` you fill in once and reuse.
 | `<PRIVACY_POLICY_URL>` | a public URL hosting your privacy policy | 7 |
 | `<CHROME_CLIENT_ID>` / `<CHROME_CLIENT_SECRET>` / `<CHROME_REFRESH_TOKEN>` | CWS API publish creds | 6 (optional) |
 
+### Secret vs. public — what goes where
+
+Most values above are **public**, not secrets. Don't over-protect them:
+
+- **Public** (fine to share/commit; configured as GitHub repo **Variables**, or shipped in the extension): `<GOOGLE_CLIENT_ID>` (committed in `client/config.mjs` and ships in the zip; read as `vars.` in `deploy.yml`), `<EXTENSION_ID>`, `<EXTENSION_PUBLIC_KEY>` (goes in `manifest.json`), `<AWS_DEPLOY_ROLE_ARN>`, `<ALLOWED_EXTENSION_ORIGIN>`, `<API_URL>`, `<API_DOMAIN>`, `<CLOUDFRONT_DOMAIN>`.
+- **Genuine secrets** (set these directly under GitHub → Settings → Secrets, never paste them anywhere public): `<EMAIL_HASH_SALT>`, `<CHROME_CLIENT_SECRET>`, `<CHROME_REFRESH_TOKEN>`. (`CHROME_EXTENSION_ID` and `CHROME_CLIENT_ID` live in the Secrets store for convenience but aren't themselves sensitive.)
+- **Not used at all:** the Google **client *secret*** from the Phase-2 Web-application client. TLDR signs in with `response_type=id_token`, which uses only the client *ID* — there's no client secret to store.
+
 ---
 
 ## Phase 0 — Accounts & prerequisites (no code yet)
