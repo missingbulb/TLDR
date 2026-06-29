@@ -5,7 +5,7 @@ body
     code "localhost"
     code "google.com"
   form#form.composer
-    textarea#denylist.body [rows="10" value="google.com localhost example.org"]
+    textarea#denylist.body [rows="10" value="google.com\nlocalhost\nexample.org"]
     div.composer-row
       span#saved.comment-meta
       button#save.post [type="submit"] "Save"

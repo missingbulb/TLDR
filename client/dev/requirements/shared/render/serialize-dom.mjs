@@ -42,8 +42,10 @@ function attrs(el) {
     .filter((n) => n.startsWith("aria-"))
     .sort();
   for (const name of aria) parts.push(`${name}=${JSON.stringify(collapse(el.getAttribute(name)))}`);
-  // A form control's live value (the seeded denylist text, a typed note), if any.
-  if (VALUE_ELEMENTS.has(el.tagName) && el.value) parts.push(`value=${JSON.stringify(collapse(el.value))}`);
+  // A form control's live value (the seeded denylist text, a typed note), if any. NOT collapsed —
+  // JSON.stringify escapes newlines as \n, so a one-host-per-line textarea value shows its line
+  // structure in the golden (and a regression to space/comma joining diffs it). See requirement 6.1.
+  if (VALUE_ELEMENTS.has(el.tagName) && el.value) parts.push(`value=${JSON.stringify(el.value)}`);
   for (const name of BOOLEAN_ATTRS) {
     if (el.hasAttribute(name) || el[name.toLowerCase()] === true) parts.push(name);
   }

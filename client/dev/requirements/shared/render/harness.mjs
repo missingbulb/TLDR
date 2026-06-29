@@ -9,10 +9,17 @@
 // through the REAL code path, faking only its inputs. There is no parallel re-implementation of the
 // render — change sidepanel.mjs and the goldens move with it.
 //
-// Determinism: every global the harness swaps (document, window, chrome, fetch, console.warn/error,
-// Date.now, setTimeout) is restored in close(); app timers (the options "Saved." auto-clear, the
-// panel's refresh debounce) are CAPTURED rather than run, so a test advances them explicitly with
-// flushTimers() instead of waiting on a real clock.
+// Determinism: every global the harness swaps (document, window, chrome, fetch, console.warn,
+// Date.now, setTimeout/clearTimeout) is restored in close(); app timers (the options "Saved."
+// auto-clear, the panel's refresh debounce) are CAPTURED rather than run, so a test advances them
+// explicitly with flushTimers() instead of waiting on a real clock.
+//
+// Failure honesty: the harness does NOT swallow errors. It leaves `console.error` and the default
+// unhandled-rejection behavior alone, so a real failure in the app's fire-and-forget async (e.g.
+// sidepanel.mjs's top-level init(), options.mjs's load()) surfaces and fails the test rather than
+// being captured into an array nobody reads. Only `console.warn` is captured — the panel logs a
+// deliberately-exercised read/post failure via console.warn, and capturing it keeps the test output
+// clean while a case can still inspect session.warnings.
 "use strict";
 
 import fs from "node:fs";
@@ -29,8 +36,6 @@ const SURFACES = {
   sidepanel: { html: "src/sidepanel.html", mod: "src/sidepanel.mjs", form: "composer", input: "body" },
   options: { html: "src/options.html", mod: "src/options.mjs", form: "form", input: "denylist" },
 };
-
-const API_HOST = "api.tldr.example"; // mirrors config.mjs's API_BASE_URL host
 
 // Build the fake `fetch` the UI's read/post path hits. Returns the configured comments for a GET,
 // and records every POST so a behavior case can assert the write carried a bearer token (and the
@@ -81,8 +86,6 @@ export async function open(surface, testCase) {
   });
   const fetchLog = [];
   const warnings = [];
-  const rejections = [];
-  const onRejection = (err) => rejections.push(err);
 
   // ---- install the environment -------------------------------------------------------------
   const saved = {
@@ -91,11 +94,14 @@ export async function open(surface, testCase) {
     chrome: global.chrome,
     fetch: global.fetch,
     warn: console.warn,
-    error: console.error,
     now: Date.now,
     setTimeout: global.setTimeout,
+    clearTimeout: global.clearTimeout,
   };
-  const capturedTimers = [];
+  // Captured app timers (delay > 0), keyed by a real, cancellable id so the app's debounce
+  // (clearTimeout(id); setTimeout(...)) supersedes correctly instead of leaking a stale callback.
+  const timers = new Map();
+  let timerSeq = 0;
 
   global.document = doc;
   global.window = dom.window;
@@ -103,20 +109,24 @@ export async function open(surface, testCase) {
   global.fetch = makeFakeFetch(testCase, fetchLog);
   // The production failure paths log via console.warn (e.g. "post failed") — capture rather than
   // print, so a deliberately-exercised error doesn't litter the test output, while still being
-  // inspectable by a case that wants to assert it.
+  // inspectable by a case that wants to assert it. console.error and unhandled rejections are left
+  // ALONE so a real app-async failure fails the test loudly instead of being swallowed.
   console.warn = (...args) => warnings.push(args.map(String).join(" "));
-  console.error = (...args) => warnings.push(args.map(String).join(" "));
   Date.now = () => REFERENCE_NOW_MS;
   // Pass through 0-delay timers (the harness's own settle) to the real clock; capture app timers
   // (delay > 0) so a test runs them deterministically with flushTimers().
   global.setTimeout = (fn, delay, ...args) => {
     if (delay && delay > 0) {
-      capturedTimers.push(() => fn(...args));
-      return capturedTimers.length;
+      const id = ++timerSeq;
+      timers.set(id, () => fn(...args));
+      return id;
     }
     return saved.setTimeout(fn, delay, ...args);
   };
-  process.on("unhandledRejection", onRejection);
+  global.clearTimeout = (id) => {
+    if (timers.has(id)) timers.delete(id);
+    else saved.clearTimeout(id);
+  };
 
   // Drain the finite microtask chain the module's init() schedules (storage.get → refresh →
   // getComments → render). No real I/O is involved (every fake resolves synchronously), so a few
@@ -137,7 +147,6 @@ export async function open(surface, testCase) {
     calls,
     fetchLog,
     warnings,
-    rejections,
     settle,
     el: (id) => doc.getElementById(id),
     text: (id) => doc.getElementById(id)?.textContent ?? null,
@@ -149,21 +158,22 @@ export async function open(surface, testCase) {
     submit() {
       doc.getElementById(spec.form).dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
     },
-    // Run the app timers captured since the last flush (e.g. the options "Saved." auto-clear).
+    // Run the app timers still pending (not superseded by a clearTimeout), e.g. the options
+    // "Saved." auto-clear.
     flushTimers() {
-      const pending = capturedTimers.splice(0);
+      const pending = [...timers.values()];
+      timers.clear();
       for (const t of pending) t();
     },
     close() {
-      process.off("unhandledRejection", onRejection);
       global.document = saved.document;
       global.window = saved.window;
       global.chrome = saved.chrome;
       global.fetch = saved.fetch;
       console.warn = saved.warn;
-      console.error = saved.error;
       Date.now = saved.now;
       global.setTimeout = saved.setTimeout;
+      global.clearTimeout = saved.clearTimeout;
       dom.window.close();
     },
   };

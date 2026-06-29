@@ -17,9 +17,20 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadCases, leafIdOf, goldenPath } from "./shared/cases.mjs";
 import { allRequirementIds, leafRequirementIds } from "./shared/requirements-doc.mjs";
-import { KIND_NAMES, SNAPSHOT_KINDS } from "./shared/kinds.mjs";
+import { KINDS, KIND_NAMES, SNAPSHOT_KINDS } from "./shared/kinds.mjs";
+
+const REQ_DIR = path.dirname(fileURLToPath(import.meta.url));
+// All snapshot kinds share one runner; each coded kind has its own `<kind>/<kind>.test.mjs`.
+const SNAPSHOT_RUNNER = path.join(REQ_DIR, "shared", "render", "dom-snapshots.test.mjs");
+
+// The leaves deliberately NOT verified here — a tbd case tracks each, naming where it's covered
+// today. This is a committed allowlist so that downgrading a wired leaf to `tbd` (which would stop
+// its verify() from ever running) is a reviewed change, not a silent hole.
+const TBD_LEAVES = ["8.1"];
 
 const allIds = new Set(allRequirementIds());
 const leaves = leafRequirementIds();
@@ -61,6 +72,23 @@ test("every case declares a known kind (its folder)", () => {
   assert.deepEqual(bad, [], `cases with an unknown kind (known: ${[...KNOWN_KINDS].join(", ")}):`);
 });
 
+// Kinds are auto-discovered from <kind>/kind.mjs, but a case is only actually VERIFIED if a runner
+// executes it. Close the loop: every discovered kind must have a runner — the shared snapshot runner
+// for a snapshot kind, or `<kind>/<kind>.test.mjs` for a coded kind. Without this, a new kind folder
+// (with cases) whose runner was forgotten would leave its leaves "claimed" but never run, suite green.
+test("every kind has a runner that executes its cases", () => {
+  const missing = [];
+  for (const kind of KINDS) {
+    if (SNAPSHOT.has(kind.name)) {
+      if (!fs.existsSync(SNAPSHOT_RUNNER)) missing.push(`${kind.name} (shared snapshot runner missing)`);
+    } else {
+      const runner = path.join(kind.dir, `${kind.name}.test.mjs`);
+      if (!fs.existsSync(runner)) missing.push(`${kind.name} (no ${kind.name}/${kind.name}.test.mjs)`);
+    }
+  }
+  assert.deepEqual(missing, [], "kinds with no runner — their cases would be claimed but never executed:");
+});
+
 test("a coded (non-snapshot) case carries no golden — a golden can't verify a click or a rule (#429)", () => {
   const bad = cases
     .filter((c) => !SNAPSHOT.has(c.kind) && fs.existsSync(goldenPath(c)))
@@ -74,4 +102,23 @@ test("a coded case must export a verify() (or be an explicit tbd with a coveredB
     .filter((c) => !(typeof c.verify === "function" || (c.tbd && c.coveredBy)))
     .map((c) => c.name);
   assert.deepEqual(bad, [], "coded cases missing verify() (and not a tbd+coveredBy):");
+});
+
+// `tbd` skips a leaf's verification (the runners report it skipped before calling verify()), so it's
+// an escape hatch. Pin it: the set of tbd leaves must equal a committed allowlist, so downgrading a
+// real, wired leaf to tbd — hiding its verification — fails here as a reviewed change, not silently.
+test("the set of tbd leaves equals the committed allowlist (a tbd downgrade is a reviewed change)", () => {
+  const tbd = cases.filter((c) => c.tbd).map((c) => leafIdOf(c.name)).sort();
+  assert.deepEqual(
+    tbd,
+    [...TBD_LEAVES].sort(),
+    "tbd leaves drifted from the allowlist — a wired leaf marked tbd hides its verification; update TBD_LEAVES only deliberately."
+  );
+});
+
+// A leaf can't both carry real coded coverage and claim it's not verified here — that combination is
+// how a sabotaged verify() would hide behind tbd (the runner skips tbd before calling verify()).
+test("a tbd case carries no verify()", () => {
+  const bad = cases.filter((c) => c.tbd && typeof c.verify === "function").map((c) => c.name);
+  assert.deepEqual(bad, [], "tbd cases that also export verify() (drop one):");
 });

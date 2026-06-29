@@ -15,31 +15,29 @@ import fs from "node:fs";
 import { loadCases, goldenPath } from "../cases.mjs";
 import { renderSnapshot, rendersSnapshot } from "./render-snapshot.mjs";
 import { artifactPath } from "../artifacts-dir.mjs";
+import { assertEnUsUtc } from "../locale-guard.mjs";
+import { SNAPSHOT_KINDS } from "../kinds.mjs";
 
-const CASES = (await loadCases()).filter(rendersSnapshot);
+const allCases = await loadCases();
+const CASES = allCases.filter(rendersSnapshot);
 
 test("there is at least one dom snapshot case", () => {
   assert.ok(CASES.length > 0, "no dom/cases/*.case.mjs found");
 });
 
-// The note meta uses the panel's toLocale* date for an older note, which follows the runtime's
-// default locale AND timezone. The committed goldens are authored in en-US / UTC (the values the
-// requirements npm scripts pin via LANG=C.UTF-8 and TZ=UTC — Node's CI/sandbox default too). Guard
-// both so a maintainer on a non-English or non-UTC shell gets an actionable message instead of a
-// baffling text diff.
+// Every snapshot kind must have a producer here — else its cases would be silently filtered out by
+// rendersSnapshot and never compared. Guards against adding a snapshot kind folder without wiring its
+// producer into render-snapshot.mjs (which would otherwise pass vacuously).
+test("every snapshot kind is produced by this runner", () => {
+  const orphan = SNAPSHOT_KINDS.filter((k) => !rendersSnapshot({ kind: k }));
+  assert.deepEqual(orphan, [], "snapshot kinds with no producer in render-snapshot.mjs:");
+});
+
+// The note meta renders an older note's absolute date via the panel's toLocale* call (locale- and
+// timezone-dependent). The goldens are authored in en-US / UTC; guard it (shared with the logic
+// runner, which has the same dependency in case 4.4).
 test("the environment resolves to the en-US / UTC settings the goldens assume", () => {
-  const locale = new Intl.DateTimeFormat().resolvedOptions().locale;
-  assert.equal(
-    locale,
-    "en-US",
-    `dom goldens are authored in en-US, but this environment resolves to "${locale}". ` +
-      `Set LANG=C.UTF-8 (the requirements npm scripts do) when running/regenerating the goldens.`
-  );
-  assert.equal(
-    new Date().getTimezoneOffset(),
-    0,
-    "dom goldens are authored in UTC; set TZ=UTC (the requirements npm scripts do) when running/regenerating them."
-  );
+  assertEnUsUtc(assert);
 });
 
 for (const testCase of CASES) {

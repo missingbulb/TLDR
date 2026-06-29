@@ -16,7 +16,10 @@ the portable, project-agnostic write-up of *why* and *how* lives in
 1. **Doc-first, red by default.** Adding a leaf to [`requirements.md`](requirements.md) fails the
    build until an executable case claims it. The spec drives the tests, not the other way around.
 2. **Every leaf ⇄ exactly one case, of exactly one kind.** Enforced as a strict bijection by
-   [`requirements-coverage.test.mjs`](requirements-coverage.test.mjs).
+   [`requirements-coverage.test.mjs`](requirements-coverage.test.mjs) — which also checks that every
+   discovered kind has a runner that *executes* its cases (a claimed-but-never-run leaf fails), and
+   that the set of skipped `tbd` leaves matches a committed allowlist (so a wired leaf can't be
+   silently downgraded to unverified).
 3. **Kinds are extensible.** A *kind* is one way a requirement can be asserted (a rendered-state
    snapshot, a click behavior, a pure rule). Adding one is a self-contained folder drop — see
    [Adding a kind](#adding-a-kind).
@@ -86,8 +89,11 @@ registry:
    `dev/requirements/**/*.test.mjs`, so the new runner is picked up automatically.
 
 A `tbd` case (`tbd: true` + a `coveredBy` pointer) is a tracked-but-not-wired-here leaf: it stays a
-visible requirement, reported skipped, naming where it's covered today. Prefer a real verification;
-reach for `tbd` only for a genuinely not-yet-wired layer (e.g. the real-browser e2e, `8.1`).
+visible requirement, reported skipped, naming where it's covered today. Because `tbd` skips
+verification, adding one is a **reviewed change**: update the `TBD_LEAVES` allowlist in
+[`requirements-coverage.test.mjs`](requirements-coverage.test.mjs) in the same commit, or the gate
+fails. Prefer a real verification; reach for `tbd` only for a genuinely not-yet-wired layer (e.g. the
+real-browser e2e, `8.1`).
 
 ## The owner-approval contract
 
@@ -111,8 +117,8 @@ branch honestly shows the test red-pending.
   `Date.now()` to [`shared/reference-time.mjs`](shared/reference-time.mjs) while it drives the real
   code, so a golden authored today doesn't rot tomorrow.
 - **Pinned locale/timezone.** Older notes show an absolute locale date; the `test`/`test:ui`/
-  `refresh:ui` scripts pin `LANG=C.UTF-8` and `TZ=UTC`, and the dom runner guards both with an
-  actionable message.
+  `refresh:ui` scripts pin `LANG=C.UTF-8` and `TZ=UTC`, and both the dom and logic runners guard them
+  with an actionable message (the shared [`shared/locale-guard.mjs`](shared/locale-guard.mjs)).
 - **No real I/O.** Every `chrome.*`/`fetch` is faked and resolves synchronously, so the harness
   settles a finite microtask chain rather than racing a network.
 
@@ -129,6 +135,7 @@ dev/requirements/
     cases.mjs                     loads every kind's cases/, tagging kind from the folder
     requirements-doc.mjs          parses requirements.md into leaf ids
     reference-time.mjs            the pinned "now"
+    locale-guard.mjs              the shared en-US/UTC environment guard (dom + logic runners)
     build-gallery.mjs + gallery.test.mjs   the two-column gallery generator + its gate
     artifacts-dir.mjs             where a failed dom diff writes its actual
     render/                       the one harness both snapshot + behavior cases use

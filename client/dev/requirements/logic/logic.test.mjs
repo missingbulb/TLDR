@@ -8,11 +8,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadCases, leafIdOf } from "../shared/cases.mjs";
+import { assertEnUsUtc } from "../shared/locale-guard.mjs";
 
 const logicCases = (await loadCases()).filter((c) => c.kind === "logic");
 
 test("there is at least one logic case", () => {
   assert.ok(logicCases.length > 0, 'no kind:"logic" cases found');
+});
+
+// Case 4.4 asserts an absolute locale date through the real render, so this runner has the same
+// locale/timezone dependency as the dom snapshots — guard it with the same actionable message.
+test("the environment resolves to the en-US / UTC settings the date cases assume", () => {
+  assertEnUsUtc(assert);
 });
 
 for (const testCase of logicCases) {
