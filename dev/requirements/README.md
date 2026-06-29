@@ -1,9 +1,11 @@
-# Executable requirements — the TLDR extension UI
+# Executable requirements — the TLDR extension (UI + server)
 
-This folder is a self-contained methodology for **executable requirements**: a way to drive UI
+This folder is a self-contained methodology for **executable requirements**: a way to drive
 development where every requirement is backed by a test that proves it, the suite fails the moment a
 requirement is added without a proof, and the *expected* result of each proof is owned by the project
-owner — never silently changed by an agent to make a red build go green.
+owner — never silently changed by an agent to make a red build go green. It is **cross-tier**: a
+product requirement is stated once, with its client-UI proof and (where the real boundary is the
+backend) its server proof as sibling leaves.
 
 The shape here — a numbered spec, a strict leaf⇄case bijection, kinds as a pluggable contract,
 owner-owned expecteds, snapshots driven through the real code — is the reusable pattern. It is
@@ -45,11 +47,16 @@ The kinds that ship today:
 | --- | --- | --- | --- |
 | `dom` | a rendered side-panel / options state | the **real** `sidepanel.mjs` / `options.mjs` run under jsdom + a fake `chrome.*`, then rasterized (satori → resvg) with the real `sidepanel.css` | `dom/cases/<stem>.png` (a committed, pixel-exact image, embedded inline in the gallery) |
 | `behavior` | a gesture a static snapshot can't show (type → Post, save the denylist) | the same harness, driven through the gesture | coded assertions in the case's `verify()` |
-| `logic` | a non-visual rule with no pixels of its own (the a11y/HTML contract, manifest surfaces) | a shipped predicate/markup | coded assertions in the case's `verify()` |
+| `logic` | a non-visual UI rule with no pixels of its own (the a11y/HTML contract, manifest surfaces) | a shipped predicate/markup | coded assertions in the case's `verify()` |
+| `server` | a server-enforced rule behind a UI requirement (only signed-in people can post; the size limit) | the **real** `server/src/handler.mjs` run against a faked event | coded assertions on the response (an error status) |
 
-`dom` is a **snapshot** kind (its expected is a committed image); `behavior` and `logic` are **coded**
-kinds (their expected *is* the assertion). [`shared/render/`](shared/render) holds the one harness
-both snapshot and behavior cases build on.
+`dom` is a **snapshot** kind (its expected is a committed image); `behavior`, `logic`, and `server`
+are **coded** kinds (their expected *is* the assertion). The `server` kind is what makes this a
+**cross-tier** spec: a requirement like *only signed-in people can post* is stated once, with its UI
+half (the client sends the token — `behavior`) **and** its real boundary (the server rejects an
+unauthenticated write — `server`) as sibling leaves. [`shared/render/`](shared/render) holds the one
+harness the snapshot + behavior cases build on; [`server/`](server) runs the handler for the server
+cases (error paths return before any DynamoDB call, so no AWS mock is needed).
 
 ### The images are the approval surface — driven by the real code
 
@@ -151,19 +158,21 @@ dev/requirements/
       image-renderer.mjs          the real DOM + real sidepanel.css -> satori -> resvg -> PNG
       fonts/                      the bundled font (deterministic rasterization) + its LICENSE
       render-snapshot.mjs         kind -> produce a case's PNG
-      note-meta.mjs               §4 helper: render one note, read its meta line
       dom-snapshots.test.mjs      the dom snapshot runner — pixel comparison (npm run test:ui)
       refresh-snapshots.mjs       regenerate images + gallery (npm run refresh:ui)
 
   dom/       kind.mjs  cases/<slug>.<id>.case.mjs (+ <stem>.png)
   behavior/  kind.mjs  behavior.test.mjs  cases/<slug>.<id>.case.mjs
   logic/     kind.mjs  logic.test.mjs     cases/<slug>.<id>.case.mjs
+  server/    kind.mjs  server.test.mjs  handler-harness.mjs  cases/<slug>.<id>.case.mjs
 ```
 
 ## Commands
 
-- `npm test` — the whole client suite, including this lane (`client/` working dir).
-- `npm run test:ui` — just the executable-requirements suite.
+Run from the `dev/` package (`npm --prefix dev …` from the repo root):
+
+- `npm test` — the whole executable-requirements suite (UI + server).
+- `npm run test:ui` — just the dom (image) snapshot lane.
 - `npm run refresh:ui` — regenerate the `dom` images + the inline gallery after an **intentional**
   panel/options/HTML change, then review the diff and get it approved.
 

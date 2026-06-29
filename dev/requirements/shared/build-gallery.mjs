@@ -22,6 +22,7 @@ import { loadCases, leafIdOf } from "./cases.mjs";
 // Test runners, addressed relative to requirements.md (its sibling kind folders).
 const BEHAVIOR_TEST = "behavior/behavior.test.mjs";
 const LOGIC_TEST = "logic/logic.test.mjs";
+const SERVER_TEST = "server/server.test.mjs";
 
 const MARKER_RE = /<!--\s*req-gallery:(\d+(?:\.\d+)+)\s*-->/;
 const marker = (id) => `<!-- req-gallery:${id} -->`;
@@ -29,6 +30,7 @@ const marker = (id) => `<!-- req-gallery:${id} -->`;
 // The canonical managed left-cell content for one leaf, derived from its CASE (its kind / tbd):
 //   - dom      → the committed PNG of the rendered state, embedded inline for visual approval.
 //   - behavior → a note pointing at the behavior runner (a gesture a static snapshot can't show).
+//   - server   → a note pointing at the server runner (a server-enforced response, no UI).
 //   - logic    → a note pointing at the logic runner, or, for a tbd leaf, where it's covered today.
 function managedLine(id, testCase) {
   const kind = testCase?.kind || "logic";
@@ -41,6 +43,9 @@ function managedLine(id, testCase) {
       return `⚠️ _Behavior leaf — **untested here** — covered today by \`${testCase?.coveredBy || "?"}\`._ ${marker(id)}`;
     }
     return `🚩 _Behavior leaf — verified by \`${BEHAVIOR_TEST}\` (a gesture a static snapshot can't show)._ ${marker(id)}`;
+  }
+  if (kind === "server") {
+    return `🛡️ _Server leaf — verified by \`${SERVER_TEST}\` (the real handler's response, asserted server-side)._ ${marker(id)}`;
   }
   const note = testCase?.tbd
     ? `**untested here** — covered today by \`${testCase?.coveredBy || "?"}\``

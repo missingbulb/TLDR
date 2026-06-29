@@ -168,8 +168,11 @@ never lost.
 
 ## 2. Posting a note
 
-The post gesture and its effects — what a static snapshot can't observe, so these are `behavior`
-cases driving the real composer and asserting the DOM + the network calls.
+What happens when you add a note, and who's allowed to. The *looks* of the flow are pinned as images
+— **posting…** (`1.7`), **saved** (`2.5`), **failed** (`1.8`); the `behavior` leaves verify the
+gesture and its effects a still image can't show (the click, the button enabling/disabling, the box
+clearing); and the `server` leaves verify the rule the UI can only assume — that the server itself
+decides who may post.
 
 <table>
 <tr>
@@ -180,8 +183,9 @@ cases driving the real composer and asserting the DOM + the network calls.
 </td>
 <td valign="top">
 
-`2.1` Submitting a note **inserts it optimistically** (shown at once) and **disables Post** while the
-write is in flight; the textarea clears.
+`2.1` When you post a note it appears **immediately** as **"posting…"**, **Post** is **disabled**
+until it's saved, and the box clears — so you see it took and can't double-post. _(How "posting…"
+looks: `1.7`.)_
 
 </td>
 </tr>
@@ -196,9 +200,9 @@ write is in flight; the textarea clears.
 </td>
 <td valign="top">
 
-`2.2` On **success** the optimistic note **reconciles** to a confirmed note (the pending treatment
-drops) and **Post re-enables**. The write carries a **bearer token**; the read carries **none**
-(reads are public/cache-friendly).
+`2.2` When the save **succeeds**, your note becomes a normal saved note and **Post** is **enabled**
+again. (Your note is sent with your signed-in identity; reading notes is anonymous.) _(How it looks:
+`2.5`.)_
 
 </td>
 </tr>
@@ -213,8 +217,9 @@ drops) and **Post re-enables**. The write carries a **bearer token**; the read c
 </td>
 <td valign="top">
 
-`2.3` On **failure** the note is **marked failed**, the composer shows **"Could not post — try
-again."**, and **Post re-enables** for a retry.
+`2.3` If the save **fails**, your note isn't lost — it stays, marked **failed**, the box shows
+**"Could not post — try again."**, and **Post** is **enabled** again so you can retry. _(How it
+looks: `1.8`.)_
 
 </td>
 </tr>
@@ -229,18 +234,67 @@ again."**, and **Post re-enables** for a retry.
 </td>
 <td valign="top">
 
-`2.4` An **empty or whitespace-only** body **does not post** and adds **no** note.
+`2.4` An **empty or whitespace-only** note doesn't post and adds nothing.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![posted-state.2.5](dom/cases/posted-state.2.5.png) <!-- req-gallery:2.5 -->
+
+</td>
+<td valign="top">
+
+`2.5` After a successful post, your note shows as a **normal saved note** with **Post enabled** again
+(the "posting…" treatment is gone).
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:2.6 -->
+
+</td>
+<td valign="top">
+
+`2.6` **Only signed-in people can post.** The UI sends your signed-in identity with a note (and
+nothing when reading) — but the guarantee is the **server's**: a write with no signed-in identity is
+rejected. _(Cross-tier: the UI half is `2.2`; this is the server enforcement.)_
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:2.7 -->
+
+</td>
+<td valign="top">
+
+`2.7` **A verified email is required to post.** The server rejects a signed-in user whose Google
+email isn't verified.
 
 </td>
 </tr>
 </table>
 
 
-## 3. Accessibility & safety
+## 3. Safety, limits & accessibility
 
-The semantics assistive tech and the security model depend on. The static-markup contracts (`3.1`,
-`3.2`, `3.4`) are `logic` cases asserted against the shipped HTML; the XSS guard (`3.3`) is a
-`behavior` case (it needs the real render of an untrusted body).
+What keeps the panel safe, bounded, and usable by everyone — stated as product behavior. *How* each
+is checked (a screen-reader live region, the shipped markup, the server's response) is the
+verification detail, not the requirement.
 
 <table>
 <tr>
@@ -251,7 +305,8 @@ The semantics assistive tech and the security model depend on. The static-markup
 </td>
 <td valign="top">
 
-`3.1` The notes list is an **`aria-live="polite"`** region, so a newly arriving note is announced.
+`3.1` When a new note arrives while the panel is open, a **screen-reader user is told about it**
+without having to go looking. _(How: the notes list is an `aria-live="polite"` region.)_
 
 </td>
 </tr>
@@ -266,7 +321,8 @@ The semantics assistive tech and the security model depend on. The static-markup
 </td>
 <td valign="top">
 
-`3.2` The composer error is a **`role="alert"`** live region, so a post failure is announced.
+`3.2` When a post fails, a **screen-reader user is told about the error** the moment it appears.
+_(How: the error is a `role="alert"` live region.)_
 
 </td>
 </tr>
@@ -281,8 +337,10 @@ The semantics assistive tech and the security model depend on. The static-markup
 </td>
 <td valign="top">
 
-`3.3` A note body is inserted as **text, never parsed as HTML**: a body crafted to inject an element
-produces **no such element** in the DOM, and the body's text equals the raw string (XSS-safe).
+`3.3` **Reading a note can never run code.** A note that contains HTML or a `<script>` shows as
+**plain text** — it's never run or rendered as markup. _(How: the body is inserted as text, so a
+crafted body injects no element. The server stores the note verbatim — it's content-agnostic — so
+this safety lives where the note is shown.)_
 
 </td>
 </tr>
@@ -297,8 +355,26 @@ produces **no such element** in the DOM, and the body's text equals the raw stri
 </td>
 <td valign="top">
 
-`3.4` The composer textarea **caps input at maxlength 8192** and carries the **placeholder prompt**,
-and **Post is a submit-type button** (keyboard-reachable, Enter/click submits).
+`3.4` The note box **shows a prompt** for what to write and **caps very long notes**; you can post
+with the button or the keyboard. _(How: the textarea's placeholder + `maxlength` 8192, and Post is a
+submit-type button.)_
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:3.5 -->
+
+</td>
+<td valign="top">
+
+`3.5` **A note over the size limit (~8 KB) is rejected** — and the guarantee is the **server's**, so
+a client that bypasses the box's cap still can't store an oversized note. _(Cross-tier: the UI cap is
+`3.4`; this is the server enforcement.)_
 
 </td>
 </tr>

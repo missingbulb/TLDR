@@ -166,12 +166,26 @@ Kinds are *mechanisms of verification*, not feature areas. A good default set:
 | **render / dom** | what a state looks like: structure, copy, classes, a11y attributes | a committed snapshot (text or pixels) |
 | **behavior** | a gesture's effect a static snapshot can't show: a click navigates, a submit posts optimistically, a save persists | coded assertions over the driven DOM + captured platform calls |
 | **logic** | a non-visual rule the UI depends on: a formatter, a state-machine transition, a config/manifest surface | coded assertions against the shipped function/markup |
+| **server / backend** | the server-enforced half of a UI requirement: auth, size/rate limits, validation | run the real handler against a faked request, assert its response (an error is easiest) |
 | **e2e** (often a singleton, frequently `tbd`) | "it actually loads and runs on the real platform" | a real-browser/device run, self-diagnosing and hang-proof |
 
 A *singleton* kind is fine: "the app loads in a real browser" is a perfectly good requirement whose
 mechanism is one heavy test. The kind names the mechanism, not a plurality. Add a kind only when a new
 requirement genuinely needs a *different way of asserting* — and make adding one a self-contained
 folder drop (a descriptor, a `cases/` dir, a runner), so the loader/gate/gallery extend for free.
+
+### 5.1 Requirements are cross-tier — state them once, prove each tier
+Many "UI" requirements are really product rules whose **real boundary is the backend**: *only
+signed-in people can post*, *a note is capped at 8 KB*, *an unverified email can't comment*. The UI
+does its visible part (sends the token, caps the box, hides the button), but a crafted client
+bypasses all of it — so a UI test alone proves only the courtesy, not the guarantee. State the
+requirement **once**, next to its UI proof, and give it a **server leaf** whose assertion is the
+server's *response* (the easiest is an error: 401/403/413). Two cheap properties make this painless:
+the framework already spans tiers (the spec is a product spec, not a UI spec), and a server's
+*rejection* paths usually short-circuit before any datastore call, so the server case runs the real
+handler with **no database mock** — just the faked request in, the status code out. Conversely, name
+the things that are **not** cross-tier: e.g. render-time XSS-safety is the client's job if the server
+stores content verbatim — don't invent a server leaf that has no error to assert.
 
 ## 6. Rendering HTML (the visual-approval gallery)
 
