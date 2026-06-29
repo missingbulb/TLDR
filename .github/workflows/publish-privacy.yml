@@ -1,6 +1,6 @@
 name: publish-privacy
 
-# Publishes docs/privacy-policy.md to GitHub Pages at /privacy/ — the stable, public URL the Chrome Web
+# Publishes dev/docs/privacy-policy.md to GitHub Pages at /privacy/ — the stable, public URL the Chrome Web
 # Store listing's Privacy tab points at. Single source: the page is rendered from the markdown at deploy
 # time, so there's no committed HTML copy to drift.
 #
@@ -13,7 +13,7 @@ on:
   push:
     branches: [main]
     paths:
-      - docs/privacy-policy.md
+      - dev/docs/privacy-policy.md
       - .github/workflows/publish-privacy.yml
 
 permissions:
@@ -41,7 +41,7 @@ jobs:
             echo '<title>TLDR — Privacy Policy</title>'
             echo '<style>body{max-width:42rem;margin:2rem auto;padding:0 1rem;font:16px/1.6 system-ui,-apple-system,sans-serif;color:#222}h1,h2{line-height:1.25}code{background:#f4f4f4;padding:.1em .3em;border-radius:3px}</style>'
             echo '</head><body>'
-            npx --yes marked@12 -i docs/privacy-policy.md
+            npx --yes marked@12 -i dev/docs/privacy-policy.md
             echo '</body></html>'
           } > _site/privacy/index.html
           # Also serve it at the site root so the bare Pages URL isn't a 404.

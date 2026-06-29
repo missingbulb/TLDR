@@ -12,6 +12,10 @@ dist/
 # Local, owner-specific config (never committed)
 client/config.local.json
 
+# Executable-requirements snapshot debugging artifacts (the rendered "actual" written on a golden
+# mismatch; regenerated on failure, never committed — the committed goldens beside the cases are the truth)
+dev/requirements/shared/.artifacts/
+
 # Logs / coverage / OS cruft
 *.log
 coverage/

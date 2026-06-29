@@ -77,7 +77,7 @@ Creates the store item as a **draft** so Chrome assigns the permanent id. **No p
 ## Phase 2 — Google OAuth "Web application" client (sign-in)
 
 Sign-in uses a Google **ID token** (JWT), which needs a **Web application** OAuth client — not a "Chrome app" client
-(that yields an opaque access token the JWT authorizer can't validate; `docs/architecture.md` §12-A1).
+(that yields an opaque access token the JWT authorizer can't validate; `dev/docs/architecture.md` §12-A1).
 
 > Google's console is now the **"Google Auth Platform"** UI: the old "OAuth consent screen" is split into **Branding** +
 > **Audience**, and OAuth clients live under **Clients**.
@@ -96,7 +96,7 @@ Sign-in uses a Google **ID token** (JWT), which needs a **Web application** OAut
 
 ## Phase 3 — AWS account + OIDC deploy role + app stack
 
-CI deploys to AWS via **GitHub OIDC** — no long-lived keys (`docs/architecture.md` §8.4). Region **`il-central-1`** (Tel Aviv), pinned in `deploy.yml`.
+CI deploys to AWS via **GitHub OIDC** — no long-lived keys (`dev/docs/architecture.md` §8.4). Region **`il-central-1`** (Tel Aviv), pinned in `deploy.yml`.
 
 ### 3A. Create the AWS account
 - [ ] **3.1** Sign up at [aws.amazon.com](https://aws.amazon.com/). Note the 12-digit **account id** → `<AWS_ACCOUNT_ID>`.
@@ -133,7 +133,7 @@ GitHub → **Settings → Secrets and variables → Actions**. The deploy job st
 - [ ] **3.7 Variables:**
   - `AWS_DEPLOY_ROLE_ARN` = `<AWS_DEPLOY_ROLE_ARN>`
   - `GOOGLE_CLIENT_ID` = `<GOOGLE_CLIENT_ID>` *(from 2.6)*
-  - `ALLOWED_EXTENSION_ORIGIN` — **leave unset** (`deploy.yml` defaults it to `*`), or set it to `*` explicitly. It **must resolve to `*`**: API Gateway HTTP API v2 **rejects** `chrome-extension://` origins ("Invalid format for origin"). Safe: writes are JWT-gated, reads public, and the extension reaches the API via `host_permissions`, not browser CORS (`docs/architecture.md` §12-A9).
+  - `ALLOWED_EXTENSION_ORIGIN` — **leave unset** (`deploy.yml` defaults it to `*`), or set it to `*` explicitly. It **must resolve to `*`**: API Gateway HTTP API v2 **rejects** `chrome-extension://` origins ("Invalid format for origin"). Safe: writes are JWT-gated, reads public, and the extension reaches the API via `host_permissions`, not browser CORS (`dev/docs/architecture.md` §12-A9).
   - *(optional)* `CDN_PRICE_CLASS` = `PriceClass_200`
 - [ ] **3.8 Secret:** `EMAIL_HASH_SALT` = a long random string (salts the stored one-way email hash; set once and don't rotate).
 
@@ -197,7 +197,7 @@ Open the item from Phase 1 in the [Developer Dashboard](https://chrome.google.co
     | Host permission | The single backend the extension talks to, to read/post notes. No other host. |
 
   - [ ] **Data usage:** declare **Authentication information** (Google sign-in) + **User-generated content** (note text); check the three certifications (no selling, no unrelated use, no creditworthiness use). Raw email is never stored (only a salted hash), so don't declare email collection.
-  - [ ] **Privacy policy URL** (**required**, public). The page is rendered from [`docs/privacy-policy.md`](privacy-policy.md) and published to GitHub Pages at `/privacy/` by the **publish-privacy** workflow. One-time: **Settings → Pages → Source = "GitHub Actions"**, then the workflow runs on push to `main` (or dispatch it). Paste the live URL — shown in the workflow's `deploy` step output and under Settings → Pages (typically `https://missingbulb.github.io/TLDR/privacy/`).
+  - [ ] **Privacy policy URL** (**required**, public). The page is rendered from [`dev/docs/privacy-policy.md`](privacy-policy.md) and published to GitHub Pages at `/privacy/` by the **publish-privacy** workflow. One-time: **Settings → Pages → Source = "GitHub Actions"**, then the workflow runs on push to `main` (or dispatch it). Paste the live URL — shown in the workflow's `deploy` step output and under Settings → Pages (typically `https://missingbulb.github.io/TLDR/privacy/`).
 - [ ] **7.4 Submit for review** (approval: a few days to a couple of weeks).
 
 > **Don't submit until it actually works.** Without a local Chrome to "load unpacked," verify against a **draft/unlisted store install** first — a reviewer who opens a broken panel can reject under "functions as described."
@@ -209,7 +209,7 @@ Open the item from Phase 1 in the [Developer Dashboard](https://chrome.google.co
 - [ ] **8.1** Install the **published** extension from its store URL (fresh profile).
 - [ ] **8.2** Confirm the id equals `<EXTENSION_ID>` (the injected `key` guarantees it), so the OAuth redirect keeps matching.
 - [ ] **8.3** On a normal page: reads load; sign in; post a note; confirm it appears for a second viewer within the CDN TTL (~30–60 s); the author sees it instantly via optimistic render.
-- [ ] **8.4** Watch CloudWatch logs / costs for the first day; revisit the deferred items in `docs/architecture.md` §10.
+- [ ] **8.4** Watch CloudWatch logs / costs for the first day; revisit the deferred items in `dev/docs/architecture.md` §10.
 
 ---
 
@@ -226,5 +226,5 @@ Phases 2/4/5 set the three release variables ──> Phase 6 (release, on main) 
 ## References (in-repo)
 - `server/README.md` — OIDC trust policy (+ casing), the full deploy permissions policy, CORS (`*`), hardening.
 - `client/README.md` — build-time config injection, the `key`, icons.
-- `docs/architecture.md` — as-built design; §12-A9 (CORS) and the §11 owner-input list this operationalizes.
+- `dev/docs/architecture.md` — as-built design; §12-A9 (CORS) and the §11 owner-input list this operationalizes.
 - Workflows: `.github/workflows/deploy.yml` (deploy + termination protection), `release.yml` (injected build), `publish-chrome-store.yml`.

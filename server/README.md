@@ -92,7 +92,7 @@ Note the `ApiUrl` / `ApiDomain` outputs.
 > `chrome-extension://` scheme in its CORS `AllowOrigins` (`BadRequestException: "Invalid format for origin …"`),
 > so you cannot lock CORS to the extension origin here. Use `*`. This is not a security regression: writes are
 > gated by the Google JWT authorizer (POST only), reads are public by design, and the extension reaches the API
-> via its manifest `host_permissions` rather than browser CORS. (See `docs/architecture.md` §6.3 / §12-A9.)
+> via its manifest `host_permissions` rather than browser CORS. (See `dev/docs/architecture.md` §6.3 / §12-A9.)
 
 **CDN (prod):**
 ```bash
@@ -119,7 +119,7 @@ PITR is enabled in the template; you can confirm it in the DynamoDB console.
 - **Per-author rate limit**: a TTL'd DynamoDB counter caps comments/author/minute (`RateLimitPerMinute`, default 10) — the real per-user control.
 - **Body cap**: `MaxBodyBytes` (default 8 KB) → 413.
 - **Verified email required** for writes (`email_verified` claim).
-- Edge/stage throttling and reserved concurrency are intentionally **not** set in v1 (reserved concurrency can fail a new account's deploy when its concurrency limit is low). Add API Gateway stage `RouteSettings` once the account's limits are known — see the §10 fast-follow in `docs/architecture.md`.
+- Edge/stage throttling and reserved concurrency are intentionally **not** set in v1 (reserved concurrency can fail a new account's deploy when its concurrency limit is low). Add API Gateway stage `RouteSettings` once the account's limits are known — see the §10 fast-follow in `dev/docs/architecture.md`.
 
 ## Tests
 `npm test` — handler logic with DynamoDB mocked at the SDK boundary (`aws-sdk-client-mock`).

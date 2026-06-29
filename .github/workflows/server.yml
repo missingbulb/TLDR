@@ -3,10 +3,10 @@ name: server
 on:
   pull_request:
     branches: [main]
-    paths: ['server/**', 'shared/**', 'scripts/**', 'test/**', '.github/workflows/server.yml']
+    paths: ['server/**', 'shared/**', 'dev/build/**', '.github/workflows/server.yml']
   push:
     branches: [main, 'claude/**']
-    paths: ['server/**', 'shared/**', 'scripts/**', 'test/**', '.github/workflows/server.yml']
+    paths: ['server/**', 'shared/**', 'dev/build/**', '.github/workflows/server.yml']
 
 permissions:
   contents: read

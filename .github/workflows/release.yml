@@ -69,7 +69,7 @@ jobs:
           done
           if [ -n "$missing" ]; then
             echo "Missing required repository variable(s):$missing" >&2
-            echo "Set them under Settings → Secrets and variables → Actions → Variables (see docs/go-live-runbook.md)." >&2
+            echo "Set them under Settings → Secrets and variables → Actions → Variables (see dev/docs/go-live-runbook.md)." >&2
             exit 1
           fi
 

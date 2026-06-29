@@ -6,8 +6,8 @@
   "description": "TLDR — community tl;dr notes for any web page. Monorepo root: canonical shared code + repo-level checks.",
   "license": "MIT",
   "scripts": {
-    "sync-shared": "node scripts/sync-shared.mjs",
-    "test": "node --test \"test/**/*.test.mjs\"",
-    "test:all": "npm test && npm --prefix server test && npm --prefix client test"
+    "sync-shared": "node dev/build/tools/sync-shared.mjs",
+    "test": "node --test \"shared/test/**/*.test.mjs\" \"dev/build/tools/test/**/*.test.mjs\"",
+    "test:all": "npm test && npm --prefix server ci && npm --prefix server test && npm --prefix client test && npm --prefix dev ci && npm --prefix dev test"
   }
 }

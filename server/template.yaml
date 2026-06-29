@@ -20,7 +20,7 @@ Parameters:
       CORS allowed origin. Keep '*': API Gateway HTTP API v2 REJECTS the chrome-extension:// scheme in CORS
       AllowOrigins ("Invalid format for origin"), so the extension origin can't be set here. Not a security
       gap — writes are gated by the JWT authorizer, reads are public, and the extension reaches the API via
-      its manifest host_permissions, not browser CORS. (See docs/architecture.md §6.3 / §12-A9.)
+      its manifest host_permissions, not browser CORS. (See dev/docs/architecture.md §6.3 / §12-A9.)
   CommentsTableName:
     Type: String
     Default: tldr-comments
