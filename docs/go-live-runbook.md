@@ -151,6 +151,7 @@ CloudFront fronts the API so reads are edge-cached. Separate, **slow** stack (~1
 
 - [ ] **4.1** Actions → **deploy** → **Run workflow** → tick **"Also deploy the CDN stack"**. It reads `ApiDomain` automatically.
   > The CDN stack creates a `CloudFront::CachePolicy` then a `Distribution` — this is why the deploy role needs `cloudfront:*` (3.6). On a failed `CREATE`, delete the `ROLLBACK_COMPLETE` `tldr-cdn` stack before retrying (nothing is retained).
+  > ⚠️ **New-account CloudFront gate.** A brand-new AWS account often can't create a CloudFront `Distribution` until AWS verifies it (`AccessDenied: "Your account must be verified before you can add new CloudFront resources"`). This is an AWS account-level block, **not** an IAM/template issue — open a free AWS Support case (Account & billing) to enable CloudFront; it clears in hours to a couple of days. **You don't have to wait:** the CDN is an optimization, so you can launch by pointing `API_BASE_URL` at the app `ApiUrl` directly and add the CDN later by re-pointing it.
 - [ ] **4.2** From the run log, record `DistributionDomainName` → `<CLOUDFRONT_DOMAIN>` (e.g. `dxxxx.cloudfront.net`).
 - [ ] **4.3** Smoke test: `curl "https://<CLOUDFRONT_DOMAIN>/comments?pageUrl=https://example.com/articles/42"` → `200`.
 
