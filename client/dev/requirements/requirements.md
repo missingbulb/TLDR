@@ -24,21 +24,22 @@ requirement it pins cross-check by number. Add new requirements with new numbers
 reuse existing ones.
 
 **How each leaf is verified is declared by its CASE (its folder), not tagged here.** The left cell of
-each row is **generated** from the case (a link to its golden for a `dom` leaf, a note for a coded
+each row is **generated** from the case (the rendered image for a `dom` leaf, a note for a coded
 leaf); don't hand-edit a line carrying a `<!-- req-gallery:… -->` marker — run `npm run refresh:ui`.
 
 ---
 
 ## 1. Side panel — states
 
-The panel is a small state machine over the active tab. Each state below is pinned by a `dom`
-golden: the panel's real `render()` run against faked inputs, serialized to a reviewable DOM tree.
+The panel is a small state machine over the active tab. Each state below is pinned by a `dom` image:
+the panel's real `render()` run against faked inputs, rasterized with the real `sidepanel.css` for
+visual approval.
 
 <table>
 <tr>
 <td valign="top" width="340">
 
-📄 [golden](dom/cases/disabled-state.1.1.golden.txt) — serialized from the real panel. <!-- req-gallery:1.1 -->
+![disabled-state.1.1](dom/cases/disabled-state.1.1.png) <!-- req-gallery:1.1 -->
 
 </td>
 <td valign="top">
@@ -54,7 +55,7 @@ shows the status **"TLDR is off for this page."**, an **empty** page line, and *
 <tr>
 <td valign="top" width="340">
 
-📄 [golden](dom/cases/empty-state.1.2.golden.txt) — serialized from the real panel. <!-- req-gallery:1.2 -->
+![empty-state.1.2](dom/cases/empty-state.1.2.png) <!-- req-gallery:1.2 -->
 
 </td>
 <td valign="top">
@@ -71,7 +72,7 @@ the page line shows the page's normalized id (mirrored in its `title` tooltip), 
 <tr>
 <td valign="top" width="340">
 
-📄 [golden](dom/cases/notes-list.1.3.golden.txt) — serialized from the real panel. <!-- req-gallery:1.3 -->
+![notes-list.1.3](dom/cases/notes-list.1.3.png) <!-- req-gallery:1.3 -->
 
 </td>
 <td valign="top">
@@ -87,7 +88,7 @@ the page line shows the page's normalized id (mirrored in its `title` tooltip), 
 <tr>
 <td valign="top" width="340">
 
-📄 [golden](dom/cases/read-failure.1.4.golden.txt) — serialized from the real panel. <!-- req-gallery:1.4 -->
+![read-failure.1.4](dom/cases/read-failure.1.4.png) <!-- req-gallery:1.4 -->
 
 </td>
 <td valign="top">
@@ -103,7 +104,7 @@ the page line shows the page's normalized id (mirrored in its `title` tooltip), 
 <tr>
 <td valign="top" width="340">
 
-📄 [golden](dom/cases/author-fallback.1.5.golden.txt) — serialized from the real panel. <!-- req-gallery:1.5 -->
+![author-fallback.1.5](dom/cases/author-fallback.1.5.png) <!-- req-gallery:1.5 -->
 
 </td>
 <td valign="top">
@@ -118,7 +119,7 @@ the page line shows the page's normalized id (mirrored in its `title` tooltip), 
 <tr>
 <td valign="top" width="340">
 
-📄 [golden](dom/cases/literal-body.1.6.golden.txt) — serialized from the real panel. <!-- req-gallery:1.6 -->
+![literal-body.1.6](dom/cases/literal-body.1.6.png) <!-- req-gallery:1.6 -->
 
 </td>
 <td valign="top">
@@ -135,7 +136,7 @@ injected — is `3.3`.)
 <tr>
 <td valign="top" width="340">
 
-📄 [golden](dom/cases/pending-note.1.7.golden.txt) — serialized from the real panel. <!-- req-gallery:1.7 -->
+![pending-note.1.7](dom/cases/pending-note.1.7.png) <!-- req-gallery:1.7 -->
 
 </td>
 <td valign="top">
@@ -151,7 +152,7 @@ injected — is `3.3`.)
 <tr>
 <td valign="top" width="340">
 
-📄 [golden](dom/cases/failed-note.1.8.golden.txt) — serialized from the real panel. <!-- req-gallery:1.8 -->
+![failed-note.1.8](dom/cases/failed-note.1.8.png) <!-- req-gallery:1.8 -->
 
 </td>
 <td valign="top">
@@ -411,7 +412,7 @@ The denylist editor (`client/src/options.{html,mjs}`).
 <tr>
 <td valign="top" width="340">
 
-📄 [golden](dom/cases/options-page.6.1.golden.txt) — serialized from the real panel. <!-- req-gallery:6.1 -->
+![options-page.6.1](dom/cases/options-page.6.1.png) <!-- req-gallery:6.1 -->
 
 </td>
 <td valign="top">

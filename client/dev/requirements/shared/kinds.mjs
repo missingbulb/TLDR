@@ -37,7 +37,7 @@ async function loadKinds() {
     kinds.push({
       name: descriptor.name || name,
       // snapshot = the kind's owner-approved EXPECTED is a committed artifact file beside the case
-      // (a serialized-DOM golden for `dom`). A non-snapshot kind's expected is a coded assertion and
+      // (a rendered PNG image for `dom`). A non-snapshot kind's expected is a coded assertion and
       // its case must carry no committed expected file (enforced by the coverage gate).
       snapshot: Boolean(descriptor.snapshot),
       dir: path.join(REQUIREMENTS_DIR, name),

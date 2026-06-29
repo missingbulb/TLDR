@@ -2,12 +2,13 @@
 // sidepanel.mjs / options.mjs into a jsdom document seeded from the real shipped HTML, installs the
 // fake `chrome.*` + a fake `fetch`, PINS `Date.now()` to the reference instant, and returns a live
 // "session": the rendered document plus helpers to type, submit, settle, and inspect what the UI
-// asked the browser/network to do. Both kinds build on it — the `dom` kind serializes the session's
-// document to a golden; the `behavior` kind drives a gesture and asserts the DOM + captured calls.
+// asked the browser/network to do. Both kinds build on it — the `dom` kind rasterizes the session's
+// document to a PNG (image-renderer.mjs); the `behavior` kind drives a gesture and asserts the DOM +
+// captured calls.
 //
 // The key property (see .claudinite/tasks/testingPractices.md): the snapshot/behavior is driven
 // through the REAL code path, faking only its inputs. There is no parallel re-implementation of the
-// render — change sidepanel.mjs and the goldens move with it.
+// render — change sidepanel.mjs and the images move with it.
 //
 // Determinism: every global the harness swaps (document, window, chrome, fetch, console.warn,
 // Date.now, setTimeout/clearTimeout) is restored in close(); app timers (the options "Saved."

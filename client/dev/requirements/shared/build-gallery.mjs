@@ -27,14 +27,14 @@ const MARKER_RE = /<!--\s*req-gallery:(\d+(?:\.\d+)+)\s*-->/;
 const marker = (id) => `<!-- req-gallery:${id} -->`;
 
 // The canonical managed left-cell content for one leaf, derived from its CASE (its kind / tbd):
-//   - dom      → a link to the committed golden the snapshot is compared against.
+//   - dom      → the committed PNG of the rendered state, embedded inline for visual approval.
 //   - behavior → a note pointing at the behavior runner (a gesture a static snapshot can't show).
 //   - logic    → a note pointing at the logic runner, or, for a tbd leaf, where it's covered today.
 function managedLine(id, testCase) {
   const kind = testCase?.kind || "logic";
   if (kind === "dom") {
     const stem = testCase?.name || id;
-    return `📄 [golden](dom/cases/${stem}.golden.txt) — serialized from the real panel. ${marker(id)}`;
+    return `![${stem}](dom/cases/${stem}.png) ${marker(id)}`;
   }
   if (kind === "behavior") {
     if (testCase?.tbd) {

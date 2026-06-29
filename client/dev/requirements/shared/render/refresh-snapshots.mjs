@@ -1,4 +1,4 @@
-// Regenerates the dom goldens (dev/requirements/dom/cases/<name>.golden.txt) from the cases, using
+// Regenerates the dom snapshot images (dev/requirements/dom/cases/<name>.png) from the cases, using
 // the same rendering as the snapshot test (each case through render-snapshot.mjs), then refreshes
 // the two-column gallery in requirements.md. Run with `npm run refresh:ui` after an INTENTIONAL
 // change to the panel, the options page, or their HTML, and commit the goldens + the gallery so a
@@ -10,13 +10,13 @@
 "use strict";
 
 import fs from "node:fs";
-import { loadCases, goldenPath } from "../cases.mjs";
+import { loadCases, snapshotPath } from "../cases.mjs";
 import { renderSnapshot, rendersSnapshot } from "./render-snapshot.mjs";
 import { buildGallery, DOC_PATH } from "../build-gallery.mjs";
 
 const cases = (await loadCases()).filter(rendersSnapshot);
 for (const testCase of cases) {
-  const out = goldenPath(testCase);
+  const out = snapshotPath(testCase);
   fs.writeFileSync(out, await renderSnapshot(testCase));
   console.log(`Wrote ${out}`);
 }

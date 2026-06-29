@@ -143,8 +143,9 @@ A practical setup recipe — cheaper to do on day one than to retrofit:
    classifier can't drift from a parallel tag.
 4. **Build one harness that runs the real UI** against a fake platform surface and a pinned clock,
    shared by your snapshot and behavior kinds. This is the highest-leverage piece — invest here.
-5. **Pick a snapshot representation you'll actually review** (§6). Default to a serialized-DOM text
-   golden; reach for pixels only when sub-pixel layout is the requirement.
+5. **Pick a snapshot representation you'll actually review** (§6). For a requirements/approval doc,
+   default to an **inline rendered image** of each state (the owner approves the look); add a
+   serialized-DOM text assertion alongside it when you want precise structural diffs.
 6. **Wire determinism into the test command** (pin `TZ`, `LANG`/locale), add a refresh script that
    regenerates goldens deterministically and is **skipped in CI** (CI is read-only; it asserts the
    committed truth), and ignore the failure-artifacts directory.
@@ -172,41 +173,50 @@ mechanism is one heavy test. The kind names the mechanism, not a plurality. Add 
 requirement genuinely needs a *different way of asserting* — and make adding one a self-contained
 folder drop (a descriptor, a `cases/` dir, a runner), so the loader/gate/gallery extend for free.
 
-## 6. Rendering HTML (the one place rendering belongs)
+## 6. Rendering HTML (the visual-approval gallery)
 
-When a kind's job is "what does this state render", you choose how to capture the rendered output.
-Two families, with a clear default.
+For a *requirements* document, the rendered output is not an afterthought — it is the **approval
+surface**. The whole reason to lay requirements out as a two-column gallery is that the owner can
+**see each state and approve how it looks**, next to the prose that says what it must be. So the
+default for a render leaf in a requirements doc is an **inline rendered image** of the state, embedded
+in the gallery and committed as the owner-owned expected. A reviewer scrolls the spec and approves the
+*pixels*, not a description of them. (A text serialization, below, is a useful *complement* or a
+fallback when you genuinely can't render — but on its own it doesn't let anyone see the UI, which is
+the point.)
 
-### 6.1 Serialized-DOM text goldens (the default)
-Run the real component into a DOM (jsdom or equivalent), then serialize the relevant subtree to a
-**normalized, indented text tree** — tag, id, classes, a meaningful allow-list of attributes (roles,
-form affordances, visibility/disabled flags, live values), and collapsed text — and commit that as
-the golden. Why this is the default for most UIs:
-
-- **Reviewable.** A human reads the diff and sees exactly what changed (a class, a string, an
-  attribute). A binary image diff hides intent.
-- **No engine, no binaries.** No headless browser, no rasterizer, no font bundle; just a DOM library.
-- **Stable.** Capture only the attributes that carry meaning, so incidental noise never churns the
-  golden, while any real change to an asserted property does.
-- **Faithful.** It's produced by the real component, so it tracks the shipped code.
-
-It asserts **structure, copy, and semantics** — which is what most UI requirements actually are.
-
-### 6.2 Pixel snapshots (when sub-pixel layout *is* the requirement)
-When the requirement is genuinely visual — a color, a spacing, an overflow fade, an icon's art — pin
-pixels. Two routes:
+### 6.1 Rendered images (the primary artifact)
+Drive the component's **real** DOM (see §3.3/§3.6), fold the **real** stylesheet onto it, and
+rasterize. Commit the PNG, embed it inline in the gallery, and compare pixel-exact. Two routes:
 
 - **Real screenshot** via a headless browser (Playwright/Puppeteer). Highest fidelity; heaviest and
   most environment-sensitive (font rendering varies across platforms, so expect a tolerance and CI
   pinning).
-- **DOM→SVG→PNG** rasterization (e.g. satori + resvg), driving the component's real DOM and stylesheet
-  with a bundled font for determinism. Lighter than a browser and deterministic, but it's an
-  approximation, not the browser's own painter — good for catching unintended layout/copy changes,
-  not for certifying exact pixels. (This is what the GoogleCalendarEventCreator reference uses for its
-  popup and toolbar-icon kinds.)
+- **DOM→SVG→PNG** rasterization (e.g. satori + resvg), driving the component's real DOM + stylesheet
+  with a **bundled font** for determinism. Lighter than a browser and byte-deterministic across
+  machines (same pinned rasterizer + font), so a pixel-exact gate doesn't flap — at the cost of being
+  an *approximation* of the browser's painter, not the painter itself. This is what this repo and the
+  GoogleCalendarEventCreator reference use.
 
-Either way, treat the committed image as an owner-owned expected (§3.4): on a legitimate change,
-surface expected/actual/diff and re-baseline only on approval.
+Determinism is the price of admission: pin the clock/locale/timezone (§3.5), bundle the font, fix the
+render width, and verify the bytes are stable across two regenerations before you trust the gate.
+
+Because a rasterizer is not a browser, expect to bridge what its static model omits — resolve CSS
+variables, expand shorthands it doesn't parse, honor `[hidden]`/`display:none` (no UA stylesheet),
+and project form-control `.value`s into the tree so a seeded field actually shows. Each is a small,
+local adapter; budget for them.
+
+Treat the committed image as an owner-owned expected (§3.4): on a legitimate change, surface
+expected / actual / diff and re-baseline only on approval — never silently regenerate to clear a red.
+
+### 6.2 Serialized-DOM text (a complement, or a fallback)
+Run the real component into a DOM and serialize the subtree to a **normalized, indented text tree** —
+tag, id, classes, an allow-list of meaningful attributes (roles, form affordances, visibility/disabled
+flags, live values), collapsed text. It's cheap (no rasterizer, no font, no binaries), and its diff
+reads as *intent* — "the class changed from X to Y", "this `aria-live` vanished" — which a binary image
+diff hides. Use it **alongside** the image when you want a precise, greppable structural assertion, or
+**instead** of it when you can't render (a headless environment, or a UI whose look genuinely doesn't
+need approval). What it can't do is let the owner *see* the UI — so it doesn't replace the gallery
+image in an approval doc.
 
 ### 6.3 What a static render can't capture — don't fake it with pixels
 A rasterized DOM is not a live browser: it cannot show an OS **mouse cursor**, a `:hover`/`:active`
@@ -216,11 +226,13 @@ does the thing) by a behavior case; the resting **visual cue** (an elevated surf
 snapshot; and, if you want it, an explicit **DOM assertion** (the element is a `<button>` whose
 computed `cursor` is `pointer`) in a logic case — never a snapshot pretending to see the cursor.
 
-### 6.4 Don't over-rotate on rendering
-Rendering is one kind among several. A UI's correctness is mostly **behavior, state, content,
-accessibility, and the rules underneath** — all of which are tested without pixels. Spend your effort
-on the harness that drives the real UI and on routing each requirement to the right kind; keep the
-pixel pipeline (if you even need one) proportionate.
+### 6.4 The image approves the look — it doesn't verify everything
+The gallery image is the approval surface for *how a state looks*, and it's worth getting right. But
+it can't observe a click, a navigation, an async transition, or a pure rule — and trying to make it is
+the §3.2 anti-pattern. So render the **look** as an image, and route **behavior, state transitions,
+content rules, and accessibility** to their own kinds. The big investment is the **harness that drives
+the real UI**; the image renderer rides on top of it, and every non-visual kind reuses it too. Get the
+harness right and the pixel layer is a thin, deterministic cap.
 
 ## 7. Anti-patterns to avoid
 

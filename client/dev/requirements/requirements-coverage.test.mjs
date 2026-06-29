@@ -5,13 +5,13 @@
 //
 //   - EVERY leaf has exactly one `<slug>.<id>.case.mjs` (the FILENAME is the link), and every case
 //     names a real leaf. No leaf is unclaimed; no case is a stray.
-//   - A case's kind (its folder) decides verification: a `dom` case is pinned by a committed golden;
+//   - A case's kind (its folder) decides verification: a `dom` case is pinned by a committed image;
 //     a `behavior`/`logic` case is verified by coded assertions in its runner — and must carry NO
-//     golden (a snapshot can't verify a click or a pure rule any more than a click test can pin
+//     image (a snapshot can't verify a click or a pure rule any more than a click test can pin
 //     pixels — the #429 segment-by-verification lesson in testingPractices.md).
 //
 // A new leaf with no case fails here; a stray/misnamed case fails; a coded case that smuggled in a
-// golden fails.
+// snapshot image fails.
 "use strict";
 
 import { test } from "node:test";
@@ -19,7 +19,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadCases, leafIdOf, goldenPath } from "./shared/cases.mjs";
+import { loadCases, leafIdOf, snapshotPath } from "./shared/cases.mjs";
 import { allRequirementIds, leafRequirementIds } from "./shared/requirements-doc.mjs";
 import { KINDS, KIND_NAMES, SNAPSHOT_KINDS } from "./shared/kinds.mjs";
 
@@ -89,11 +89,11 @@ test("every kind has a runner that executes its cases", () => {
   assert.deepEqual(missing, [], "kinds with no runner — their cases would be claimed but never executed:");
 });
 
-test("a coded (non-snapshot) case carries no golden — a golden can't verify a click or a rule (#429)", () => {
+test("a coded (non-snapshot) case carries no snapshot image — an image can't verify a click or a rule (#429)", () => {
   const bad = cases
-    .filter((c) => !SNAPSHOT.has(c.kind) && fs.existsSync(goldenPath(c)))
-    .map((c) => `${c.name}.golden.txt`);
-  assert.deepEqual(bad, [], "behavior/logic leaves must not carry a golden:");
+    .filter((c) => !SNAPSHOT.has(c.kind) && fs.existsSync(snapshotPath(c)))
+    .map((c) => `${c.name}.png`);
+  assert.deepEqual(bad, [], "behavior/logic leaves must not carry a snapshot image:");
 });
 
 test("a coded case must export a verify() (or be an explicit tbd with a coveredBy pointer)", () => {

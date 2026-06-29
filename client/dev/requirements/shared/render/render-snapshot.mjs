@@ -1,22 +1,16 @@
-// One entry point that renders ANY snapshot case to its golden text. A case's `kind` — set from the
+// One entry point that renders ANY snapshot case to its PNG. A case's `kind` — set from the
 // folder it lives in (loadCases), so it's always present and never guessed — picks the producer.
 // Today there is one snapshot kind, `dom`; adding another rendered surface is a new entry in
 // PRODUCERS plus a kind folder that names it, and nothing else here changes.
 "use strict";
 
-import { openForSnapshot } from "./harness.mjs";
-import { serializeDom } from "./serialize-dom.mjs";
+import { renderCaseImage } from "./image-renderer.mjs";
 
-// kind -> (case) => Promise<string>. A snapshot case is produced by exactly one of these.
+// kind -> (case) => Promise<Buffer>. A snapshot case is rasterized by exactly one of these. The
+// returned PNG buffer is both the committed expected (refresh-snapshots) and the compared actual
+// (dom-snapshots), and is embedded inline in the requirements gallery for visual approval.
 const PRODUCERS = {
-  dom: async (testCase) => {
-    const session = await openForSnapshot(testCase);
-    try {
-      return serializeDom(session.document.body);
-    } finally {
-      session.close();
-    }
-  },
+  dom: (testCase) => renderCaseImage(testCase),
 };
 
 export async function renderSnapshot(testCase) {

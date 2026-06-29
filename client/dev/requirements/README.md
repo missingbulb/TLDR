@@ -23,7 +23,7 @@ the portable, project-agnostic write-up of *why* and *how* lives in
 3. **Kinds are extensible.** A *kind* is one way a requirement can be asserted (a rendered-state
    snapshot, a click behavior, a pure rule). Adding one is a self-contained folder drop — see
    [Adding a kind](#adding-a-kind).
-4. **Expected is owner-owned.** The success criterion of every case — a committed golden, or a coded
+4. **Expected is owner-owned.** The success criterion of every case — a committed image, or a coded
    assertion — is approved by the owner. An agent **may never edit an expected (or weaken an
    assertion) to turn a red requirement green**; on a mismatch it surfaces *actual vs expected* and
    asks. See [The owner-approval contract](#the-owner-approval-contract).
@@ -43,23 +43,30 @@ The kinds that ship today:
 
 | kind | validates | how the "actual" is produced | expected |
 | --- | --- | --- | --- |
-| `dom` | a rendered side-panel / options state | the **real** `sidepanel.mjs` / `options.mjs` run under jsdom + a fake `chrome.*`, serialized to a DOM tree | `dom/cases/<stem>.golden.txt` (a committed, reviewable text golden) |
+| `dom` | a rendered side-panel / options state | the **real** `sidepanel.mjs` / `options.mjs` run under jsdom + a fake `chrome.*`, then rasterized (satori → resvg) with the real `sidepanel.css` | `dom/cases/<stem>.png` (a committed, pixel-exact image, embedded inline in the gallery) |
 | `behavior` | a gesture a static snapshot can't show (type → Post, save the denylist) | the same harness, driven through the gesture | coded assertions in the case's `verify()` |
 | `logic` | a non-visual rule (time formatting, the a11y/HTML contract, manifest surfaces) | a shipped predicate/markup, or the real render for a private formatter | coded assertions in the case's `verify()` |
 
-`dom` is a **snapshot** kind (its expected is a committed file); `behavior` and `logic` are **coded**
+`dom` is a **snapshot** kind (its expected is a committed image); `behavior` and `logic` are **coded**
 kinds (their expected *is* the assertion). [`shared/render/`](shared/render) holds the one harness
 both snapshot and behavior cases build on.
 
-### Why text goldens, not pixels
+### The images are the approval surface — driven by the real code
 
-The panel's requirements are about **structure, copy, and semantics** — which element, which
-class/state, which `aria` role, what text — not sub-pixel layout. A serialized DOM tree
-([`shared/render/serialize-dom.mjs`](shared/render/serialize-dom.mjs)) captures exactly those, stays
-readable in a PR diff (the owner can eyeball what changed), needs no rendering engine or binary
-artifacts, and still tracks the shipped code (it's produced by running the real modules). When a
-project genuinely needs pixel fidelity, a pixel-snapshot kind is a separate, heavier addition — see
-the "rendering HTML" section of [the portable guideline](../../../docs/ui-testing-guideline.md).
+The point of a requirements gallery is that the owner **sees and approves the rendered UI**. Each
+`dom` leaf embeds a real **PNG of that state** in the two-column table, rendered by
+[`shared/render/image-renderer.mjs`](shared/render/image-renderer.mjs): the harness builds the panel's
+**real** DOM, the real `sidepanel.css` is folded onto it, and satori → resvg rasterize it
+deterministically with a bundled font. So the image tracks the shipped code — change a view or a style
+and the image moves — and the comparison is pixel-exact (`pixelmatch`, `MAX_DIFF_RATIO = 0`).
+
+satori is not a browser, so the renderer handles what its static model omits: it resolves
+`var(--…)` from `:root`, expands the `font:` shorthand, drops the dark-mode `@media` block (rendering
+the default light theme), removes `[hidden]` elements (Chrome's UA `display:none`, which satori lacks),
+and projects a `textarea`'s `.value` into the image (e.g. the options page's seeded denylist, one host
+per line). It cannot show an OS cursor or a `:hover` state — those aren't static DOM; a "clickable"
+affordance is covered by its resting visual cue here plus a `behavior` click test, never a faked
+cursor. See the "Rendering HTML" section of [the portable guideline](../../../docs/ui-testing-guideline.md).
 
 ## Adding a requirement (an existing kind)
 
@@ -69,9 +76,9 @@ the "rendering HTML" section of [the portable guideline](../../../docs/ui-testin
    component/feature name, `<id>` the dotted number (e.g. `notes-list.1.3.case.mjs`). The case
    supplies only the fake inputs (a `dom` case) or a `verify()` (a coded case); it does **not**
    declare a kind.
-3. Provide the expected: `npm run refresh:ui` to render the golden for a `dom` case (then have the
-   owner approve it), or write the `verify()` assertions for a coded case. The build goes **green**
-   when the leaf is both claimed and passing.
+3. Provide the expected: `npm run refresh:ui` to render the image for a `dom` case (then have the
+   owner approve the pixels), or write the `verify()` assertions for a coded case. The build goes
+   **green** when the leaf is both claimed and passing.
 
 ## Adding a kind
 
@@ -99,23 +106,23 @@ real-browser e2e, `8.1`).
 
 The *expected* of every requirement is owned by the project owner, in two honest shapes:
 
-- **Artifact-expected** (`dom` golden): the owner approves a committed **file**. An agent may
-  *propose* a new golden for a brand-new leaf, but must **never modify a committed golden** to make a
+- **Artifact-expected** (`dom` image): the owner approves a committed **PNG**. An agent may
+  *propose* a new image for a brand-new leaf, but must **never modify a committed image** to make a
   failing test pass.
 - **Coded-expected** (`behavior`, `logic`): the expected *is* the assertion in the case's `verify()`.
 
 Either way the rule is one sentence: **on an actual↔expected mismatch, surface *actual*, *expected*,
 and the *diff*, and ask the owner to approve or reject — never edit the success criterion to go
-green.** On a `dom` mismatch the runner writes the freshly-rendered actual to
-`shared/.artifacts/<name>.actual.txt` and points at it; regenerate with `npm run refresh:ui` only
-once the change is understood and approved, and keep the *reverted* golden committed until then so the
-branch honestly shows the test red-pending.
+green.** On a `dom` mismatch the runner writes the freshly-rendered `actual` + a `diff` to
+`shared/.artifacts/` and points at them; regenerate with `npm run refresh:ui` only once the change is
+understood and approved, and keep the *reverted* image committed until then so the branch honestly
+shows the test red-pending.
 
 ## Determinism
 
 - **Pinned clock.** The panel formats a note's age against the wall clock. The harness pins
   `Date.now()` to [`shared/reference-time.mjs`](shared/reference-time.mjs) while it drives the real
-  code, so a golden authored today doesn't rot tomorrow.
+  code, so an image authored today doesn't rot tomorrow.
 - **Pinned locale/timezone.** Older notes show an absolute locale date; the `test`/`test:ui`/
   `refresh:ui` scripts pin `LANG=C.UTF-8` and `TZ=UTC`, and both the dom and logic runners guard them
   with an actionable message (the shared [`shared/locale-guard.mjs`](shared/locale-guard.mjs)).
@@ -141,13 +148,14 @@ dev/requirements/
     render/                       the one harness both snapshot + behavior cases use
       harness.mjs                 drives the real sidepanel.mjs/options.mjs under jsdom + fake-chrome
       fake-chrome.mjs             the fake chrome.* surface (incl. a real, decodable OAuth token)
-      serialize-dom.mjs           normalized DOM -> golden text
-      render-snapshot.mjs         kind -> produce a case's golden
+      image-renderer.mjs          the real DOM + real sidepanel.css -> satori -> resvg -> PNG
+      fonts/                      the bundled font (deterministic rasterization) + its LICENSE
+      render-snapshot.mjs         kind -> produce a case's PNG
       note-meta.mjs               §4 helper: render one note, read its meta line
-      dom-snapshots.test.mjs      the dom snapshot runner (npm run test:ui)
-      refresh-snapshots.mjs       regenerate goldens + gallery (npm run refresh:ui)
+      dom-snapshots.test.mjs      the dom snapshot runner — pixel comparison (npm run test:ui)
+      refresh-snapshots.mjs       regenerate images + gallery (npm run refresh:ui)
 
-  dom/       kind.mjs  cases/<slug>.<id>.case.mjs (+ <stem>.golden.txt)
+  dom/       kind.mjs  cases/<slug>.<id>.case.mjs (+ <stem>.png)
   behavior/  kind.mjs  behavior.test.mjs  cases/<slug>.<id>.case.mjs
   logic/     kind.mjs  logic.test.mjs     cases/<slug>.<id>.case.mjs
 ```
@@ -156,7 +164,7 @@ dev/requirements/
 
 - `npm test` — the whole client suite, including this lane (`client/` working dir).
 - `npm run test:ui` — just the executable-requirements suite.
-- `npm run refresh:ui` — regenerate the `dom` goldens + the inline gallery after an **intentional**
+- `npm run refresh:ui` — regenerate the `dom` images + the inline gallery after an **intentional**
   panel/options/HTML change, then review the diff and get it approved.
 
 ## Honesty caveat

@@ -12,6 +12,10 @@
     "build": "node scripts/build-zip.mjs"
   },
   "devDependencies": {
-    "jsdom": "^29.1.1"
+    "@resvg/resvg-js": "^2.6.2",
+    "jsdom": "^29.1.1",
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0",
+    "satori": "^0.26.0"
   }
 }

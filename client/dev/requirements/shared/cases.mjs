@@ -16,7 +16,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { KINDS } from "./kinds.mjs";
 
-// The leaf requirement id (`1.3`) a case name (`notes-list.1.3`) or golden stem pins: the trailing
+// The leaf requirement id (`1.3`) a case name (`notes-list.1.3`) or image stem pins: the trailing
 // dotted-number run. Returns null if the name carries no dotted id (a malformed/misnamed case — the
 // coverage gate flags it).
 export function leafIdOf(name) {
@@ -27,7 +27,7 @@ export function leafIdOf(name) {
 // All cases across all kinds, in stable (name) order. Each entry is { ...caseModule, name, kind,
 // dir, snapshot } — kind/dir/snapshot come from the case's folder (kinds.mjs) and are authoritative
 // over anything the module might set. `dir` is the kind's cases/ directory, where a snapshot kind's
-// committed golden lives.
+// committed image lives.
 export async function loadCases() {
   const cases = [];
   for (const kind of KINDS) {
@@ -42,7 +42,8 @@ export async function loadCases() {
   return cases.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-// Absolute path to a case's committed golden artifact (snapshot kinds only).
-export function goldenPath(testCase) {
-  return path.join(testCase.dir, `${testCase.name}.golden.txt`);
+// Absolute path to a case's committed snapshot artifact — the owner-approved PNG embedded in the
+// requirements gallery (snapshot kinds only).
+export function snapshotPath(testCase) {
+  return path.join(testCase.dir, `${testCase.name}.png`);
 }
