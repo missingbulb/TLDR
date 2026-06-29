@@ -209,13 +209,17 @@ export async function renderCaseImage(testCase) {
     // they stay.
     for (const el of body.querySelectorAll("[hidden]")) el.remove();
     inlineCss(body);
-    // A textarea's text is its `.value` property, not a child text node, so satori would draw it
-    // empty. Project the live value into the element (white-space preserved) so the rendered image
-    // shows what the user sees — e.g. the options page's seeded denylist, one host per line (6.1).
+    // A textarea's text is its `.value` property (and an empty one shows its placeholder) — neither
+    // is a child text node, so satori would draw it empty. Project what the user sees: the live value
+    // (white-space preserved — e.g. the options page's seeded denylist, one host per line, 6.1), or
+    // the placeholder prompt in a muted tone when empty (the composer's "Add a tl;dr note…").
     for (const ta of body.querySelectorAll("textarea")) {
       if (ta.value) {
         ta.textContent = ta.value;
         ta.style.whiteSpace = "pre-wrap";
+      } else if (ta.getAttribute("placeholder")) {
+        ta.textContent = ta.getAttribute("placeholder");
+        ta.style.color = "#9ca3af"; // a muted placeholder tone (Chrome paints the prompt greyed)
       }
     }
     const vdom = toVDom(body);

@@ -45,7 +45,7 @@ The kinds that ship today:
 | --- | --- | --- | --- |
 | `dom` | a rendered side-panel / options state | the **real** `sidepanel.mjs` / `options.mjs` run under jsdom + a fake `chrome.*`, then rasterized (satori → resvg) with the real `sidepanel.css` | `dom/cases/<stem>.png` (a committed, pixel-exact image, embedded inline in the gallery) |
 | `behavior` | a gesture a static snapshot can't show (type → Post, save the denylist) | the same harness, driven through the gesture | coded assertions in the case's `verify()` |
-| `logic` | a non-visual rule (time formatting, the a11y/HTML contract, manifest surfaces) | a shipped predicate/markup, or the real render for a private formatter | coded assertions in the case's `verify()` |
+| `logic` | a non-visual rule with no pixels of its own (the a11y/HTML contract, manifest surfaces) | a shipped predicate/markup | coded assertions in the case's `verify()` |
 
 `dom` is a **snapshot** kind (its expected is a committed image); `behavior` and `logic` are **coded**
 kinds (their expected *is* the assertion). [`shared/render/`](shared/render) holds the one harness

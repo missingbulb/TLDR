@@ -307,15 +307,15 @@ and **Post is a submit-type button** (keyboard-reachable, Enter/click submits).
 
 ## 4. Note time formatting
 
-How a note's age reads on its meta line. The formatter is private to `sidepanel.mjs`, so each leaf is
-a `logic` case verified **through the real render** at a fixed offset from the pinned reference
-instant (`shared/reference-time.mjs`).
+How a note's age reads on its meta line — visible UI, so each leaf is a `dom` image: a note rendered
+at a fixed offset from the pinned reference instant (`shared/reference-time.mjs`), its meta line the
+approved artifact.
 
 <table>
 <tr>
 <td valign="top" width="340">
 
-🔧 _Logic leaf — verified by `logic/logic.test.mjs`._ <!-- req-gallery:4.1 -->
+![time-just-now.4.1](dom/cases/time-just-now.4.1.png) <!-- req-gallery:4.1 -->
 
 </td>
 <td valign="top">
@@ -330,7 +330,7 @@ instant (`shared/reference-time.mjs`).
 <tr>
 <td valign="top" width="340">
 
-🔧 _Logic leaf — verified by `logic/logic.test.mjs`._ <!-- req-gallery:4.2 -->
+![time-minutes.4.2](dom/cases/time-minutes.4.2.png) <!-- req-gallery:4.2 -->
 
 </td>
 <td valign="top">
@@ -345,7 +345,7 @@ instant (`shared/reference-time.mjs`).
 <tr>
 <td valign="top" width="340">
 
-🔧 _Logic leaf — verified by `logic/logic.test.mjs`._ <!-- req-gallery:4.3 -->
+![time-hours.4.3](dom/cases/time-hours.4.3.png) <!-- req-gallery:4.3 -->
 
 </td>
 <td valign="top">
@@ -360,7 +360,7 @@ instant (`shared/reference-time.mjs`).
 <tr>
 <td valign="top" width="340">
 
-🔧 _Logic leaf — verified by `logic/logic.test.mjs`._ <!-- req-gallery:4.4 -->
+![time-absolute-date.4.4](dom/cases/time-absolute-date.4.4.png) <!-- req-gallery:4.4 -->
 
 </td>
 <td valign="top">
@@ -375,7 +375,7 @@ instant (`shared/reference-time.mjs`).
 <tr>
 <td valign="top" width="340">
 
-🔧 _Logic leaf — verified by `logic/logic.test.mjs`._ <!-- req-gallery:4.5 -->
+![time-missing.4.5](dom/cases/time-missing.4.5.png) <!-- req-gallery:4.5 -->
 
 </td>
 <td valign="top">
