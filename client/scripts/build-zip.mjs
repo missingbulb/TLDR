@@ -1,8 +1,14 @@
 // Packages the extension into dist/tldr-extension.zip — ONLY the shippable files, never dev/test
 // tooling. Uses the system `zip` (present on CI runners). Run with `npm run build`.
+//
+// Build-time config injection: the committed source carries only PLACEHOLDERS. The real values live
+// in GitHub variables (they're public — the client id and key ship in every install), not in the
+// repo, and are injected here into STAGED copies of the files (never the committed source). The
+// release workflow passes them in via the environment. With no env set, the build still produces a
+// valid placeholder zip (e.g. for reserving the store id).
 
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, rmSync } from 'node:fs';
+import { mkdirSync, rmSync, cpSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,13 +20,58 @@ export const SHIP = ['manifest.json', 'config.mjs', 'src', 'vendor', 'icons'];
 
 export const ZIP_NAME = 'tldr-extension.zip';
 
-export function buildZip() {
+// Rewrite the STAGED config.mjs + manifest.json from the environment. Each value is optional; whatever
+// is absent stays at its committed placeholder (so a partial env is a no-op, never a corruption).
+//   API_BASE_URL          -> config.mjs API_BASE_URL + manifest host_permissions (origin + '/*')
+//   GOOGLE_CLIENT_ID      -> config.mjs GOOGLE_CLIENT_ID
+//   EXTENSION_PUBLIC_KEY  -> manifest "key" (fixes the extension id to the registered one)
+export function injectConfig(stageDir, env = process.env) {
+  const { API_BASE_URL, GOOGLE_CLIENT_ID, EXTENSION_PUBLIC_KEY } = env;
+
+  if (API_BASE_URL || GOOGLE_CLIENT_ID) {
+    const configPath = resolve(stageDir, 'config.mjs');
+    let config = readFileSync(configPath, 'utf8');
+    if (API_BASE_URL) {
+      config = config.replace(/(export const API_BASE_URL = )'[^']*'/, `$1'${API_BASE_URL}'`);
+    }
+    if (GOOGLE_CLIENT_ID) {
+      config = config.replace(/(export const GOOGLE_CLIENT_ID = )'[^']*'/, `$1'${GOOGLE_CLIENT_ID}'`);
+    }
+    writeFileSync(configPath, config);
+  }
+
+  if (API_BASE_URL || EXTENSION_PUBLIC_KEY) {
+    const manifestPath = resolve(stageDir, 'manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    if (API_BASE_URL) {
+      manifest.host_permissions = [`${new URL(API_BASE_URL).origin}/*`];
+    }
+    if (EXTENSION_PUBLIC_KEY) {
+      manifest.key = EXTENSION_PUBLIC_KEY;
+    }
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  }
+}
+
+export function buildZip(env = process.env) {
   const distDir = resolve(clientDir, 'dist');
+  const stageDir = resolve(distDir, 'staging');
   const zipPath = resolve(distDir, ZIP_NAME);
   mkdirSync(distDir, { recursive: true });
+  rmSync(stageDir, { recursive: true, force: true });
   rmSync(zipPath, { force: true });
+  mkdirSync(stageDir, { recursive: true });
+
+  // Stage exactly the shippable files (preserving mtimes for byte-stable zips), then inject config
+  // into the staged copies only — the committed source is never modified.
+  for (const entry of SHIP) {
+    cpSync(resolve(clientDir, entry), resolve(stageDir, entry), { recursive: true, preserveTimestamps: true });
+  }
+  injectConfig(stageDir, env);
+
   // -X strips extra file attributes so an unchanged build is byte-stable; -r recurses dirs.
-  execFileSync('zip', ['-r', '-X', '-q', zipPath, ...SHIP], { cwd: clientDir });
+  execFileSync('zip', ['-r', '-X', '-q', zipPath, ...SHIP], { cwd: stageDir });
+  rmSync(stageDir, { recursive: true, force: true });
   return zipPath;
 }
 
