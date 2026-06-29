@@ -75,7 +75,11 @@ The extension signs in with a Google **ID token** (a JWT), which requires a **We
 **not** a "Chrome app" client (that yields an opaque access token the server's JWT authorizer can't validate;
 `server/README.md` §1, `docs/architecture.md` §12-A1).
 
-- [ ] **2.1** [Google Cloud Console](https://console.cloud.google.com/) → create (or pick) a project for TLDR.
+- [ ] **2.1** [Google Cloud Console](https://console.cloud.google.com/) → create a **dedicated project** for TLDR.
+  Don't reuse a project from another extension: the **OAuth consent screen is per-project and user-facing** (app
+  name/logo/support email shown on the sign-in dialog), so a shared project would brand TLDR's sign-in with the other
+  app's name. A separate project also isolates quotas, billing, and suspension blast-radius. (You *can* add another
+  Web-application client to an existing project — it works — but the shared consent screen is the reason not to.)
 - [ ] **2.2** APIs & Services → **OAuth consent screen** → configure it (External; app name, support email).
 - [ ] **2.3** APIs & Services → **Credentials** → **Create credentials** → **OAuth client ID** → **Web application**.
 - [ ] **2.4** Under **Authorized redirect URIs**, add **exactly**:
