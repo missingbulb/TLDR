@@ -1,0 +1,78 @@
+name: claudinite-lesson-handoff
+
+# When an issue here gains the `claudinite-lesson` label, copy it into the shared Claudinite corpus
+# repo (with a provenance backlink) and close the source issue as a duplicate of the new one.
+#
+# The copy is created with a cross-repo PAT (CLAUDINITE_ISSUE_TOKEN), NOT the built-in GITHUB_TOKEN:
+#   - GITHUB_TOKEN can't write to another repository, and
+#   - an issue created by GITHUB_TOKEN wouldn't trigger the corpus repo's curation workflow
+#     (GitHub suppresses workflow runs triggered by GITHUB_TOKEN to prevent recursion).
+# A PAT sidesteps both, so the curation routine fires on the copied issue.
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write # close + comment on the SOURCE issue (via GITHUB_TOKEN)
+
+jobs:
+  handoff:
+    # Only act on the label this workflow owns — ignore every other label event.
+    if: github.event.label.name == 'claudinite-lesson'
+    runs-on: ubuntu-latest
+    env:
+      TARGET_REPO: missingbulb/Claudinite
+      SOURCE_REPO: ${{ github.repository }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      # Untrusted issue fields go through env, never inlined into a run script (shell-injection safe).
+      ISSUE_TITLE: ${{ github.event.issue.title }}
+      ISSUE_URL: ${{ github.event.issue.html_url }}
+    steps:
+      - name: Ensure the label exists on the target repo
+        env:
+          GH_TOKEN: ${{ secrets.CLAUDINITE_ISSUE_TOKEN }}
+        run: |
+          gh label create claudinite-lesson \
+            --repo "$TARGET_REPO" \
+            --color BFD4F2 \
+            --description "Portable lesson handed off from a consuming repo." \
+            2>/dev/null || true
+
+      - name: Copy the issue into the Claudinite corpus repo
+        id: copy
+        env:
+          GH_TOKEN: ${{ secrets.CLAUDINITE_ISSUE_TOKEN }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          {
+            printf '%s\n\n' "$ISSUE_BODY"
+            printf -- '---\n'
+            printf '_Handed off from %s#%s — %s_\n' "$SOURCE_REPO" "$ISSUE_NUMBER" "$ISSUE_URL"
+          } > body.md
+          new_url="$(gh issue create \
+            --repo "$TARGET_REPO" \
+            --title "$ISSUE_TITLE" \
+            --body-file body.md \
+            --label claudinite-lesson)"
+          echo "new_url=$new_url" >> "$GITHUB_OUTPUT"
+          echo "Copied to $new_url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Guard — the copy must exist before we touch the source
+        env:
+          NEW_URL: ${{ steps.copy.outputs.new_url }}
+        run: |
+          case "$NEW_URL" in
+            https://github.com/*) echo "Copy created: $NEW_URL" ;;
+            *) echo "No valid Claudinite issue URL — leaving the source issue open." >&2; exit 1 ;;
+          esac
+
+      - name: Close the source issue as a duplicate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_URL: ${{ steps.copy.outputs.new_url }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$SOURCE_REPO" \
+            --body "Handed off to the Claudinite corpus: ${NEW_URL}. Closing as a duplicate — the canonical lesson now lives there."
+          gh api -X PATCH "repos/$SOURCE_REPO/issues/$ISSUE_NUMBER" \
+            -f state=closed -f state_reason=duplicate
