@@ -1,5 +1,6 @@
-// Owner-edited configuration. Replace BOTH placeholders before building or loading the extension,
-// and set the matching `host_permissions` host in manifest.json.
+// Configuration. The committed values below are PLACEHOLDERS — the real values are injected at build
+// time from the GitHub repository variables `API_BASE_URL` and `GOOGLE_CLIENT_ID` (see
+// scripts/build-zip.mjs), so the committed source stays at placeholders forever.
 //
 // API_BASE_URL  — in dev, the app stack's ApiUrl output (https://<id>.execute-api.<region>.amazonaws.com);
 //                 in prod, the CloudFront domain (https://<dist>.cloudfront.net). No trailing slash.

@@ -191,6 +191,11 @@ The brief's mechanism ("include Authorization in a custom OriginRequestPolicy") 
 rejects a *custom* origin request policy that names `Authorization`. As built (§12-A2):
 - **Custom CachePolicy** keys on the `pageUrl`/`nextToken` querystring **+ the `Origin` header**, and
   **excludes `Authorization`** → every viewer shares one cached read per page; per-origin CORS isn't cross-served.
+  Note the API-level CORS `AllowOrigins` is **`*`**, not the extension origin: API Gateway HTTP API (v2) rejects
+  the `chrome-extension://` scheme outright (deploy fails with `BadRequestException: Invalid format for origin …`),
+  accepting only `http(s)://…` or `*`. This is safe — the JWT authorizer gates writes (POST only), reads are
+  public by design, and the extension reaches the API via its manifest `host_permissions`, so browser CORS was
+  never the extension's security boundary (🔧 §12-A9).
 - **Managed `AllViewerExceptHostHeader`** origin-request policy forwards `Authorization` + querystrings to the
   origin but **strips Host** (forwarding Host to an API Gateway origin returns 403).
 - One distribution, one (default) behavior: CloudFront caches GET/HEAD and always passes POST through.
@@ -317,13 +322,15 @@ The brief's "assumptions to confirm" are **resolved** below; only the genuinely 
 | 11.4 | Search engines | ✅ **Off by default** (`google.com`/`bing.com`/`duckduckgo.com` seeded in the denylist, §4.2). |
 | 11.5 | Email | ✅ **Salted one-way hash** stored for moderation; raw email never stored/returned (§5.2). |
 | — | Region | **`il-central-1`** (Tel Aviv), default `*.cloudfront.net` domain (no us-east-1 ACM needed). |
+| — | CORS `AllowedExtensionOrigin` | **`*`** — API Gateway v2 rejects the `chrome-extension://` scheme; not a security regression (JWT gates writes, reads public, extension uses `host_permissions`) (§6.3/§12-A9). |
 | — | Runtime / SDK | **`nodejs22.x`**, AWS SDK **bundled** (§12-A4/A5). |
 
 ### Still open — needs the owner (cannot be safely defaulted)
 1. **Google OAuth "Web application" client** — the owner must create it and provide the **client id** (= JWT
    authorizer audience = `client/config.mjs` `GOOGLE_CLIENT_ID`).
-2. **Extension id / signing `key`** — fixes the `chromiumapp.org` redirect URI and the CORS origin. Confirm the
-   production id (or approve a fixed manifest `key`); a dev id too if dev/prod differ.
+2. **Extension id / signing `key`** — fixes the `chromiumapp.org` redirect URI (it does **not** lock the CORS
+   origin: `AllowedExtensionOrigin` is `*` because API Gateway v2 rejects the `chrome-extension://` scheme —
+   §6.3/§12-A9). Confirm the production id (or approve a fixed manifest `key`); a dev id too if dev/prod differ.
 3. **AWS account id + GitHub repo/branch** for the OIDC trust policy `sub`. (Assumed `missingbulb/tldr` + `main`.)
 4. **`EmailHashSalt`** — set a long random server secret (`server/README.md`); without it the email hash is unsalted.
 5. **Throttle numbers** — the per-author rate (default 10/min) and any future edge throttle depend on the
@@ -349,6 +356,12 @@ Corrections that changed the build (verified against authoritative docs during t
 - **A7 — Abuse cap.** Pull a per-author rate limit (and body cap, verified-email) into v1 (§10).
 - **A8 — OIDC gating.** Lock the trust policy to exact `aud`+`sub`; gate the deploy on a repo *variable* so it
   skips gray, not red.
+- **A9 — CORS origin can't be locked to the extension (deploy-time correction, June 2026).** The doc assumed CORS
+  `AllowOrigins` would be the `chrome-extension://<EXTENSION_ID>` origin; a real AWS deploy proved this impossible —
+  API Gateway HTTP API (v2) rejects the `chrome-extension://` scheme (`BadRequestException: Invalid format for
+  origin …`), accepting only `http(s)://…` or `*`. So `AllowedExtensionOrigin` **must be `*`**. Not a security
+  regression: the JWT authorizer gates writes (POST only), reads are public by design, and the extension reaches
+  the API via its manifest `host_permissions` — browser CORS was never the extension's security boundary.
 
 Choices made and noted (not detrimental):
 - **Two stacks** (app + CDN) split at the change-frequency line, over a single stack with an `EnableCdn` toggle —

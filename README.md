@@ -31,9 +31,9 @@ The code is complete; bringing it live needs five owner-specific inputs (none ca
 1. **Google OAuth "Web application" client** → its client id. (`server/README.md` §1)
 2. **AWS deploy role via GitHub OIDC** → set repo variable `AWS_DEPLOY_ROLE_ARN` (+ `GOOGLE_CLIENT_ID`). (`server/README.md` §2)
 3. `cd server && sam build && sam deploy …`, then (prod) deploy the CDN stack. (`server/README.md` §3)
-4. Set `client/config.mjs` (`API_BASE_URL`, `GOOGLE_CLIENT_ID`) + the manifest `host_permissions`; fix the
-   extension id. (`client/README.md`)
-5. `cd client && npm run build` → load unpacked, or release via the `release` workflow + `publish-chrome-store`.
+4. Set the client config as repo **variables** (`API_BASE_URL`, `GOOGLE_CLIENT_ID`, `EXTENSION_PUBLIC_KEY`) — the
+   release build injects them into the zip; committed source stays placeholder. (`client/README.md`)
+5. Release via the `release` workflow (bump the version on `main`) + `publish-chrome-store`. The zip is built in CI.
 
 Open product/config questions are tracked in [`docs/architecture.md`](docs/architecture.md) §11.
 
