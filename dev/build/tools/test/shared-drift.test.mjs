@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { SOURCE, VENDORED } from '../scripts/sync-shared.mjs';
+import { SOURCE, VENDORED } from '../sync-shared.mjs';
 
 test('every vendored normalizeUrl copy is byte-identical to the canonical source', () => {
   const source = readFileSync(SOURCE);

@@ -10,7 +10,7 @@ import { SHIP, clientDir } from '../scripts/build-zip.mjs';
 const manifest = JSON.parse(readFileSync(resolve(clientDir, 'manifest.json'), 'utf8'));
 
 test('the ship list excludes dev/test tooling', () => {
-  for (const forbidden of ['test', 'scripts', 'package.json', 'package-lock.json', 'node_modules', 'README.md']) {
+  for (const forbidden of ['test', 'dev', 'scripts', 'package.json', 'package-lock.json', 'node_modules', 'README.md']) {
     assert.ok(!SHIP.includes(forbidden), `${forbidden} must not ship`);
   }
 });

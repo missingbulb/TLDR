@@ -3,10 +3,10 @@ name: client
 on:
   pull_request:
     branches: [main]
-    paths: ['client/**', 'shared/**', 'scripts/**', 'test/**', '.github/workflows/client.yml']
+    paths: ['client/**', 'shared/**', 'dev/build/**', '.github/workflows/client.yml']
   push:
     branches: [main, 'claude/**']
-    paths: ['client/**', 'shared/**', 'scripts/**', 'test/**', '.github/workflows/client.yml']
+    paths: ['client/**', 'shared/**', 'dev/build/**', '.github/workflows/client.yml']
 
 permissions:
   contents: read
@@ -21,13 +21,14 @@ jobs:
         with:
           node-version: 22
 
-      # Cross-cutting checks: the URL-normalizer corpus + the shared drift guard.
-      - name: Cross-cutting tests
+      # Repo-level checks: the URL-normalizer corpus + the shared drift guard (root, no deps).
+      - name: Repo-level tests
         run: npm test
 
       - name: Validate manifest.json is parseable
         run: node -e "JSON.parse(require('fs').readFileSync('client/manifest.json'))"
 
+      # The client has no runtime/test dependencies (the UI requirements suite + its deps live in dev/).
       - name: Client tests (logic + manifest/packaging guards)
         working-directory: client
         run: npm test

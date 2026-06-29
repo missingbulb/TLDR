@@ -2,13 +2,14 @@
 // can't import across the repo at runtime. Run after editing shared/normalizeUrl.mjs.
 //
 // The copies are byte-identical to the source (the GENERATED marker lives in the filename), so
-// test/shared-drift.test.mjs can guard drift with a simple byte-equality check.
+// dev/build/tools/test/shared-drift.test.mjs can guard drift with a simple byte-equality check.
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+// This tool lives at dev/build/tools/, so the repo root is three levels up.
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 export const SOURCE = resolve(repoRoot, 'shared/normalizeUrl.mjs');
 export const VENDORED = [
