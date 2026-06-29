@@ -250,10 +250,20 @@ Back in the [Developer Dashboard](https://chrome.google.com/webstore/devconsole)
   and small/marquee tiles as prompted.
 - [ ] **7.3 Privacy** tab (this gates approval — TLDR uses `identity`, `storage`, `tabs`, `webNavigation`, and host
   permissions, and collects a Google identity + user-posted text):
-  - [ ] **Single purpose** — one clear sentence (e.g. *"Show and post short community notes attached to the current web page."*).
-  - [ ] **Per-permission justification** — one line each for `identity`, `sidePanel`, `storage`, `tabs`, `webNavigation`, and the host permission. Be specific about *why*.
-  - [ ] **Data usage** disclosures — declare that you collect authentication info (Google account) and user content (the note text); check the certification boxes.
-  - [ ] **Privacy policy URL** = `<PRIVACY_POLICY_URL>` — **required** and must be publicly reachable. Host a short policy (what you store: a salted email hash + note text + author name/id; that raw email is never stored or shared) and paste the URL.
+  - [ ] **Single purpose** (paste): *"Show and post short community 'tl;dr' notes attached to the web page the user is currently viewing."*
+  - [ ] **Per-permission justification** — paste these (each is grounded in actual code use):
+
+    | Field on the form | Justification to paste |
+    |-------------------|------------------------|
+    | `identity` | Used only to sign the user in with Google via `launchWebAuthFlow` to obtain an ID token, so they can post notes. No token is requested unless the user chooses to post. |
+    | `sidePanel` | The extension's entire UI is a side panel that lists notes for the current page and lets the user post one; required to open and render it. |
+    | `storage` | Stores the user's per-site on/off list (the denylist) in `chrome.storage.sync` and a short-lived sign-in token cache in `chrome.storage.session`. No browsing data is stored. |
+    | `tabs` | Reads the active tab's URL to fetch and display the notes attached to the page the user is currently viewing, and to refresh when they switch tabs. |
+    | `webNavigation` | Detects in-page (SPA) navigations (`onHistoryStateUpdated`) so the notes list refreshes when the URL changes without a full page reload. |
+    | Host permission (`https://<CLOUDFRONT_DOMAIN>/*`) | The single backend the extension talks to, to read and post notes. It contacts no other host. |
+
+  - [ ] **Data usage** disclosures — declare: **Authentication information** (Google sign-in / ID token) and **User-generated content** (the note text). Check the three certifications: not selling/transferring data to third parties, not using it for unrelated purposes, and not using it for creditworthiness/lending. (Raw email is never stored — only a salted one-way hash — so don't declare email collection.)
+  - [ ] **Privacy policy URL** = `<PRIVACY_POLICY_URL>` — **required**, must be publicly reachable. A ready-to-host draft is in [`docs/privacy-policy.md`](privacy-policy.md): fill in `<CONTACT_EMAIL>` + date, publish it (e.g. GitHub Pages), and paste the URL here.
 - [ ] **7.4 Submit for review.** Approval typically takes a few days to a couple of weeks. You'll get an email on
   approval or rejection (rejections name the policy + the fix).
 
