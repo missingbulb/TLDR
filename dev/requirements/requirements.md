@@ -132,60 +132,26 @@ injected — is `3.3`.)
 </tr>
 </table>
 
-<table>
-<tr>
-<td valign="top" width="340">
-
-![pending-note.1.7](dom/cases/pending-note.1.7.png) <!-- req-gallery:1.7 -->
-
-</td>
-<td valign="top">
-
-`1.7` A just-posted note appears **immediately** in a **pending** treatment
-(**"&lt;author&gt; · posting…"**, muted) before the server confirms it.
-
-</td>
-</tr>
-</table>
-
-<table>
-<tr>
-<td valign="top" width="340">
-
-![failed-note.1.8](dom/cases/failed-note.1.8.png) <!-- req-gallery:1.8 -->
-
-</td>
-<td valign="top">
-
-`1.8` When a post **fails**, the note stays visible in a **failed** treatment
-(**"&lt;author&gt; · failed to post"**) and the composer shows an inline error — the user's text is
-never lost.
-
-</td>
-</tr>
-</table>
-
-
 ## 2. Posting a note
 
-What happens when you add a note, and who's allowed to. The *looks* of the flow are pinned as images
-— **posting…** (`1.7`), **saved** (`2.5`), **failed** (`1.8`); the `behavior` leaves verify the
-gesture and its effects a still image can't show (the click, the button enabling/disabling, the box
-clearing); and the `server` leaves verify the rule the UI can only assume — that the server itself
+What happens when you add a note, and who's allowed to. The **flow is shown as the panel actually
+looks** at each step — *posting* (`2.1`), *saved* (`2.2`), *failed* (`2.3`) — driven by the real
+gesture with the save mocked to land each outcome; the note's treatment **and Post's
+enabled/disabled state** are the visible proof. The `behavior` leaves cover what an image can't (an
+empty note posts nothing; reading is anonymous), and the `server` leaves prove the server itself
 decides who may post.
 
 <table>
 <tr>
 <td valign="top" width="340">
 
-🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:2.1 -->
+![posting.2.1](dom/cases/posting.2.1.png) <!-- req-gallery:2.1 -->
 
 </td>
 <td valign="top">
 
-`2.1` When you post a note it appears **immediately** as **"posting…"**, **Post** is **disabled**
-until it's saved, and the box clears — so you see it took and can't double-post. _(How "posting…"
-looks: `1.7`.)_
+`2.1` When you press **Post**, your note appears **immediately** as **"posting…"** and **Post** is
+**disabled** until it's saved — so you see it took and can't double-post.
 
 </td>
 </tr>
@@ -195,14 +161,13 @@ looks: `1.7`.)_
 <tr>
 <td valign="top" width="340">
 
-🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:2.2 -->
+![saved.2.2](dom/cases/saved.2.2.png) <!-- req-gallery:2.2 -->
 
 </td>
 <td valign="top">
 
-`2.2` When the save **succeeds**, your note becomes a normal saved note and **Post** is **enabled**
-again. (Your note is sent with your signed-in identity; reading notes is anonymous.) _(How it looks:
-`2.5`.)_
+`2.2` Once the save **succeeds**, your note becomes a **normal saved note** and **Post** is
+**enabled** again.
 
 </td>
 </tr>
@@ -212,14 +177,13 @@ again. (Your note is sent with your signed-in identity; reading notes is anonymo
 <tr>
 <td valign="top" width="340">
 
-🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:2.3 -->
+![post-failed.2.3](dom/cases/post-failed.2.3.png) <!-- req-gallery:2.3 -->
 
 </td>
 <td valign="top">
 
-`2.3` If the save **fails**, your note isn't lost — it stays, marked **failed**, the box shows
-**"Could not post — try again."**, and **Post** is **enabled** again so you can retry. _(How it
-looks: `1.8`.)_
+`2.3` If the save **fails**, your note **isn't lost** — it stays, marked **failed**, the box shows
+**"Could not post — try again."**, and **Post** is **enabled** again so you can retry.
 
 </td>
 </tr>
@@ -244,13 +208,13 @@ looks: `1.8`.)_
 <tr>
 <td valign="top" width="340">
 
-![posted-state.2.5](dom/cases/posted-state.2.5.png) <!-- req-gallery:2.5 -->
+🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:2.5 -->
 
 </td>
 <td valign="top">
 
-`2.5` After a successful post, your note shows as a **normal saved note** with **Post enabled** again
-(the "posting…" treatment is gone).
+`2.5` You can **read** notes without signing in; **posting** attaches your signed-in identity.
+_(Cross-tier: this is the UI half; the server enforcement is `2.6`.)_
 
 </td>
 </tr>
@@ -265,9 +229,8 @@ looks: `1.8`.)_
 </td>
 <td valign="top">
 
-`2.6` **Only signed-in people can post.** The UI sends your signed-in identity with a note (and
-nothing when reading) — but the guarantee is the **server's**: a write with no signed-in identity is
-rejected. _(Cross-tier: the UI half is `2.2`; this is the server enforcement.)_
+`2.6` **Only signed-in people can post** — the guarantee is the **server's**: a write with no
+signed-in identity is rejected. _(Cross-tier: the UI half is `2.5`; this is the server enforcement.)_
 
 </td>
 </tr>
@@ -282,7 +245,7 @@ rejected. _(Cross-tier: the UI half is `2.2`; this is the server enforcement.)_
 </td>
 <td valign="top">
 
-`2.7` **A verified email is required to post.** The server rejects a signed-in user whose Google
+`2.7` **A verified email is required to post** — the server rejects a signed-in user whose Google
 email isn't verified.
 
 </td>
