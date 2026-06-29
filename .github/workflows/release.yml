@@ -54,9 +54,32 @@ jobs:
         working-directory: client
         run: npm test
 
+      # The real config is injected at build time from repository variables (kept out of the repo).
+      # Fail fast with a clear message rather than shipping a placeholder zip to the store.
+      - name: Require release config
+        if: steps.version.outputs.release == 'true'
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          EXTENSION_PUBLIC_KEY: ${{ vars.EXTENSION_PUBLIC_KEY }}
+        run: |
+          missing=
+          for v in API_BASE_URL GOOGLE_CLIENT_ID EXTENSION_PUBLIC_KEY; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "Missing required repository variable(s):$missing" >&2
+            echo "Set them under Settings → Secrets and variables → Actions → Variables (see dev/docs/go-live-runbook.md)." >&2
+            exit 1
+          fi
+
       - name: Build the extension zip
         if: steps.version.outputs.release == 'true'
         working-directory: client
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          EXTENSION_PUBLIC_KEY: ${{ vars.EXTENSION_PUBLIC_KEY }}
         run: npm run build
 
       - name: Publish GitHub Release

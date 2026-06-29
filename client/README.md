@@ -7,7 +7,7 @@ user post one. No bundler — Chrome loads the ES modules directly.
 ```
 client/
 ├── manifest.json            # MV3 manifest (least-privilege; no <all_urls>)
-├── config.mjs               # OWNER-EDITED: API_BASE_URL + GOOGLE_CLIENT_ID
+├── config.mjs               # API_BASE_URL + GOOGLE_CLIENT_ID (placeholders; injected at build time)
 ├── src/
 │   ├── service-worker.mjs   # opens the side panel on toolbar click; seeds the denylist
 │   ├── sidepanel.{html,css,mjs}  # the UI + read/post orchestration
@@ -22,21 +22,30 @@ client/
 └── test/                    # node --test unit tests
 ```
 
-## Configure (before building/loading)
-1. **`config.mjs`** — set `API_BASE_URL` (dev: the app stack `ApiUrl`; prod: `https://<cloudfront-domain>`)
-   and `GOOGLE_CLIENT_ID` (the Google "Web application" client id — see `server/README.md`).
-2. **`manifest.json` → `host_permissions`** — change `https://api.tldr.example/*` to your API/CloudFront host.
+## Configuration (injected at build time)
+The committed `config.mjs` and `manifest.json` carry only placeholders. The release workflow
+(`.github/workflows/release.yml`) builds the zip in CI and injects the real values from GitHub
+repository variables — there is no local checkout to hand-edit:
+- **`API_BASE_URL`** (dev: the app stack `ApiUrl`; prod: `https://<cloudfront-domain>`) →
+  `config.mjs` `API_BASE_URL` **and** `manifest.json` `host_permissions` (as `<origin>/*`, the
+  API/CloudFront host).
+- **`GOOGLE_CLIENT_ID`** (the Google "Web application" client id — see `server/README.md`) →
+  `config.mjs`.
 
 ## The extension id (and why it matters)
 The OAuth redirect URI is `https://<EXTENSION_ID>.chromiumapp.org/`, and CORS is locked to
 `chrome-extension://<EXTENSION_ID>`. So the id must be **stable**:
 - **Unpacked dev:** Chrome derives the id from the load path; run `chrome.identity.getRedirectURL()`
   in the side panel devtools to read the exact redirect URI, and register that on the Google client.
-- **Stable id across machines / for production:** add a `"key"` to `manifest.json` (the public key of
-  a keypair, or the key Chrome shows for your uploaded Web Store item). It is intentionally omitted
-  here because an invalid `"key"` makes the manifest fail to load — add the real one when you have it.
+- **Stable id across machines / for production:** the manifest needs a `"key"` (the public key of a
+  keypair, or the key Chrome shows for your uploaded Web Store item). It is omitted from the committed
+  source because an invalid `"key"` makes the manifest fail to load; the build injects the real one
+  from the `EXTENSION_PUBLIC_KEY` repository variable.
 
 ## Build
+The shippable zip is produced by CI — the release workflow runs `npm run build`, injecting the repo
+variables above into staged copies (the committed source is never touched). The build itself runs
+anywhere; with no env set it still produces a valid placeholder zip:
 ```bash
 cd client
 npm run build      # -> dist/tldr-extension.zip (only the shippable files)

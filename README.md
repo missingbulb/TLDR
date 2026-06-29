@@ -24,14 +24,18 @@ for the active tab, and only on commentable pages. A comment is one DynamoDB ite
 CloudFront edge lookup. See [`dev/docs/architecture.md`](dev/docs/architecture.md).
 
 ## Quickstart (owner setup)
+> **Going live from zero?** Follow [`dev/docs/go-live-runbook.md`](dev/docs/go-live-runbook.md) — an action-by-action
+> checklist from no AWS/Chrome-Store accounts to a published, working extension. The summary below is the
+> five inputs it operationalizes.
+
 The code is complete; bringing it live needs five owner-specific inputs (none can be defaulted):
 
 1. **Google OAuth "Web application" client** → its client id. (`server/README.md` §1)
 2. **AWS deploy role via GitHub OIDC** → set repo variable `AWS_DEPLOY_ROLE_ARN` (+ `GOOGLE_CLIENT_ID`). (`server/README.md` §2)
 3. `cd server && sam build && sam deploy …`, then (prod) deploy the CDN stack. (`server/README.md` §3)
-4. Set `client/config.mjs` (`API_BASE_URL`, `GOOGLE_CLIENT_ID`) + the manifest `host_permissions`; fix the
-   extension id. (`client/README.md`)
-5. `cd client && npm run build` → load unpacked, or release via the `release` workflow + `publish-chrome-store`.
+4. Set the client config as repo **variables** (`API_BASE_URL`, `GOOGLE_CLIENT_ID`, `EXTENSION_PUBLIC_KEY`) — the
+   release build injects them into the zip; committed source stays placeholder. (`client/README.md`)
+5. Release via the `release` workflow (bump the version on `main`) + `publish-chrome-store`. The zip is built in CI.
 
 Open product/config questions are tracked in [`dev/docs/architecture.md`](dev/docs/architecture.md) §11.
 

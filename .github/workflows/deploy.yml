@@ -41,7 +41,7 @@ jobs:
         working-directory: server
         run: npm ci
 
-      - uses: aws-actions/setup-sam@v2
+      - uses: aws-actions/setup-sam@v3
         with:
           use-installer: true
 
@@ -49,7 +49,7 @@ jobs:
       - name: Install esbuild on PATH (for SAM's esbuild builder)
         run: npm install -g esbuild@0.24.0
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: il-central-1
@@ -65,6 +65,15 @@ jobs:
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --parameter-overrides "GoogleClientId=${{ vars.GOOGLE_CLIENT_ID }} AllowedExtensionOrigin=${{ vars.ALLOWED_EXTENSION_ORIGIN || '*' }} EmailHashSalt=${{ secrets.EMAIL_HASH_SALT }}"
+
+      # Stack termination protection can't be expressed in the template body; set it via the API after
+      # deploy. Idempotent — re-enabling an already-protected stack is a no-op — so it runs every deploy.
+      - name: Enable termination protection on the app stack
+        run: |
+          aws cloudformation update-termination-protection \
+            --enable-termination-protection \
+            --stack-name tldr-app \
+            --region il-central-1
 
       - name: sam deploy (CDN stack, on request)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_cdn }}
