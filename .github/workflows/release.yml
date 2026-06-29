@@ -49,11 +49,6 @@ jobs:
           echo "tag=v$version" >> "$GITHUB_OUTPUT"
           echo "Releasing v$version" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Install client dev dependencies
-        if: steps.version.outputs.release == 'true'
-        working-directory: client
-        run: npm ci
-
       - name: Test
         if: steps.version.outputs.release == 'true'
         working-directory: client

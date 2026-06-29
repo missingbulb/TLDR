@@ -7,7 +7,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "client");
 
 export default {
   description: "the notes list is an aria-live=\"polite\" region",

@@ -233,7 +233,9 @@ Cost watch-items: a GSI (multiplies writes), verbose CloudWatch logging, CloudFr
 ### 8.1 Structure (as built)
 ```
 repo-root/
-├── shared/normalizeUrl.mjs          # 🔧 single source of truth for normalization (vendored into both)
+├── shared/                          # 🔧 single source of truth for normalization (vendored into both)
+│   ├── normalizeUrl.mjs
+│   └── test/normalizeUrl.test.mjs   # the normalizer corpus test, next to what it tests
 ├── server/                          # everything AWS
 │   ├── template.yaml                # SAM: HTTP API + JWT authorizer + Lambda + DynamoDB
 │   ├── cdn-template.yaml            # plain CFN: CloudFront (separate stack)
@@ -245,15 +247,18 @@ repo-root/
 │   ├── src/… (service worker, side panel, options, auth, api, denylist, optimistic)
 │   ├── vendor/normalizeUrl.GENERATED.mjs
 │   ├── icons/  scripts/  test/
-├── test/                            # cross-cutting: normalizer corpus + shared drift guard
-├── docs/architecture.md             # this file
-└── .github/workflows/               # server.yml, client.yml, deploy.yml, release.yml, publish-chrome-store.yml
+├── dev/                             # repo dev tooling (not shipped)
+│   ├── requirements/                # the executable-requirements suite (client UI + server)
+│   ├── docs/                        # architecture.md (this file) + ui-testing-guideline.md
+│   └── build/tools/                 # sync-shared.mjs + test/shared-drift.test.mjs (the drift guard)
+└── .github/workflows/               # server.yml, client.yml, requirements.yml, deploy.yml, release.yml, publish-chrome-store.yml
 ```
 
-### 8.2 Two build artifacts from one repo (CI)
+### 8.2 Build artifacts and checks from one repo (CI)
 🔧 Path-filtered **`server.yml`** and **`client.yml`** run build+test independently (each also runs the
-cross-cutting normalizer + drift guard, since both depend on `shared/`). A pure change to one folder does not
-run the other. (This replaces a single combined pipeline; deploy/release are separate, below.)
+repo-level normalizer corpus + drift guard, since both depend on `shared/`); **`requirements.yml`** runs the
+cross-tier executable-requirements suite. A pure change to one folder does not run the others. (This replaces
+a single combined pipeline; deploy/release are separate, below.)
 
 ### 8.3 Who applies the changes (no local execution)
 A push/merge to `server/**` on `main` triggers **`deploy.yml`** on an ephemeral GitHub runner, which runs

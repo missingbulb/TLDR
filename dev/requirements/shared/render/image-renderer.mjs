@@ -24,7 +24,7 @@ import { Resvg } from "@resvg/resvg-js";
 import { openForSnapshot } from "./harness.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const CLIENT = path.join(HERE, "..", "..", "..", "..");
+const CLIENT = path.join(HERE, "..", "..", "..", "..", "client");
 const FONT_DIR = path.join(HERE, "fonts");
 
 const FONT_FAMILY = "Liberation Sans"; // a deterministic, metric-stable stand-in for the panel's sans-serif stack

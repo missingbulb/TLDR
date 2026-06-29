@@ -82,7 +82,7 @@ Verify in the console that the table's **Point-in-time recovery** is on.
 - **Per-author rate limit**: a TTL'd DynamoDB counter caps comments/author/minute (`RateLimitPerMinute`, default 10) — the real per-user control.
 - **Body cap**: `MaxBodyBytes` (default 8 KB) → 413.
 - **Verified email required** for writes (`email_verified` claim).
-- Edge/stage throttling and reserved concurrency are intentionally **not** set in v1 (reserved concurrency can fail a new account's deploy when its concurrency limit is low). Add API Gateway stage `RouteSettings` once the account's limits are known — see the §10 fast-follow in `docs/architecture.md`.
+- Edge/stage throttling and reserved concurrency are intentionally **not** set in v1 (reserved concurrency can fail a new account's deploy when its concurrency limit is low). Add API Gateway stage `RouteSettings` once the account's limits are known — see the §10 fast-follow in `dev/docs/architecture.md`.
 
 ## Tests
 `npm test` — handler logic with DynamoDB mocked at the SDK boundary (`aws-sdk-client-mock`).

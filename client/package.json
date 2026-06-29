@@ -6,16 +6,7 @@
   "description": "TLDR Chrome extension (MV3) — side-panel-gated community notes for any web page.",
   "license": "MIT",
   "scripts": {
-    "test": "TZ=UTC LANG=C.UTF-8 node --test \"test/**/*.test.mjs\" \"dev/requirements/**/*.test.mjs\"",
-    "test:ui": "TZ=UTC LANG=C.UTF-8 node --test \"dev/requirements/**/*.test.mjs\"",
-    "refresh:ui": "TZ=UTC LANG=C.UTF-8 node dev/requirements/shared/render/refresh-snapshots.mjs",
+    "test": "node --test \"test/**/*.test.mjs\"",
     "build": "node scripts/build-zip.mjs"
-  },
-  "devDependencies": {
-    "@resvg/resvg-js": "^2.6.2",
-    "jsdom": "^29.1.1",
-    "pixelmatch": "^7.2.0",
-    "pngjs": "^7.0.0",
-    "satori": "^0.26.0"
   }
 }

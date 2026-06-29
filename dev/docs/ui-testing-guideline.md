@@ -7,7 +7,7 @@ UI testing*, not any one rendering technology; HTML rendering is one section nea
 spine.
 
 Two worked examples to read alongside it: this repo's
-[`client/dev/requirements/`](../client/dev/requirements/README.md), and the project it adapts,
+[`dev/requirements/`](../requirements/README.md), and the project it adapts,
 [`missingbulb/GoogleCalendarEventCreator` `dev/requirements/`](https://github.com/missingbulb/GoogleCalendarEventCreator/tree/main/dev/requirements).
 The durable, cross-project testing lessons these build on live in the team corpus (`testingPractices.md`).
 

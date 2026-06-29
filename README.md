@@ -9,19 +9,19 @@ URL-normalization rule.
 ## Layout
 | Path | What |
 |------|------|
-| [`shared/normalizeUrl.mjs`](shared/normalizeUrl.mjs) | The single source of truth for URL → `pageId` normalization (vendored into both sides, drift-guarded). |
+| [`shared/`](shared/normalizeUrl.mjs) | The single source of truth for URL → `pageId` normalization (vendored into both sides, drift-guarded); `shared/test/` holds its corpus test. |
 | [`server/`](server/README.md) | Everything AWS: HTTP API + Google JWT authorizer, one Lambda, DynamoDB, CloudFront. Two CloudFormation stacks. |
 | [`client/`](client/README.md) | The MV3 Chrome extension (side panel, no bundler). |
-| [`docs/architecture.md`](docs/architecture.md) | The as-built architecture and the decision log. |
-| [`docs/ui-testing-guideline.md`](docs/ui-testing-guideline.md) | Portable guideline for testing a UI as executable requirements (a new UI project can start here). |
-| [`client/dev/requirements/`](client/dev/requirements/README.md) | The executable-requirements suite for the extension UI (the guideline applied). |
-| `.github/workflows/` | CI (`server`, `client`), gated deploy (`deploy`), extension release (`release`, `publish-chrome-store`). |
+| [`dev/requirements/`](dev/requirements/README.md) | The executable-requirements suite (client UI + server), spanning both apps. |
+| [`dev/docs/`](dev/docs/architecture.md) | The as-built [architecture](dev/docs/architecture.md) + the portable [UI-testing guideline](dev/docs/ui-testing-guideline.md). |
+| [`dev/build/tools/`](dev/build/tools/sync-shared.mjs) | Build tooling: the shared-code sync + its drift guard (`dev/build/tools/test/`). |
+| `.github/workflows/` | CI (`server`, `client`, `requirements`), gated deploy (`deploy`), extension release (`release`, `publish-chrome-store`). |
 
 ## Architecture in one breath
 Public, CDN-cached reads; authenticated writes. The client fetches only while the side panel is open,
 for the active tab, and only on commentable pages. A comment is one DynamoDB item keyed by
 `(pageId, ULID)`, so "all comments for a page" is a single-partition query that's usually a single
-CloudFront edge lookup. See [`docs/architecture.md`](docs/architecture.md).
+CloudFront edge lookup. See [`dev/docs/architecture.md`](dev/docs/architecture.md).
 
 ## Quickstart (owner setup)
 The code is complete; bringing it live needs five owner-specific inputs (none can be defaulted):
@@ -33,16 +33,16 @@ The code is complete; bringing it live needs five owner-specific inputs (none ca
    extension id. (`client/README.md`)
 5. `cd client && npm run build` → load unpacked, or release via the `release` workflow + `publish-chrome-store`.
 
-Open product/config questions are tracked in [`docs/architecture.md`](docs/architecture.md) §11.
+Open product/config questions are tracked in [`dev/docs/architecture.md`](dev/docs/architecture.md) §11.
 
 ## Develop & test
 ```bash
-npm test                       # cross-cutting: URL-normalizer corpus + shared drift guard
+npm test                       # repo-level checks: URL-normalizer corpus + shared drift guard
 npm --prefix server ci && npm --prefix server test
-npm --prefix client ci && npm --prefix client test    # incl. the UI executable-requirements suite (jsdom)
-npm --prefix client run test:ui                       # just the UI executable-requirements suite
+npm --prefix client test       # client unit + manifest/packaging guards (no deps)
+npm --prefix dev ci && npm --prefix dev test           # the executable-requirements suite (UI + server)
 ```
 No bundler, no linter — native `node --test` and `node --check`, matching the project's conventions.
-The extension's UI is specified as executable requirements under
-[`client/dev/requirements/`](client/dev/requirements/README.md); regenerate its goldens with
-`npm --prefix client run refresh:ui` after an intentional panel change.
+The UI + server requirements are specified as executable requirements under
+[`dev/requirements/`](dev/requirements/README.md); regenerate its rendered images with
+`npm --prefix dev run refresh:ui` after an intentional panel change.

@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizePageUrl, InvalidPageUrlError } from '../shared/normalizeUrl.mjs';
+import { normalizePageUrl, InvalidPageUrlError } from '../normalizeUrl.mjs';
 
 const CASES = [
   // [input, expected]

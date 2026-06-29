@@ -9,7 +9,7 @@ The shape here — a numbered spec, a strict leaf⇄case bijection, kinds as a p
 owner-owned expecteds, snapshots driven through the real code — is the reusable pattern. It is
 adapted from [`missingbulb/GoogleCalendarEventCreator` `dev/requirements/`](https://github.com/missingbulb/GoogleCalendarEventCreator/tree/main/dev/requirements);
 the portable, project-agnostic write-up of *why* and *how* lives in
-[`docs/ui-testing-guideline.md`](../../../docs/ui-testing-guideline.md).
+[`docs/ui-testing-guideline.md`](../docs/ui-testing-guideline.md).
 
 ## The five invariants
 
@@ -66,7 +66,7 @@ the default light theme), removes `[hidden]` elements (Chrome's UA `display:none
 and projects a `textarea`'s `.value` into the image (e.g. the options page's seeded denylist, one host
 per line). It cannot show an OS cursor or a `:hover` state — those aren't static DOM; a "clickable"
 affordance is covered by its resting visual cue here plus a `behavior` click test, never a faked
-cursor. See the "Rendering HTML" section of [the portable guideline](../../../docs/ui-testing-guideline.md).
+cursor. See the "Rendering HTML" section of [the portable guideline](../docs/ui-testing-guideline.md).
 
 ## Adding a requirement (an existing kind)
 

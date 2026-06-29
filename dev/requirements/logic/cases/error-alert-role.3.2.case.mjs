@@ -5,7 +5,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "client");
 
 export default {
   description: "the composer error is a role=\"alert\" live region",

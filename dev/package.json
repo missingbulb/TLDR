@@ -1,0 +1,20 @@
+{
+  "name": "tldr-dev",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Repo dev tooling: the executable-requirements suite (client UI + server), docs, and build tools.",
+  "license": "MIT",
+  "scripts": {
+    "test": "TZ=UTC LANG=C.UTF-8 node --test \"requirements/**/*.test.mjs\"",
+    "test:ui": "TZ=UTC LANG=C.UTF-8 node --test \"requirements/shared/render/dom-snapshots.test.mjs\"",
+    "refresh:ui": "TZ=UTC LANG=C.UTF-8 node requirements/shared/render/refresh-snapshots.mjs"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "jsdom": "^29.1.1",
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0",
+    "satori": "^0.26.0"
+  }
+}
