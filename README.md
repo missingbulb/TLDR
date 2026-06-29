@@ -13,6 +13,8 @@ URL-normalization rule.
 | [`server/`](server/README.md) | Everything AWS: HTTP API + Google JWT authorizer, one Lambda, DynamoDB, CloudFront. Two CloudFormation stacks. |
 | [`client/`](client/README.md) | The MV3 Chrome extension (side panel, no bundler). |
 | [`docs/architecture.md`](docs/architecture.md) | The as-built architecture and the decision log. |
+| [`docs/ui-testing-guideline.md`](docs/ui-testing-guideline.md) | Portable guideline for testing a UI as executable requirements (a new UI project can start here). |
+| [`client/dev/requirements/`](client/dev/requirements/README.md) | The executable-requirements suite for the extension UI (the guideline applied). |
 | `.github/workflows/` | CI (`server`, `client`), gated deploy (`deploy`), extension release (`release`, `publish-chrome-store`). |
 
 ## Architecture in one breath
@@ -37,6 +39,10 @@ Open product/config questions are tracked in [`docs/architecture.md`](docs/archi
 ```bash
 npm test                       # cross-cutting: URL-normalizer corpus + shared drift guard
 npm --prefix server ci && npm --prefix server test
-npm --prefix client test
+npm --prefix client ci && npm --prefix client test    # incl. the UI executable-requirements suite (jsdom)
+npm --prefix client run test:ui                       # just the UI executable-requirements suite
 ```
 No bundler, no linter — native `node --test` and `node --check`, matching the project's conventions.
+The extension's UI is specified as executable requirements under
+[`client/dev/requirements/`](client/dev/requirements/README.md); regenerate its goldens with
+`npm --prefix client run refresh:ui` after an intentional panel change.

@@ -1,0 +1,11 @@
+body
+  header.header
+    h1.title "TLDR · denylist"
+  p.status "One host per line. TLDR stays off on these hosts and their subdomains (e.g. , ). The Chrome Web Store is always off and can't be removed."
+    code "localhost"
+    code "google.com"
+  form#form.composer
+    textarea#denylist.body [rows="10" value="google.com localhost example.org"]
+    div.composer-row
+      span#saved.comment-meta
+      button#save.post [type="submit"] "Save"

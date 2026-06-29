@@ -1,0 +1,14 @@
+body
+  header.header
+    h1.title "TLDR"
+    p#page.page [title="https://example.com/article"] "https://example.com/article"
+  p#status.status [hidden]
+  ul#comments.comments [aria-live="polite"]
+    li.comment
+      p.comment-body "<b>not bold</b> & <i>not italic</i>"
+      div.comment-meta "Mallory · 6/26/2026"
+  form#composer.composer
+    textarea#body.body [placeholder="Add a tl;dr note for this page…" rows="3" maxlength="8192"]
+    div.composer-row
+      span#composer-error.composer-error [role="alert"]
+      button#post.post [type="submit"] "Post"

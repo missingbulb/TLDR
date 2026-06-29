@@ -20,15 +20,23 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
 
-      # Cross-cutting checks: the URL-normalizer corpus + the shared drift guard.
+      # Cross-cutting checks: the URL-normalizer corpus + the shared drift guard (root, no deps).
       - name: Cross-cutting tests
         run: npm test
 
       - name: Validate manifest.json is parseable
         run: node -e "JSON.parse(require('fs').readFileSync('client/manifest.json'))"
 
-      - name: Client tests (logic + manifest/packaging guards)
+      # The UI executable-requirements suite (dev/requirements/) runs the real panel under jsdom, so
+      # the client now has a test-only devDependency. Install it before the client tests.
+      - name: Install client dev dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Client tests (logic, UI executable-requirements, manifest/packaging guards)
         working-directory: client
         run: npm test
 

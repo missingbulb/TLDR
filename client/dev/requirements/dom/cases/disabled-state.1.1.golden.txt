@@ -1,0 +1,11 @@
+body
+  header.header
+    h1.title "TLDR"
+    p#page.page [title=""]
+  p#status.status "TLDR is off for this page."
+  ul#comments.comments [aria-live="polite"]
+  form#composer.composer [hidden]
+    textarea#body.body [placeholder="Add a tl;dr note for this page…" rows="3" maxlength="8192"]
+    div.composer-row
+      span#composer-error.composer-error [role="alert"]
+      button#post.post [type="submit"] "Post"
