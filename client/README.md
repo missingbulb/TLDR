@@ -23,11 +23,13 @@ client/
 ```
 
 ## Configuration (injected at build time)
-The committed `config.mjs` `API_BASE_URL` points at the **dev** stack on purpose, so any build that
-isn't the official store release talks to dev — **never prod**. PROD is reachable in exactly one way:
+The committed `config.mjs` `API_BASE_URL` points at the **dev** stack on purpose, so any build **not
+produced by the release workflow** talks to dev — **never prod**. PROD is reachable in exactly one way:
 the release workflow (`.github/workflows/release.yml`) injects the prod URL from a GitHub repository
-variable at build time. A plain/local/unpacked build keeps the committed dev default and cannot reach
-production. (`GOOGLE_CLIENT_ID` and the manifest `key` stay placeholders, injected the same way.)
+variable at build time. That prod-pointed zip is **both** the GitHub Release artifact **and** what
+`publish-chrome-store.yml` uploads to the store — so **downloading the release zip from GitHub is
+prod**, while a plain/local/unpacked/`build:dev` build keeps the committed dev default. (`GOOGLE_CLIENT_ID`
+and the manifest `key` stay placeholders, injected the same way.)
 - **`API_BASE_URL`** — committed default = the **dev** app stack `ApiUrl`
   (`https://<id>.execute-api.<region>.amazonaws.com`); the release build overrides it with prod
   (`https://<cloudfront-domain>`). Injected into `config.mjs` **and** `manifest.json` `host_permissions`
