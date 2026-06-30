@@ -63,3 +63,11 @@ test('an ad-hoc stack name also gets its own table, never prod’s', () => {
   assert.equal(resolveTableName('tldr-app-experiment'), 'tldr-app-experiment-comments');
   assert.notEqual(resolveTableName('tldr-app-experiment'), prodTableLiteral());
 });
+
+// CORS allows the client's X-Client-Version header (issue #29). The client attaches it to every
+// request; a custom header makes even the public GET a non-simple request, so the browser preflights
+// it and API Gateway must list it in AllowHeaders — drop this and reads/posts break in-browser only
+// (never in a unit test), so this guard stands in for that missing platform feedback.
+test('CORS allows the client version header (X-Client-Version)', () => {
+  assert.match(template, /AllowHeaders:[\s\S]*?- x-client-version/);
+});

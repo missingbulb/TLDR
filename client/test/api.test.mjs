@@ -6,17 +6,26 @@ function jsonResponse(status, body) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
 }
 
-test('getComments builds a public GET (no Authorization header) with the pageUrl query', async () => {
+test('getComments builds a public GET (no Authorization) with the pageUrl query and the client-version header', async () => {
   const calls = [];
   const fetchImpl = async (url, opts) => {
     calls.push({ url, opts });
     return jsonResponse(200, { comments: [], nextToken: undefined });
   };
-  await getComments('https://example.com/x', { fetchImpl });
+  await getComments('https://example.com/x', { fetchImpl, clientVersion: '1.2.3' });
   assert.equal(calls.length, 1);
   assert.match(calls[0].url, /\/comments\?pageUrl=https%3A%2F%2Fexample\.com%2Fx$/);
   assert.equal(calls[0].opts.method, 'GET');
-  assert.ok(!calls[0].opts.headers, 'reads must not send an Authorization header');
+  // The version is telemetry, not auth — the read stays anonymous (no bearer), but does carry the version.
+  assert.ok(!('authorization' in (calls[0].opts.headers || {})), 'reads must not send an Authorization header');
+  assert.equal(calls[0].opts.headers['x-client-version'], '1.2.3');
+});
+
+test('getComments omits the version header when no version is supplied', async () => {
+  const calls = [];
+  const fetchImpl = async (url, opts) => { calls.push({ url, opts }); return jsonResponse(200, {}); };
+  await getComments('https://example.com/x', { fetchImpl });
+  assert.ok(!calls[0].opts.headers || !('x-client-version' in calls[0].opts.headers));
 });
 
 test('getComments passes a nextToken through', async () => {
@@ -26,14 +35,16 @@ test('getComments passes a nextToken through', async () => {
   assert.match(seen, /nextToken=TKN/);
 });
 
-test('postComment attaches the bearer token and posts the body', async () => {
+test('postComment attaches the bearer token, the client-version header, and posts the body', async () => {
   const calls = [];
   const fetchImpl = async (url, opts) => { calls.push({ url, opts }); return jsonResponse(201, { comment: { commentId: 'x' } }); };
   const getIdToken = async () => 'ID_TOKEN';
-  const out = await postComment('https://e.com/p', 'hello', getIdToken, { fetchImpl });
+  const out = await postComment('https://e.com/p', 'hello', getIdToken, { fetchImpl, clientVersion: '1.2.3' });
   assert.equal(out.comment.commentId, 'x');
   assert.equal(calls[0].opts.method, 'POST');
   assert.equal(calls[0].opts.headers.authorization, 'Bearer ID_TOKEN');
+  assert.equal(calls[0].opts.headers['x-client-version'], '1.2.3');
+  // The version is a header — the wire body is unchanged (additive evolution, never reshaped).
   assert.deepEqual(JSON.parse(calls[0].opts.body), { pageUrl: 'https://e.com/p', body: 'hello' });
 });
 

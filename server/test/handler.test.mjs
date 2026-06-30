@@ -2,7 +2,7 @@
 // handler logic — auth-claim checks, normalization, validation, rate-limit branch, projection,
 // pagination — runs for real.
 
-import { test, beforeEach } from 'node:test';
+import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { mockClient } from 'aws-sdk-client-mock';
 import {
@@ -18,25 +18,37 @@ process.env.RATE_LIMIT_PER_MINUTE = '10';
 const ddbMock = mockClient(DynamoDBDocumentClient);
 const { handler } = await import('../src/handler.mjs');
 
+// The handler logs a per-request telemetry line (the X-Client-Version cohort). Capture it so the
+// suite output stays clean and a case can assert it; restore the real console.log afterward.
+const realLog = console.log;
+let logs = [];
+
 beforeEach(() => {
   ddbMock.reset();
   ddbMock.on(UpdateCommand).resolves({});
   ddbMock.on(PutCommand).resolves({});
   ddbMock.on(QueryCommand).resolves({ Items: [] });
+  logs = [];
+  console.log = (...args) => logs.push(args);
+});
+
+afterEach(() => {
+  console.log = realLog;
 });
 
 const VALID_CLAIMS = { sub: 'user-123', name: 'Ada', email: 'ada@example.com', email_verified: 'true' };
 
-function postEvent({ claims = VALID_CLAIMS, body, isBase64Encoded = false } = {}) {
+function postEvent({ claims = VALID_CLAIMS, body, isBase64Encoded = false, headers } = {}) {
   return {
     requestContext: { http: { method: 'POST', path: '/comments' }, authorizer: { jwt: { claims } } },
+    headers,
     body: typeof body === 'string' ? body : JSON.stringify(body),
     isBase64Encoded,
   };
 }
 
-function getEvent(queryStringParameters) {
-  return { requestContext: { http: { method: 'GET', path: '/comments' } }, queryStringParameters };
+function getEvent(queryStringParameters, headers) {
+  return { requestContext: { http: { method: 'GET', path: '/comments' } }, headers, queryStringParameters };
 }
 
 function conditionalFailure() {
@@ -170,4 +182,15 @@ test('GET without a pageUrl is rejected (400)', async () => {
 test('unknown routes return 404', async () => {
   const res = await handler({ requestContext: { http: { method: 'DELETE', path: '/comments' } } });
   assert.equal(res.statusCode, 404);
+});
+
+test('every request logs the client version for telemetry (X-Client-Version, null when absent)', async () => {
+  // A request carrying the header logs that version...
+  await handler(getEvent({ pageUrl: 'https://e.com' }, { 'x-client-version': '0.2.0' }));
+  assert.deepEqual(logs.at(-1), ['request', { route: 'GET /comments', clientVersion: '0.2.0' }]);
+
+  // ...and one without it logs null — the old-client cohort we must be able to count.
+  logs = [];
+  await handler(postEvent({ body: { pageUrl: 'https://e.com', body: 'hi' } }));
+  assert.deepEqual(logs.at(-1), ['request', { route: 'POST /comments', clientVersion: null }]);
 });

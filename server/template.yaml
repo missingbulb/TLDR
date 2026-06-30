@@ -113,6 +113,10 @@ Resources:
         AllowHeaders:
           - authorization
           - content-type
+          # The client attaches X-Client-Version (version telemetry, issue #29) to every request. A
+          # custom header makes even the public GET a non-simple request, so the browser preflights
+          # it — this MUST list the header or the preflight fails and reads/posts break in-browser.
+          - x-client-version
         MaxAge: 600
       Auth:
         Authorizers:

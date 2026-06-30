@@ -11,7 +11,21 @@
 // browser e2e (a tracked follow-up) does that.
 "use strict";
 
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 const NOOP_EVENT = { addListener() {} };
+
+// The REAL shipped manifest, so chrome.runtime.getManifest() returns the same object the extension
+// sees — including the `version` the side panel attaches as X-Client-Version on every API request.
+// Read from source (not hard-coded) so it tracks a version bump automatically.
+const MANIFEST = JSON.parse(
+  fs.readFileSync(
+    path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "client", "manifest.json"),
+    "utf8",
+  ),
+);
 
 // Build a JWT-shaped id_token whose payload carries the request's `nonce` and a far-future `exp`,
 // base64url-encoded the way a real Google token is. The production auth.mjs decodes the payload,
@@ -79,7 +93,7 @@ export function makeFakeChrome({ tabUrl, denylist = null, authFails = false, now
       },
     },
     sidePanel: { setPanelBehavior: async () => {} },
-    runtime: { onInstalled: NOOP_EVENT, onStartup: NOOP_EVENT },
+    runtime: { onInstalled: NOOP_EVENT, onStartup: NOOP_EVENT, getManifest: () => MANIFEST },
   };
 
   return { chrome, calls };

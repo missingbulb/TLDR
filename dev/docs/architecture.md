@@ -329,6 +329,47 @@ commands, termination protection).
 Errors: `400` invalid body / missing or non-http(s) `pageUrl`; `401` missing/invalid token; `403` unverified
 email; `413` body too large; `429` per-author rate limit; `404` unknown route; `500` unexpected.
 
+Every request also carries **`X-Client-Version`** — the extension's manifest `version` — as a request header
+(see §9.1). It's telemetry only; it never changes a response, the cache key, or the body.
+
+### 9.1 Versioning & backward-compatibility policy (issue #29)
+
+The extension updates on the Chrome Web Store's schedule, not ours, and the server deploys independently —
+so an old client can call a newer server for a long time. The standing policy keeps that safe **without**
+a version in the URL.
+
+**Additive-only contract evolution (the standing rule — owner-ratified, issue #29).** Evolve the wire
+contract by *adding*, never by *reshaping*:
+- A new request parameter is **always optional, with a server-side default**. An existing parameter is
+  **never** made newly-required for an existing endpoint. (The handler already ignores unknown body fields
+  and defaults missing ones, so a newer client's extra field never breaks an older server, and vice-versa.)
+- A field in the public read projection (`toPublicComment`) is **never removed or renamed — only added**.
+  Pinned by the exact key-set assertion in `server/test/handler.test.mjs` (a removed/renamed field fails it).
+- **Reserve a path version (`/v2`) for a genuinely breaking change only** — one additive-only can't express —
+  and escalate to it *only on future friction*. There is **no `/v1` prefix today** (it would rewrite the
+  routes, the client paths, and reset the CloudFront cache key for no present gain).
+
+**Client version signaling (`X-Client-Version`).** The side panel reads `chrome.runtime.getManifest().version`
+once and attaches it to every API request (`client/src/api.mjs`); the server logs it per request
+(`server/src/handler.mjs`). It rides in a **request header** on purpose:
+- **Cache-neutral.** The CloudFront cache policy keys on `pageUrl` + `Origin` and **excludes headers**
+  (§6.3), so the version never fragments the public-read cache.
+- **CORS cost (the one non-obvious coupling).** A custom header makes even the public GET a *non-simple*
+  request, so the browser preflights it — API Gateway's `CorsConfiguration.AllowHeaders` **must** list
+  `x-client-version` (`server/template.yaml`), or reads/posts break in a real browser (but never in a unit
+  test). Guarded by `server/test/template.test.mjs`.
+- **Telemetry coverage.** The server logs the version (or `null` for a pre-versioning client) on every
+  request. POST always reaches the origin, so write telemetry is complete; GET is CloudFront-cached, so read
+  telemetry lands only on cache *misses* — enough to answer "is any old client still calling?".
+
+**Deprecation / sunset.** Don't retire an old behavior until the version telemetry shows ~zero calls from the
+old cohort for a sustained window. The exact threshold/window is **deferred** until we have a first real
+evolution and a baseline in the logs.
+
+**Drift / sequencing.** The first actual request/response changes (issues #22, #25) must be authored *under*
+this policy — additive, or an explicit `/v2` if they truly break. The version header ships *before* them so
+the logs carry a version baseline.
+
 ---
 
 ## 10. Out of scope for v1 (deliberate)
@@ -356,6 +397,7 @@ The brief's "assumptions to confirm" are **resolved** below; only the genuinely 
 | 11.3 | Cache TTL | **30–60 s**, no per-write invalidation (§6.2). |
 | 11.4 | Search engines | ✅ **Off by default** (`google.com`/`bing.com`/`duckduckgo.com` seeded in the denylist, §4.2). |
 | 11.5 | Email | ✅ **Salted one-way hash** stored for moderation; raw email never stored/returned (§5.2). |
+| 11.6 | API versioning | ✅ **Additive-only** evolution; client sends `X-Client-Version`, server logs it; reserve `/v2` for a real break only — no `/v1` now (§9.1). |
 | — | Region | **`il-central-1`** (Tel Aviv), default `*.cloudfront.net` domain (no us-east-1 ACM needed). |
 | — | CORS `AllowedExtensionOrigin` | **`*`** — API Gateway v2 rejects the `chrome-extension://` scheme; not a security regression (JWT gates writes, reads public; the `*` lets the extension reach the API under standard CORS, so **no** `host_permissions`) (§6.3/§12-A9/§12-A10). |
 | — | Runtime / SDK | **`nodejs22.x`**, AWS SDK **bundled** (§12-A4/A5). |
