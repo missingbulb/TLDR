@@ -4,15 +4,38 @@ name: deploy
 # repository VARIABLE AWS_DEPLOY_ROLE_ARN: until the owner sets it (and GOOGLE_CLIENT_ID), the job is
 # SKIPPED (gray) — never a red failure. (A variable, not a secret, because secrets aren't readable in
 # a job-level `if:`, so a secret gate can't skip cleanly. The role ARN is not sensitive.)
+#
+# Promotion model: a push to main with server changes auto-deploys DEV (the always-current sandbox),
+# so every merged server change is immediately exercisable end-to-end. PROD is NEVER automatic — it's
+# a deliberate manual promotion (workflow_dispatch, environment: prod) you run once a change has been
+# verified in dev. Both run from refs/heads/main, so the OIDC role needs no trust-policy change.
 
 on:
+  # Push to main that changes something the app stack actually DEPLOYS => auto-deploy DEV only (prod is
+  # manual, via workflow_dispatch below). This is an allowlist on purpose: only the deploy inputs — the
+  # template, the Lambda source + its deps, the deploy config, and the shared canonical sources — should
+  # trigger a deploy. Tests, dev scripts, the README, and cdn-template.yaml (the CDN is its own
+  # manual-dispatch stack) are intentionally excluded, so a docs/test-only commit doesn't spin up a
+  # whole deploy job just to produce an empty changeset.
   push:
     branches: [main]
-    paths: ['server/**', 'shared/**', '.github/workflows/deploy.yml']
+    paths:
+      - 'server/template.yaml'
+      - 'server/samconfig.toml'
+      - 'server/src/**'
+      - 'server/package.json'
+      - 'server/package-lock.json'
+      - 'shared/**'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
     inputs:
+      environment:
+        description: 'Environment to deploy. prod = deliberate promotion (tldr-app); dev = sandbox (tldr-app-dev).'
+        type: choice
+        options: [prod, dev]
+        default: prod
       deploy_cdn:
-        description: 'Also deploy the CDN stack (CloudFront — slow, ~15-20 min)'
+        description: 'Also deploy the CDN stack (CloudFront — slow, ~15-20 min). prod only.'
         type: boolean
         default: false
 
@@ -30,6 +53,25 @@ jobs:
     if: ${{ vars.AWS_DEPLOY_ROLE_ARN != '' && vars.GOOGLE_CLIENT_ID != '' }}
     steps:
       - uses: actions/checkout@v5
+
+      # Resolve the target environment once. A push to main auto-deploys DEV; a manual dispatch honors
+      # its input (prod = the deliberate promotion). Each env maps to a codified samconfig section
+      # (prod => default, dev => dev), which carries the stack name — the template derives prod-vs-dev
+      # from that stack name, so there's no Environment parameter to pass. Both run from
+      # refs/heads/main, so the OIDC role stays scoped as-is.
+      - name: Resolve target environment
+        id: env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ inputs.environment }}"
+          else
+            ENV="dev"
+          fi
+          if [ "$ENV" = "prod" ]; then CONFIG="default"; STACK="tldr-app"; else CONFIG="$ENV"; STACK="tldr-app-$ENV"; fi
+          echo "name=$ENV" >> "$GITHUB_OUTPUT"
+          echo "config=$CONFIG" >> "$GITHUB_OUTPUT"
+          echo "stack=$STACK" >> "$GITHUB_OUTPUT"
+          echo "Deploying environment '$ENV' (samconfig env '$CONFIG') to stack '$STACK'." >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/setup-node@v5
         with:
@@ -61,22 +103,24 @@ jobs:
       - name: sam deploy (app stack)
         working-directory: server
         run: |
-          sam deploy \
+          sam deploy --config-env ${{ steps.env.outputs.config }} \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --parameter-overrides "GoogleClientId=${{ vars.GOOGLE_CLIENT_ID }} AllowedExtensionOrigin=${{ vars.ALLOWED_EXTENSION_ORIGIN || '*' }} EmailHashSalt=${{ secrets.EMAIL_HASH_SALT }}"
 
       # Stack termination protection can't be expressed in the template body; set it via the API after
       # deploy. Idempotent — re-enabling an already-protected stack is a no-op — so it runs every deploy.
+      # prod only: the dev stack must stay deletable (`sam delete --config-env dev`) for teardown.
       - name: Enable termination protection on the app stack
+        if: ${{ steps.env.outputs.name == 'prod' }}
         run: |
           aws cloudformation update-termination-protection \
             --enable-termination-protection \
-            --stack-name tldr-app \
+            --stack-name ${{ steps.env.outputs.stack }} \
             --region il-central-1
 
       - name: sam deploy (CDN stack, on request)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_cdn }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_cdn && steps.env.outputs.name == 'prod' }}
         working-directory: server
         run: |
           API_DOMAIN="$(aws cloudformation describe-stacks --stack-name tldr-app \

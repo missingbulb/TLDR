@@ -22,10 +22,6 @@ Parameters:
       gap — writes are gated by the JWT authorizer and reads are public; the '*' is also what lets the
       extension reach the API under standard CORS (so it needs no host_permissions). The security boundary is
       the JWT authorizer, never browser CORS. (See dev/docs/architecture.md §6.3 / §12-A9 / §12-A10.)
-  CommentsTableName:
-    Type: String
-    Default: tldr-comments
-    Description: Explicit table name so a KeySchema change fails loudly instead of silently swapping in an empty table.
   RateLimitPerMinute:
     Type: Number
     Default: 10
@@ -43,6 +39,14 @@ Parameters:
     Description: >
       Server secret salting the stored one-way email hash (used for moderation only; the hash is never
       returned). Set to a long random string; rotating it disconnects old hashes from new ones.
+
+Conditions:
+  # Which environment this is, is derived from the STACK NAME — not an external parameter. Production
+  # is the one canonical stack named `tldr-app`; its table name is then pinned (below) to the exact
+  # legacy `tldr-comments`. Nothing passed at deploy time can make prod point at a different table.
+  # Any other stack name (tldr-app-dev, or an ad-hoc tldr-app-<x>) is non-prod and gets its own
+  # stack-scoped table, so dev/sandbox testing can never read or write prod data.
+  IsProd: !Equals [!Ref AWS::StackName, tldr-app]
 
 Globals:
   Function:
@@ -67,7 +71,11 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      TableName: !Ref CommentsTableName
+      # prod (stack tldr-app) => the exact legacy name, HARD-CODED in source so it can't be overridden
+      # from outside (renaming would REPLACE the table — see UpdateReplacePolicy and the frozen-KeySchema
+      # note below). Any other stack => a stack-scoped table (e.g. tldr-app-dev => tldr-app-dev-comments),
+      # so it's physically distinct from prod's data store.
+      TableName: !If [IsProd, tldr-comments, !Sub '${AWS::StackName}-comments']
       BillingMode: PAY_PER_REQUEST
       # FROZEN: editing KeySchema / AttributeDefinitions REPLACES the table — a new EMPTY table; the
       # data does NOT follow. Treat any changeset showing "Replacement: True" here as a hard stop.

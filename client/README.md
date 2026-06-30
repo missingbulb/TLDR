@@ -23,12 +23,20 @@ client/
 ```
 
 ## Configuration (injected at build time)
-The committed `config.mjs` and `manifest.json` carry only placeholders. The release workflow
-(`.github/workflows/release.yml`) builds the zip in CI and injects the real values from GitHub
-repository variables — there is no local checkout to hand-edit:
-- **`API_BASE_URL`** (dev: the app stack `ApiUrl`; prod: `https://<cloudfront-domain>`) →
-  `config.mjs` `API_BASE_URL`. The extension reaches the API via the server's `*` CORS, so **no**
-  `manifest.json` `host_permissions` is injected.
+The committed `config.mjs` `API_BASE_URL` points at the **dev** stack on purpose, so any build **not
+produced by the release workflow** talks to dev — **never prod**. PROD is reachable in exactly one way:
+the release workflow (`.github/workflows/release.yml`) injects the prod URL from a GitHub repository
+variable at build time. That prod-pointed zip is **both** the GitHub Release artifact **and** what
+`publish-chrome-store.yml` uploads to the store — so **downloading the release zip from GitHub is
+prod**, while a plain/local/unpacked/`build:dev` build keeps the committed dev default. (`GOOGLE_CLIENT_ID`
+and the manifest `key` stay placeholders, injected the same way.)
+- **`API_BASE_URL`** — committed default = the **dev** app stack `ApiUrl`
+  (`https://<id>.execute-api.<region>.amazonaws.com`); the release build overrides it with prod
+  (`https://<cloudfront-domain>`) → `config.mjs` `API_BASE_URL`. The extension reaches the API via the
+  server's `*` CORS, so **no** `manifest.json` `host_permissions` is injected. A test guards that the
+  committed default is never a prod (CloudFront) URL.
+  > **Follow-up:** the committed default is a non-resolving placeholder until the dev stack exists —
+  > after the first dev deploy, set `config.mjs` `API_BASE_URL` to the dev stack's `ApiUrl` output.
 - **`GOOGLE_CLIENT_ID`** (the Google "Web application" client id — see `server/README.md`) →
   `config.mjs`.
 
@@ -46,7 +54,7 @@ so the id matters for the redirect URI, not for API access):
 ## Build
 The shippable zip is produced by CI — the release workflow runs `npm run build`, injecting the repo
 variables above into staged copies (the committed source is never touched). The build itself runs
-anywhere; with no env set it still produces a valid placeholder zip:
+anywhere; with no env set it produces a **dev-pointed** zip from the committed defaults:
 ```bash
 cd client
 npm run build      # -> dist/tldr-extension.zip (only the shippable files)

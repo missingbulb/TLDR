@@ -64,7 +64,9 @@ The deploy workflow assumes an IAM role via GitHub OIDC — no long-lived AWS ke
          "Resource": "arn:aws:apigateway:il-central-1::*" },
        { "Sid": "DynamoDB", "Effect": "Allow", "Action": "dynamodb:*", "Resource": [
          "arn:aws:dynamodb:il-central-1:<ACCOUNT_ID>:table/tldr-comments",
-         "arn:aws:dynamodb:il-central-1:<ACCOUNT_ID>:table/tldr-comments/*" ] },
+         "arn:aws:dynamodb:il-central-1:<ACCOUNT_ID>:table/tldr-comments/*",
+         "arn:aws:dynamodb:il-central-1:<ACCOUNT_ID>:table/tldr-app-*",
+         "arn:aws:dynamodb:il-central-1:<ACCOUNT_ID>:table/tldr-app-*/*" ] },
        { "Sid": "Logs", "Effect": "Allow", "Action": "logs:*", "Resource": [
          "arn:aws:logs:il-central-1:<ACCOUNT_ID>:log-group:/aws/lambda/tldr-app-*",
          "arn:aws:logs:il-central-1:<ACCOUNT_ID>:log-group:/aws/lambda/tldr-app-*:*" ] },
@@ -104,13 +106,65 @@ Point the extension's `API_BASE_URL` at `https://<DistributionDomainName>`. (Ski
 
 ### 4. Post-deploy hardening
 Stack termination protection isn't expressible in the template body, so the **deploy workflow sets it
-automatically** after each app-stack deploy (`aws cloudformation update-termination-protection`, idempotent —
-see `deploy.yml`). No manual step. For a manual/local deploy, run it yourself once:
+automatically** after each **prod** app-stack deploy (`aws cloudformation update-termination-protection`,
+idempotent — see `deploy.yml`; dev skips it so the sandbox stays deletable). No manual step. For a
+manual/local prod deploy, run it yourself once:
 ```bash
 aws cloudformation update-termination-protection --enable-termination-protection \
   --stack-name tldr-app --region il-central-1
 ```
 PITR is enabled in the template; you can confirm it in the DynamoDB console.
+
+## Dev / sandbox environment
+
+A second, isolated copy of the app stack so new versions can be exercised end-to-end **without
+touching prod data**. Same AWS account, same region — but a distinct stack (`tldr-app-dev`) and,
+critically, a distinct DynamoDB table (`tldr-app-dev-comments`), so a dev write can never land in prod.
+**The environment is derived from the stack name, not a parameter:** the canonical `tldr-app` stack is
+prod and its table is pinned in the template to `tldr-comments`; any other stack name (`tldr-app-dev`,
+or an ad-hoc `tldr-app-<x>`) gets a stack-scoped table (`<stack>-comments`). Prod takes no environment
+input, so nothing at deploy time can repoint it. There is **no dev CDN** — point the dev extension
+build straight at the dev stack's `ApiUrl`.
+
+**Promotion model.** A push to `main` with server changes **auto-deploys dev** (the always-current
+sandbox) — every merged server change is immediately exercisable end-to-end. **Prod is never
+automatic:** it's a deliberate manual promotion you run from the **deploy** workflow via *Run workflow*
+→ `environment: prod`, once the change has been verified in dev. Both run from `main`, so the OIDC role
+needs no trust-policy change.
+
+**Deploy dev** — usually automatic on merge to `main`; to redeploy on demand, run the **deploy**
+workflow with `environment: dev` (it skips termination protection so the stack stays deletable). Locally
+it's the codified `dev` samconfig section (which just sets `stack_name = "tldr-app-dev"`):
+```bash
+sam build
+sam deploy --config-env dev \
+  --parameter-overrides "GoogleClientId=<web-client-id> AllowedExtensionOrigin=* EmailHashSalt=<secret>"
+```
+The dev stack reuses the **prod** Google OAuth Web client (simplest; the locked decision in #27).
+
+**Build a dev extension.** The committed `client/config.mjs` already defaults to dev, so a plain
+`npm run build` (or loading `client/` unpacked) talks to dev — never prod. To point at a specific dev
+API without editing the committed default:
+```bash
+cd ../client
+API_BASE_URL_DEV="<dev stack ApiUrl output>" GOOGLE_CLIENT_ID="<web-client-id>" npm run build:dev
+```
+`build:dev` prefers `*_DEV` env vars (`API_BASE_URL_DEV`, `GOOGLE_CLIENT_ID_DEV`,
+`EXTENSION_PUBLIC_KEY_DEV`), falling back to the committed default. Only the release pipeline injects
+prod (see `client/README.md`).
+
+**Seed** the dev table with sample comments (dev-only; it refuses to target the prod table):
+```bash
+cd ../server
+TABLE_NAME=tldr-app-dev-comments AWS_REGION=il-central-1 node scripts/seed-dev.mjs
+```
+
+**Teardown**: `sam delete --config-env dev`. Because the table is `Retain`, it survives as an orphan
+(`DELETE_SKIPPED`) — delete `tldr-app-dev-comments` by hand if you want it gone.
+
+> The deploy role's IAM policy scopes DynamoDB to prod's exact `table/tldr-comments` plus
+> `table/tldr-app-*` (which covers `tldr-app-dev-comments` and any ad-hoc `tldr-app-<x>-comments`).
+> `tldr-app-*` already covers the dev stack's Lambda/Logs/IAM roles too.
 
 ## Deploy discipline
 - **Review every changeset** (`confirm_changeset = true` in `samconfig.toml`). `Replacement: True` on `CommentsTable` is a **hard stop** — replacement makes a new empty table and the data does not follow. The frozen attributes are `KeySchema` and `AttributeDefinitions`.

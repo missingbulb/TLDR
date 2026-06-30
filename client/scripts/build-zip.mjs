@@ -1,11 +1,11 @@
 // Packages the extension into dist/tldr-extension.zip — ONLY the shippable files, never dev/test
 // tooling. Uses the system `zip` (present on CI runners). Run with `npm run build`.
 //
-// Build-time config injection: the committed source carries only PLACEHOLDERS. The real values live
-// in GitHub variables (they're public — the client id and key ship in every install), not in the
-// repo, and are injected here into STAGED copies of the files (never the committed source). The
-// release workflow passes them in via the environment. With no env set, the build still produces a
-// valid placeholder zip (e.g. for reserving the store id).
+// Build-time config injection: the committed source points at the DEV stack (API_BASE_URL), with the
+// client id and `key` left as placeholders. The PROD URL lives only in a GitHub variable (it's public,
+// but kept out of the repo) and is injected here into STAGED copies of the files (never the committed
+// source) — so only the release workflow ever produces a prod-pointed build, and a plain build stays
+// on dev. With no env set, the build produces a dev-pointed zip from the committed defaults.
 
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync, cpSync, readFileSync, writeFileSync } from 'node:fs';
@@ -51,6 +51,20 @@ export function injectConfig(stageDir, env = process.env) {
   }
 }
 
+// Resolve which env vars feed the injector for a build flavor. The dev flavor prefers *_DEV overrides
+// (so a dev build points the extension at the dev app-stack API, never prod), falling back to the
+// unsuffixed value when no dev-specific one is set. prod (the default) uses the unsuffixed values as-is,
+// so `npm run build` / `build:prod` behave identically to before flavors existed. Only the three keys
+// the injector reads are mapped — nothing else.
+export function flavorEnv(flavor = 'prod', env = process.env) {
+  const pick = (key) => (flavor === 'dev' ? env[`${key}_DEV`] ?? env[key] : env[key]);
+  return {
+    API_BASE_URL: pick('API_BASE_URL'),
+    GOOGLE_CLIENT_ID: pick('GOOGLE_CLIENT_ID'),
+    EXTENSION_PUBLIC_KEY: pick('EXTENSION_PUBLIC_KEY'),
+  };
+}
+
 export function buildZip(env = process.env) {
   const distDir = resolve(clientDir, 'dist');
   const stageDir = resolve(distDir, 'staging');
@@ -74,5 +88,7 @@ export function buildZip(env = process.env) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  console.log(`built ${buildZip()}`);
+  // Optional first arg selects the build flavor (dev|prod); default prod keeps `npm run build` unchanged.
+  const flavor = process.argv[2] || 'prod';
+  console.log(`built ${buildZip(flavorEnv(flavor))} (${flavor})`);
 }
