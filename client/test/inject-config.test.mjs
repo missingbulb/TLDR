@@ -27,7 +27,9 @@ test('injectConfig writes env values into staged config.mjs and manifest.json', 
     assert.match(config, /export const API_BASE_URL = 'https:\/\/d123\.cloudfront\.net';/);
     assert.match(config, /export const GOOGLE_CLIENT_ID = '999\.apps\.googleusercontent\.com';/);
     const manifest = JSON.parse(readFileSync(resolve(dir, 'manifest.json'), 'utf8'));
-    assert.deepEqual(manifest.host_permissions, ['https://d123.cloudfront.net/*']);
+    // API_BASE_URL no longer injects host_permissions — the extension reaches the API via the
+    // server's '*' CORS, so only the signing key is written into the manifest.
+    assert.ok(!('host_permissions' in manifest), 'API_BASE_URL must not inject host_permissions');
     assert.equal(manifest.key, 'MIIBIjANBgkqExamplePublicKeyAB');
   } finally {
     rmSync(dir, { recursive: true, force: true });

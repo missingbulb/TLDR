@@ -27,14 +27,15 @@ The committed `config.mjs` and `manifest.json` carry only placeholders. The rele
 (`.github/workflows/release.yml`) builds the zip in CI and injects the real values from GitHub
 repository variables — there is no local checkout to hand-edit:
 - **`API_BASE_URL`** (dev: the app stack `ApiUrl`; prod: `https://<cloudfront-domain>`) →
-  `config.mjs` `API_BASE_URL` **and** `manifest.json` `host_permissions` (as `<origin>/*`, the
-  API/CloudFront host).
+  `config.mjs` `API_BASE_URL`. The extension reaches the API via the server's `*` CORS, so **no**
+  `manifest.json` `host_permissions` is injected.
 - **`GOOGLE_CLIENT_ID`** (the Google "Web application" client id — see `server/README.md`) →
   `config.mjs`.
 
 ## The extension id (and why it matters)
-The OAuth redirect URI is `https://<EXTENSION_ID>.chromiumapp.org/`, and CORS is locked to
-`chrome-extension://<EXTENSION_ID>`. So the id must be **stable**:
+The OAuth redirect URI is `https://<EXTENSION_ID>.chromiumapp.org/`, so the id must be **stable**
+(server CORS is `*`, not the extension origin — API Gateway v2 rejects the `chrome-extension://` scheme —
+so the id matters for the redirect URI, not for API access):
 - **Unpacked dev:** Chrome derives the id from the load path; run `chrome.identity.getRedirectURL()`
   in the side panel devtools to read the exact redirect URI, and register that on the Google client.
 - **Stable id across machines / for production:** the manifest needs a `"key"` (the public key of a
