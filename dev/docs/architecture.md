@@ -288,7 +288,7 @@ job-level `if:` can skip cleanly → the run is *gray/skipped*, never red, until
   distinct table (`tldr-comments-dev`) in the **same account** — dev testing can't read or write prod
   data. prod keeps the exact legacy names (a rename would replace the live table). No dev CDN (the dev
   client hits `ApiUrl` directly); the dev client build is `npm run build:dev`. Seed/teardown:
-  `server/scripts/seed-dev.mjs` / `sam delete --config-env dev`.
+  `server/scripts/seed-dev.mjs` / `sam delete --stack-name tldr-app-dev`.
 - **Promotion model** (🔧 owner decision, #27): a push to `main` with server changes **auto-deploys
   dev** (the always-current sandbox); **prod is never automatic** — it's a deliberate manual promotion
   (`workflow_dispatch`, `environment: prod`) run once a change is verified in dev. Both run from

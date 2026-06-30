@@ -128,10 +128,12 @@ automatic:** it's a deliberate manual promotion you run from the **deploy** work
 needs no trust-policy change.
 
 **Deploy dev** — usually automatic on merge to `main`; to redeploy on demand, run the **deploy**
-workflow with `environment: dev` (it skips termination protection so the stack stays deletable). Locally:
+workflow with `environment: dev` (it skips termination protection so the stack stays deletable). Locally,
+dev is just the default (prod) config with two flags changed — there's no separate `dev` config env (SAM
+config envs don't inherit, so one would only duplicate the default):
 ```bash
 sam build
-sam deploy --config-env dev \
+sam deploy --stack-name tldr-app-dev \
   --parameter-overrides "GoogleClientId=<web-client-id> AllowedExtensionOrigin=* EmailHashSalt=<secret> Environment=dev"
 ```
 The dev stack reuses the **prod** Google OAuth Web client (simplest; the locked decision in #27).
@@ -151,7 +153,7 @@ cd ../server
 TABLE_NAME=tldr-comments-dev AWS_REGION=il-central-1 node scripts/seed-dev.mjs
 ```
 
-**Teardown**: `sam delete --config-env dev`. Because the table is `Retain`, it survives as an orphan
+**Teardown**: `sam delete --stack-name tldr-app-dev`. Because the table is `Retain`, it survives as an orphan
 (`DELETE_SKIPPED`) — delete `tldr-comments-dev` by hand if you want it gone.
 
 > The deploy role's IAM policy scopes DynamoDB to `table/tldr-comments*` (note the wildcard) so it can
