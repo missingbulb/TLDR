@@ -1,8 +1,8 @@
 // A minimal FAKE of the `chrome.*` extension APIs the side panel and options page call. It lets a
 // test load the REAL sidepanel.mjs / options.mjs UNMODIFIED — running the same render, refresh,
 // post, and save code the extension runs — by standing in for the one boundary that is genuinely
-// Chrome's job: the active tab's URL, the synced denylist, the session token cache, and the OAuth
-// redirect.
+// Chrome's job: the active tab's URL, the synced denylist, the session token cache, the remembered
+// login_hint email (storage.local), and the OAuth redirect.
 //
 // The fake is deliberately faithful where the UI's behavior depends on it (it mints a *real,
 // decodable* id_token whose nonce/state echo the request, so the production auth flow's checks
@@ -40,6 +40,7 @@ function mintIdToken(nonce, nowMs) {
  */
 export function makeFakeChrome({ tabUrl, denylist = null, authFails = false, nowMs = Date.now() }) {
   const session = {}; // chrome.storage.session token cache (in-memory)
+  const local = {}; // chrome.storage.local — the remembered login_hint email (in-memory)
   const calls = { syncSet: [], launchWebAuthFlow: 0 };
 
   const chrome = {
@@ -59,6 +60,10 @@ export function makeFakeChrome({ tabUrl, denylist = null, authFails = false, now
       session: {
         get: async (key) => (key in session ? { [key]: session[key] } : {}),
         set: async (obj) => Object.assign(session, obj),
+      },
+      local: {
+        get: async (key) => (key in local ? { [key]: local[key] } : {}),
+        set: async (obj) => Object.assign(local, obj),
       },
       onChanged: NOOP_EVENT,
     },
