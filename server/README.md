@@ -103,8 +103,9 @@ Point the extension's `API_BASE_URL` at `https://<DistributionDomainName>`. (Ski
 
 ### 4. Post-deploy hardening
 Stack termination protection isn't expressible in the template body, so the **deploy workflow sets it
-automatically** after each app-stack deploy (`aws cloudformation update-termination-protection`, idempotent —
-see `deploy.yml`). No manual step. For a manual/local deploy, run it yourself once:
+automatically** after each **prod** app-stack deploy (`aws cloudformation update-termination-protection`,
+idempotent — see `deploy.yml`; dev skips it so the sandbox stays deletable). No manual step. For a
+manual/local prod deploy, run it yourself once:
 ```bash
 aws cloudformation update-termination-protection --enable-termination-protection \
   --stack-name tldr-app --region il-central-1
@@ -120,9 +121,14 @@ The `Environment` parameter (`dev`|`prod`, default `prod`) drives the naming; pr
 legacy names (a rename would replace the live table). There is **no dev CDN** — point the dev
 extension build straight at the dev stack's `ApiUrl`.
 
-**Deploy dev** — from CI, run the **deploy** workflow via *Run workflow* (workflow_dispatch) and pick
-`environment: dev`. It runs from `main`, reusing the existing OIDC role as-is (no trust-policy change),
-and skips termination protection so the stack stays deletable. Locally:
+**Promotion model.** A push to `main` with server changes **auto-deploys dev** (the always-current
+sandbox) — every merged server change is immediately exercisable end-to-end. **Prod is never
+automatic:** it's a deliberate manual promotion you run from the **deploy** workflow via *Run workflow*
+→ `environment: prod`, once the change has been verified in dev. Both run from `main`, so the OIDC role
+needs no trust-policy change.
+
+**Deploy dev** — usually automatic on merge to `main`; to redeploy on demand, run the **deploy**
+workflow with `environment: dev` (it skips termination protection so the stack stays deletable). Locally:
 ```bash
 sam build
 sam deploy --config-env dev \

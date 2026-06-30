@@ -4,15 +4,21 @@ name: deploy
 # repository VARIABLE AWS_DEPLOY_ROLE_ARN: until the owner sets it (and GOOGLE_CLIENT_ID), the job is
 # SKIPPED (gray) — never a red failure. (A variable, not a secret, because secrets aren't readable in
 # a job-level `if:`, so a secret gate can't skip cleanly. The role ARN is not sensitive.)
+#
+# Promotion model: a push to main with server changes auto-deploys DEV (the always-current sandbox),
+# so every merged server change is immediately exercisable end-to-end. PROD is NEVER automatic — it's
+# a deliberate manual promotion (workflow_dispatch, environment: prod) you run once a change has been
+# verified in dev. Both run from refs/heads/main, so the OIDC role needs no trust-policy change.
 
 on:
+  # Push to main with server changes => auto-deploy DEV only. prod is manual (workflow_dispatch below).
   push:
     branches: [main]
     paths: ['server/**', 'shared/**', '.github/workflows/deploy.yml']
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Which environment to deploy (dev = isolated sandbox stack tldr-app-dev / table tldr-comments-dev)'
+        description: 'Environment to deploy. prod = deliberate promotion (tldr-app); dev = sandbox (tldr-app-dev).'
         type: choice
         options: [prod, dev]
         default: prod
@@ -36,16 +42,17 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # Resolve the target environment once. A push to main is always prod; a manual run honors the
-      # dispatch input. The dev stack is name-suffixed (tldr-app-dev) so it can't touch prod resources;
-      # the OIDC role stays scoped to refs/heads/main, so dev deploys run from main via workflow_dispatch.
+      # Resolve the target environment once. A push to main auto-deploys DEV; a manual dispatch honors
+      # its input (prod = the deliberate promotion). Both run from refs/heads/main, so the OIDC role
+      # stays scoped as-is. The dev stack is name-suffixed (tldr-app-dev) with a distinct table, so it
+      # can never touch prod resources.
       - name: Resolve target environment
         id: env
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             ENV="${{ inputs.environment }}"
           else
-            ENV="prod"
+            ENV="dev"
           fi
           if [ "$ENV" = "prod" ]; then STACK="tldr-app"; else STACK="tldr-app-$ENV"; fi
           echo "name=$ENV" >> "$GITHUB_OUTPUT"
