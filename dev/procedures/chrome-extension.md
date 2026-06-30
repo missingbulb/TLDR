@@ -22,7 +22,11 @@ versions are what would propagate to the corpus `technologies/chrome-extension.m
   interaction and so always fails silently — reserve it (or omit `prompt`) for the interactive fallback.
   Worked example: `client/src/auth.mjs` (`mintToken` passes `prompt: interactive ? undefined : 'none'`).
 
-- **`host_permissions` does not bypass CORS.** Listing the API host lets the extension's fetches *reach* it,
-  but the server must still return CORS headers for the extension origin (`chrome-extension://<id>`), or
-  reads/writes fail in-browser despite correct client code. Worked example: `CorsConfiguration` in
-  `server/template.yaml` (allow the extension origin; `authorization`/`content-type` headers; `OPTIONS`).
+- **Reach the API via the server's CORS, not `host_permissions`.** Our backend returns
+  `Access-Control-Allow-Origin: *` (API Gateway CORS — it's `*` because HTTP API v2 rejects the
+  `chrome-extension://` scheme), which already permits the extension origin, so the side-panel `fetch`es
+  (public GET, Bearer POST; no cookies → not "credentialed") succeed under standard CORS with **no**
+  `host_permissions` entry. Don't request a host permission for an API your server already CORS-allows —
+  it only adds an install warning. (Conversely, a `host_permissions` grant alone wouldn't help if the
+  server returned no usable CORS header.) Worked example: `CorsConfiguration` in `server/template.yaml`
+  (allow `*`; `authorization`/`content-type` headers; `GET`/`POST`/`OPTIONS`).

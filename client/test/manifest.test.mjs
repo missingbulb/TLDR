@@ -32,9 +32,8 @@ test('manifest declares the side panel, an ESM service worker, and icons', () =>
 test('permissions are least-privilege', () => {
   const expected = ['identity', 'sidePanel', 'storage', 'tabs', 'webNavigation'];
   assert.deepEqual([...manifest.permissions].sort(), [...expected].sort());
-  // Never request broad host access.
-  assert.ok(!manifest.host_permissions.includes('<all_urls>'));
-  assert.ok(Array.isArray(manifest.host_permissions) && manifest.host_permissions.length >= 1);
-  // accounts.google.com is NOT needed (launchWebAuthFlow uses a browser-managed window).
-  assert.ok(!manifest.host_permissions.some((h) => h.includes('accounts.google.com')));
+  // No host access at all: the extension reaches the API via the server's '*' CORS (API Gateway v2
+  // rejects the chrome-extension:// origin, so CORS is '*'), and launchWebAuthFlow uses a
+  // browser-managed window — so no host_permissions is requested (not even the API host).
+  assert.ok(!('host_permissions' in manifest), 'should request no host_permissions');
 });

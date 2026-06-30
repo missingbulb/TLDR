@@ -91,8 +91,9 @@ Note the `ApiUrl` / `ApiDomain` outputs.
 > **CORS / `AllowedExtensionOrigin` must be `*`.** API Gateway HTTP API (v2) **rejects** the
 > `chrome-extension://` scheme in its CORS `AllowOrigins` (`BadRequestException: "Invalid format for origin …"`),
 > so you cannot lock CORS to the extension origin here. Use `*`. This is not a security regression: writes are
-> gated by the Google JWT authorizer (POST only), reads are public by design, and the extension reaches the API
-> via its manifest `host_permissions` rather than browser CORS. (See `dev/docs/architecture.md` §6.3 / §12-A9.)
+> gated by the Google JWT authorizer (POST only), and reads are public by design. The `*` is also what lets the
+> extension reach the API under standard browser CORS, so it needs no `host_permissions`; the security boundary
+> is the JWT authorizer, never browser CORS. (See `dev/docs/architecture.md` §6.3 / §12-A9 / §12-A10.)
 
 **CDN (prod):**
 ```bash

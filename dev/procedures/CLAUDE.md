@@ -15,6 +15,6 @@ trigger fires; don't pre-load.
 
 ## Lessons — read the matching one before working in that area
 
-- [chrome-extension.md](chrome-extension.md) — **before touching `client/`.** MV3 Google ID-token auth (`launchWebAuthFlow`, not `getAuthToken`), ES-modules-without-a-bundler, the silent-refresh `prompt`, and why `host_permissions` doesn't remove server CORS.
+- [chrome-extension.md](chrome-extension.md) — **before touching `client/`.** MV3 Google ID-token auth (`launchWebAuthFlow`, not `getAuthToken`), ES-modules-without-a-bundler, the silent-refresh `prompt`, and why the API is reached via the server's `*` CORS, not `host_permissions`.
 - [aws-sam.md](aws-sam.md) — **before touching `server/` templates or the build.** The SAM esbuild Handler-path and esbuild-dependency traps, and CloudFront's `Authorization` / cache-key rules; the deploy role's IAM scope (the Serverless-transform + CloudFront grants); the new-account CloudFront-verification gate; and failed-`CREATE` cleanup (`ROLLBACK_COMPLETE` + orphaned `Retain` resources).
 - [ci-cd.md](ci-cd.md) — **before editing `.github/workflows/`, or when reading CI status to gate a merge.** Gating an optional job (e.g. deploy) so it skips cleanly instead of failing red; reading a PR's check state with the PR-scoped MCP call instead of the context-overflowing workflow-run listing tools; the case-sensitive OIDC `sub` trust-policy match; reading run state via the MCP tools (not `curl`) plus a read-only status workflow; and why workflow/build changes only take effect once on the default branch.

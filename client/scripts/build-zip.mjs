@@ -22,7 +22,8 @@ export const ZIP_NAME = 'tldr-extension.zip';
 
 // Rewrite the STAGED config.mjs + manifest.json from the environment. Each value is optional; whatever
 // is absent stays at its committed placeholder (so a partial env is a no-op, never a corruption).
-//   API_BASE_URL          -> config.mjs API_BASE_URL + manifest host_permissions (origin + '/*')
+//   API_BASE_URL          -> config.mjs API_BASE_URL (the extension reaches the API via the server's
+//                            '*' CORS, so no manifest host_permissions is needed)
 //   GOOGLE_CLIENT_ID      -> config.mjs GOOGLE_CLIENT_ID
 //   EXTENSION_PUBLIC_KEY  -> manifest "key" (fixes the extension id to the registered one)
 export function injectConfig(stageDir, env = process.env) {
@@ -40,15 +41,12 @@ export function injectConfig(stageDir, env = process.env) {
     writeFileSync(configPath, config);
   }
 
-  if (API_BASE_URL || EXTENSION_PUBLIC_KEY) {
+  // Only EXTENSION_PUBLIC_KEY touches the manifest now — API_BASE_URL no longer injects
+  // host_permissions (the extension reaches the API via the server's '*' CORS, not a host grant).
+  if (EXTENSION_PUBLIC_KEY) {
     const manifestPath = resolve(stageDir, 'manifest.json');
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-    if (API_BASE_URL) {
-      manifest.host_permissions = [`${new URL(API_BASE_URL).origin}/*`];
-    }
-    if (EXTENSION_PUBLIC_KEY) {
-      manifest.key = EXTENSION_PUBLIC_KEY;
-    }
+    manifest.key = EXTENSION_PUBLIC_KEY;
     writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   }
 }

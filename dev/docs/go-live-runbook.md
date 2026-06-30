@@ -44,7 +44,7 @@ nothing real is committed:
 
 | Variable | Injected into |
 |----------|---------------|
-| `API_BASE_URL` | `config.mjs` `API_BASE_URL` **and** `manifest.json` `host_permissions` (`<origin>/*`) |
+| `API_BASE_URL` | `config.mjs` `API_BASE_URL` — the extension reaches the API via the server's `*` CORS, so **no** `host_permissions` is injected |
 | `GOOGLE_CLIENT_ID` | `config.mjs` `GOOGLE_CLIENT_ID` |
 | `EXTENSION_PUBLIC_KEY` | `manifest.json` `key` (pins the extension id) |
 
@@ -133,7 +133,7 @@ GitHub → **Settings → Secrets and variables → Actions**. The deploy job st
 - [ ] **3.7 Variables:**
   - `AWS_DEPLOY_ROLE_ARN` = `<AWS_DEPLOY_ROLE_ARN>`
   - `GOOGLE_CLIENT_ID` = `<GOOGLE_CLIENT_ID>` *(from 2.6)*
-  - `ALLOWED_EXTENSION_ORIGIN` — **leave unset** (`deploy.yml` defaults it to `*`), or set it to `*` explicitly. It **must resolve to `*`**: API Gateway HTTP API v2 **rejects** `chrome-extension://` origins ("Invalid format for origin"). Safe: writes are JWT-gated, reads public, and the extension reaches the API via `host_permissions`, not browser CORS (`dev/docs/architecture.md` §12-A9).
+  - `ALLOWED_EXTENSION_ORIGIN` — **leave unset** (`deploy.yml` defaults it to `*`), or set it to `*` explicitly. It **must resolve to `*`**: API Gateway HTTP API v2 **rejects** `chrome-extension://` origins ("Invalid format for origin"). Safe: writes are JWT-gated and reads public; the `*` is also what lets the extension reach the API under standard CORS (so it needs no `host_permissions`) (`dev/docs/architecture.md` §12-A9/§12-A10).
   - *(optional)* `CDN_PRICE_CLASS` = `PriceClass_200`
 - [ ] **3.8 Secret:** `EMAIL_HASH_SALT` = a long random string (salts the stored one-way email hash; set once and don't rotate).
 
@@ -162,7 +162,7 @@ CloudFront fronts the API so reads are edge-cached. Separate, **slow** stack (~1
 No code editing — the build injects config from variables (see top). You only set variables and replace icons.
 
 - [ ] **5.1** Set repo **Variable** `API_BASE_URL` = `https://<CLOUDFRONT_DOMAIN>` (no trailing slash). *(Dev alternative: the app `ApiUrl` directly.)*
-- [ ] **5.2** Confirm the other two release variables are set: `GOOGLE_CLIENT_ID` (2.6) and `EXTENSION_PUBLIC_KEY` (Phase 1.5). With all three set, the release build injects `config.mjs` + `manifest.json` (host_permissions + `key`) automatically.
+- [ ] **5.2** Confirm the other two release variables are set: `GOOGLE_CLIENT_ID` (2.6) and `EXTENSION_PUBLIC_KEY` (Phase 1.5). With all three set, the release build injects `config.mjs` (API base URL + client id) and the `manifest.json` `key` automatically.
 - [ ] **5.3 Replace the placeholder icons.** `client/icons/` ship placeholder PNGs (16/32/48/128). Commit real icons at the same paths (a real listing requires them). *(This is the one committed file change in this phase — done via a commit, not a local edit.)*
 
 ---
@@ -183,7 +183,7 @@ Open the item from Phase 1 in the [Developer Dashboard](https://chrome.google.co
 
 - [ ] **7.1 Upload the final package** — drag the released `tldr-extension.zip` in, or run **Actions → publish-chrome-store → Run workflow** (uncheck *auto-publish* to upload as a draft first).
 - [ ] **7.2 Store listing:** description, category, language, a **screenshot** (1280×800 or 640×400), tiles.
-- [ ] **7.3 Privacy tab** (gates approval — TLDR uses `identity`, `storage`, `tabs`, `webNavigation`, host permissions, and collects a Google identity + user text):
+- [ ] **7.3 Privacy tab** (gates approval — TLDR uses `identity`, `storage`, `tabs`, `webNavigation`, and collects a Google identity + user text):
   - [ ] **Single purpose:** *"Show and post short community 'tl;dr' notes attached to the web page the user is currently viewing."*
   - [ ] **Per-permission justification** (each grounded in actual code use):
 
@@ -194,7 +194,6 @@ Open the item from Phase 1 in the [Developer Dashboard](https://chrome.google.co
     | `storage` | The user's per-site on/off list (`chrome.storage.sync`) + a short-lived sign-in token cache (`chrome.storage.session`). No browsing data. |
     | `tabs` | Read the active tab's URL to fetch the notes for the page being viewed, and refresh on tab switch. |
     | `webNavigation` | Detect in-page (SPA) navigations so the list refreshes when the URL changes without a full reload. |
-    | Host permission | The single backend the extension talks to, to read/post notes. No other host. |
 
   - [ ] **Data usage:** declare **Authentication information** (Google sign-in) + **User-generated content** (note text); check the three certifications (no selling, no unrelated use, no creditworthiness use). Raw email is never stored (only a salted hash), so don't declare email collection.
   - [ ] **Privacy policy URL** (**required**, public). The page is rendered from [`dev/docs/privacy-policy.md`](privacy-policy.md) and published to GitHub Pages at `/privacy/` by the **publish-privacy** workflow. One-time: **Settings → Pages → Source = "GitHub Actions"**, then the workflow runs on push to `main` (or dispatch it). Paste the live URL — shown in the workflow's `deploy` step output and under Settings → Pages (typically `https://missingbulb.github.io/TLDR/privacy/`).
