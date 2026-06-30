@@ -6,16 +6,6 @@ Description: >
   never slows this fast-iterating stack.
 
 Parameters:
-  Environment:
-    Type: String
-    Default: prod
-    AllowedValues: [dev, prod]
-    Description: >
-      Which environment this stack instance is. Suffixes non-prod resource names so a dev stack
-      (deployed as tldr-app-dev) gets a physically distinct DynamoDB table (tldr-comments-dev) and
-      can NEVER read or write prod data. prod is the default and keeps the exact legacy names — see
-      CommentsTable.TableName, which only suffixes when Environment != prod (renaming the live prod
-      table would REPLACE it with an empty one). Pair with stack_name=tldr-app-${Environment}.
   GoogleClientId:
     Type: String
     # Intentionally no default: an empty JWT-authorizer audience would accept ID tokens minted for
@@ -31,10 +21,6 @@ Parameters:
       AllowOrigins ("Invalid format for origin"), so the extension origin can't be set here. Not a security
       gap — writes are gated by the JWT authorizer, reads are public, and the extension reaches the API via
       its manifest host_permissions, not browser CORS. (See dev/docs/architecture.md §6.3 / §12-A9.)
-  CommentsTableName:
-    Type: String
-    Default: tldr-comments
-    Description: Explicit table name so a KeySchema change fails loudly instead of silently swapping in an empty table.
   RateLimitPerMinute:
     Type: Number
     Default: 10
@@ -54,9 +40,12 @@ Parameters:
       returned). Set to a long random string; rotating it disconnects old hashes from new ones.
 
 Conditions:
-  # prod keeps the legacy names verbatim; everything else is suffixed. Gates the table name so adding
-  # the Environment parameter never renames (= replaces) the live prod table.
-  IsProd: !Equals [!Ref Environment, prod]
+  # Which environment this is, is derived from the STACK NAME — not an external parameter. Production
+  # is the one canonical stack named `tldr-app`; its table name is then pinned (below) to the exact
+  # legacy `tldr-comments`. Nothing passed at deploy time can make prod point at a different table.
+  # Any other stack name (tldr-app-dev, or an ad-hoc tldr-app-<x>) is non-prod and gets its own
+  # stack-scoped table, so dev/sandbox testing can never read or write prod data.
+  IsProd: !Equals [!Ref AWS::StackName, tldr-app]
 
 Globals:
   Function:
@@ -81,9 +70,11 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      # prod => the exact legacy name (renaming would REPLACE the table — see UpdateReplacePolicy and
-      # the frozen-KeySchema note below); non-prod => suffixed, so dev gets its own physical table.
-      TableName: !If [IsProd, !Ref CommentsTableName, !Sub '${CommentsTableName}-${Environment}']
+      # prod (stack tldr-app) => the exact legacy name, HARD-CODED in source so it can't be overridden
+      # from outside (renaming would REPLACE the table — see UpdateReplacePolicy and the frozen-KeySchema
+      # note below). Any other stack => a stack-scoped table (e.g. tldr-app-dev => tldr-app-dev-comments),
+      # so it's physically distinct from prod's data store.
+      TableName: !If [IsProd, tldr-comments, !Sub '${AWS::StackName}-comments']
       BillingMode: PAY_PER_REQUEST
       # FROZEN: editing KeySchema / AttributeDefinitions REPLACES the table — a new EMPTY table; the
       # data does NOT follow. Treat any changeset showing "Replacement: True" here as a hard stop.

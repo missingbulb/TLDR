@@ -1,9 +1,10 @@
-// Guards the Environment-parameterized table naming in template.yaml — the load-bearing isolation
-// change for the dev/sandbox environment (#27). dev and prod MUST resolve to physically distinct
-// table names, and prod MUST keep the exact legacy name `tldr-comments` (renaming would REPLACE the
-// live table with an empty one). Parsing CloudFormation intrinsic tags (!If/!Equals/!Sub) with a
-// real YAML lib needs custom tag handling, so we assert against the template text directly — which
-// doubles as a drift guard: change the !If form and the structural assertion fails.
+// Guards the stack-name-derived table naming in template.yaml — the isolation contract for the
+// dev/sandbox environment (#27). Production is the canonical `tldr-app` stack and its table name is
+// PINNED in source to `tldr-comments` (renaming would REPLACE the live table with an empty one); it
+// takes no environment parameter, so nothing passed at deploy time can repoint it. Any other stack
+// gets its own stack-scoped table, so dev can't share prod's data store. Parsing CloudFormation
+// intrinsic tags with a real YAML lib needs custom tag handling, so we assert against the template
+// text directly — which doubles as a drift guard: change the !If form and the assertion fails.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,42 +15,51 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const template = readFileSync(resolve(here, '../template.yaml'), 'utf8');
 
-// The default of a String parameter, pulled from the template so these assertions track the source.
-function paramDefault(name) {
-  const re = new RegExp(`\\n  ${name}:\\n(?:\\s+\\S.*\\n)*?\\s+Default:\\s*(\\S+)`);
-  const m = template.match(re);
+// Pull the prod stack name and the pinned prod table literal straight from the template so these
+// assertions track the source rather than re-hardcoding the values.
+function prodStackName() {
+  const m = template.match(/IsProd:\s*!Equals \[!Ref AWS::StackName, (\S+)\]/);
+  return m && m[1];
+}
+function prodTableLiteral() {
+  const m = template.match(/TableName:\s*!If \[IsProd, (\S+),/);
   return m && m[1];
 }
 
-// Mirror the template's `TableName: !If [IsProd, !Ref CommentsTableName, !Sub '${CommentsTableName}-${Environment}']`.
-// The structural assertion below is the drift guard that keeps this mirror honest.
-function resolveTableName(environment) {
-  const base = paramDefault('CommentsTableName');
-  return environment === 'prod' ? base : `${base}-${environment}`;
+// Mirror the template's `!If [IsProd, <prod literal>, !Sub '${AWS::StackName}-comments']`. The
+// structural assertion below is the drift guard that keeps this mirror honest.
+function resolveTableName(stackName) {
+  return stackName === prodStackName() ? prodTableLiteral() : `${stackName}-comments`;
 }
 
-test('the IsProd condition keys off the Environment parameter', () => {
-  assert.match(template, /IsProd:\s*!Equals \[!Ref Environment, prod\]/);
+test('production is pinned by stack name, not an external parameter', () => {
+  assert.match(template, /IsProd:\s*!Equals \[!Ref AWS::StackName, tldr-app\]/);
+  // No Environment parameter exists — prod's identity is codified, not chosen at invocation.
+  assert.doesNotMatch(template, /\n  Environment:\n/);
+  // The table name is not an overridable parameter either (the same-named Output is fine — it's a
+  // parameter, i.e. a `Name:` immediately followed by `Type:`, that must not exist).
+  assert.doesNotMatch(template, /CommentsTableName:\s*\n\s+Type:/);
 });
 
-test('the table name is conditional on IsProd (prod literal, non-prod suffixed)', () => {
+test('the table name derives from the stack name (prod literal vs stack-scoped)', () => {
   assert.match(
     template,
-    /TableName:\s*!If \[IsProd, !Ref CommentsTableName, !Sub '\$\{CommentsTableName\}-\$\{Environment\}'\]/,
+    /TableName:\s*!If \[IsProd, tldr-comments, !Sub '\$\{AWS::StackName\}-comments'\]/,
   );
 });
 
-test('prod keeps the exact legacy table name (no replacing rename)', () => {
-  assert.equal(paramDefault('CommentsTableName'), 'tldr-comments');
-  assert.equal(resolveTableName('prod'), 'tldr-comments');
+test('prod keeps the exact legacy table name, hard-coded (no replacing rename)', () => {
+  assert.equal(prodStackName(), 'tldr-app');
+  assert.equal(prodTableLiteral(), 'tldr-comments');
+  assert.equal(resolveTableName('tldr-app'), 'tldr-comments');
 });
 
 test('dev and prod resolve to distinct physical tables (no shared data store)', () => {
-  assert.equal(resolveTableName('dev'), 'tldr-comments-dev');
-  assert.notEqual(resolveTableName('dev'), resolveTableName('prod'));
+  assert.equal(resolveTableName('tldr-app-dev'), 'tldr-app-dev-comments');
+  assert.notEqual(resolveTableName('tldr-app-dev'), resolveTableName('tldr-app'));
 });
 
-test('Environment is constrained to dev|prod and defaults to prod (back-compat)', () => {
-  assert.equal(paramDefault('Environment'), 'prod');
-  assert.match(template, /Environment:\n(?:\s+\S.*\n)*?\s+AllowedValues: \[dev, prod\]/);
+test('an ad-hoc stack name also gets its own table, never prod’s', () => {
+  assert.equal(resolveTableName('tldr-app-experiment'), 'tldr-app-experiment-comments');
+  assert.notEqual(resolveTableName('tldr-app-experiment'), prodTableLiteral());
 });

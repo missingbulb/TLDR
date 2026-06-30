@@ -283,12 +283,14 @@ job-level `if:` can skip cleanly → the run is *gray/skipped*, never red, until
   the app's API endpoint as a parameter. The table (the one stateful resource) stays in the app stack, guarded by
   Retain + PITR + termination protection.
 - **Greenfield IaC:** no "import existing console resources" step.
-- **Dev / sandbox environment** (🔧 owner decision, #27): an `Environment` SAM parameter (`dev`|`prod`,
-  default `prod`) suffixes non-prod resource names, so a dev deploy (`tldr-app-dev`) gets a physically
-  distinct table (`tldr-comments-dev`) in the **same account** — dev testing can't read or write prod
-  data. prod keeps the exact legacy names (a rename would replace the live table). No dev CDN (the dev
-  client hits `ApiUrl` directly); the dev client build is `npm run build:dev`. Seed/teardown:
-  `server/scripts/seed-dev.mjs` / `sam delete --stack-name tldr-app-dev`.
+- **Dev / sandbox environment** (🔧 owner decision, #27): the environment is derived from the **stack
+  name**, not an external parameter. The canonical `tldr-app` stack is prod and its table is **pinned in
+  source** to `tldr-comments` (renaming would replace the live table) — prod takes no environment input,
+  so nothing at deploy time can repoint it. Any other stack name (`tldr-app-dev`, or an ad-hoc
+  `tldr-app-<x>`) is non-prod and gets a stack-scoped table (`<stack>-comments`, e.g.
+  `tldr-app-dev-comments`) in the **same account**, so dev testing can't read or write prod data. No dev
+  CDN (the dev client hits `ApiUrl` directly); the dev client build is `npm run build:dev`.
+  Seed/teardown: `server/scripts/seed-dev.mjs` / `sam delete --config-env dev`.
 - **Promotion model** (🔧 owner decision, #27): a push to `main` with server changes **auto-deploys
   dev** (the always-current sandbox); **prod is never automatic** — it's a deliberate manual promotion
   (`workflow_dispatch`, `environment: prod`) run once a change is verified in dev. Both run from

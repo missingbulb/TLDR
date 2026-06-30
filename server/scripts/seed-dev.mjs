@@ -2,11 +2,11 @@
 // something to render end-to-end. DEV ONLY — there is a hard guard below that refuses to run against
 // the prod table name (`tldr-comments`); seeding is never something prod wants.
 //
-//   node scripts/seed-dev.mjs                 # -> tldr-comments-dev (default), il-central-1
-//   TABLE_NAME=tldr-comments-dev AWS_REGION=il-central-1 node scripts/seed-dev.mjs
+//   node scripts/seed-dev.mjs                       # -> tldr-app-dev-comments (default), il-central-1
+//   TABLE_NAME=tldr-app-dev-comments AWS_REGION=il-central-1 node scripts/seed-dev.mjs
 //
 // Teardown is just the stack delete — `sam delete --config-env dev`. Because the table is Retain it
-// survives that as an orphan; delete `tldr-comments-dev` by hand (or empty it) if you want it gone.
+// survives that as an orphan; delete `tldr-app-dev-comments` by hand (or empty it) if you want it gone.
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
@@ -14,7 +14,7 @@ import { ulid, decodeTime } from 'ulid';
 import { normalizePageUrl } from '../src/vendor/normalizeUrl.GENERATED.mjs';
 
 const PROD_TABLE_NAME = 'tldr-comments';
-const TABLE_NAME = process.env.TABLE_NAME || 'tldr-comments-dev';
+const TABLE_NAME = process.env.TABLE_NAME || 'tldr-app-dev-comments';
 
 // The whole point of a dev sandbox is that it can't touch prod data. Make that impossible here too:
 // refuse to write to the prod table no matter what, so a stray TABLE_NAME can't corrupt real data.

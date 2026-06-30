@@ -43,9 +43,10 @@ jobs:
       - uses: actions/checkout@v5
 
       # Resolve the target environment once. A push to main auto-deploys DEV; a manual dispatch honors
-      # its input (prod = the deliberate promotion). Both run from refs/heads/main, so the OIDC role
-      # stays scoped as-is. The dev stack is name-suffixed (tldr-app-dev) with a distinct table, so it
-      # can never touch prod resources.
+      # its input (prod = the deliberate promotion). Each env maps to a codified samconfig section
+      # (prod => default, dev => dev), which carries the stack name — the template derives prod-vs-dev
+      # from that stack name, so there's no Environment parameter to pass. Both run from
+      # refs/heads/main, so the OIDC role stays scoped as-is.
       - name: Resolve target environment
         id: env
         run: |
@@ -54,10 +55,11 @@ jobs:
           else
             ENV="dev"
           fi
-          if [ "$ENV" = "prod" ]; then STACK="tldr-app"; else STACK="tldr-app-$ENV"; fi
+          if [ "$ENV" = "prod" ]; then CONFIG="default"; STACK="tldr-app"; else CONFIG="$ENV"; STACK="tldr-app-$ENV"; fi
           echo "name=$ENV" >> "$GITHUB_OUTPUT"
+          echo "config=$CONFIG" >> "$GITHUB_OUTPUT"
           echo "stack=$STACK" >> "$GITHUB_OUTPUT"
-          echo "Deploying environment '$ENV' to stack '$STACK'." >> "$GITHUB_STEP_SUMMARY"
+          echo "Deploying environment '$ENV' (samconfig env '$CONFIG') to stack '$STACK'." >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/setup-node@v5
         with:
@@ -89,11 +91,10 @@ jobs:
       - name: sam deploy (app stack)
         working-directory: server
         run: |
-          sam deploy \
-            --stack-name ${{ steps.env.outputs.stack }} \
+          sam deploy --config-env ${{ steps.env.outputs.config }} \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
-            --parameter-overrides "GoogleClientId=${{ vars.GOOGLE_CLIENT_ID }} AllowedExtensionOrigin=${{ vars.ALLOWED_EXTENSION_ORIGIN || '*' }} EmailHashSalt=${{ secrets.EMAIL_HASH_SALT }} Environment=${{ steps.env.outputs.name }}"
+            --parameter-overrides "GoogleClientId=${{ vars.GOOGLE_CLIENT_ID }} AllowedExtensionOrigin=${{ vars.ALLOWED_EXTENSION_ORIGIN || '*' }} EmailHashSalt=${{ secrets.EMAIL_HASH_SALT }}"
 
       # Stack termination protection can't be expressed in the template body; set it via the API after
       # deploy. Idempotent — re-enabling an already-protected stack is a no-op — so it runs every deploy.

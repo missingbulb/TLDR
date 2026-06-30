@@ -63,8 +63,10 @@ The deploy workflow assumes an IAM role via GitHub OIDC — no long-lived AWS ke
        { "Sid": "ApiGateway", "Effect": "Allow", "Action": "apigateway:*",
          "Resource": "arn:aws:apigateway:il-central-1::*" },
        { "Sid": "DynamoDB", "Effect": "Allow", "Action": "dynamodb:*", "Resource": [
-         "arn:aws:dynamodb:il-central-1:<ACCOUNT_ID>:table/tldr-comments*",
-         "arn:aws:dynamodb:il-central-1:<ACCOUNT_ID>:table/tldr-comments*/*" ] },
+         "arn:aws:dynamodb:il-central-1:<ACCOUNT_ID>:table/tldr-comments",
+         "arn:aws:dynamodb:il-central-1:<ACCOUNT_ID>:table/tldr-comments/*",
+         "arn:aws:dynamodb:il-central-1:<ACCOUNT_ID>:table/tldr-app-*",
+         "arn:aws:dynamodb:il-central-1:<ACCOUNT_ID>:table/tldr-app-*/*" ] },
        { "Sid": "Logs", "Effect": "Allow", "Action": "logs:*", "Resource": [
          "arn:aws:logs:il-central-1:<ACCOUNT_ID>:log-group:/aws/lambda/tldr-app-*",
          "arn:aws:logs:il-central-1:<ACCOUNT_ID>:log-group:/aws/lambda/tldr-app-*:*" ] },
@@ -116,10 +118,12 @@ PITR is enabled in the template; you can confirm it in the DynamoDB console.
 
 A second, isolated copy of the app stack so new versions can be exercised end-to-end **without
 touching prod data**. Same AWS account, same region — but a distinct stack (`tldr-app-dev`) and,
-critically, a distinct DynamoDB table (`tldr-comments-dev`), so a dev write can never land in prod.
-The `Environment` parameter (`dev`|`prod`, default `prod`) drives the naming; prod keeps the exact
-legacy names (a rename would replace the live table). There is **no dev CDN** — point the dev
-extension build straight at the dev stack's `ApiUrl`.
+critically, a distinct DynamoDB table (`tldr-app-dev-comments`), so a dev write can never land in prod.
+**The environment is derived from the stack name, not a parameter:** the canonical `tldr-app` stack is
+prod and its table is pinned in the template to `tldr-comments`; any other stack name (`tldr-app-dev`,
+or an ad-hoc `tldr-app-<x>`) gets a stack-scoped table (`<stack>-comments`). Prod takes no environment
+input, so nothing at deploy time can repoint it. There is **no dev CDN** — point the dev extension
+build straight at the dev stack's `ApiUrl`.
 
 **Promotion model.** A push to `main` with server changes **auto-deploys dev** (the always-current
 sandbox) — every merged server change is immediately exercisable end-to-end. **Prod is never
@@ -128,13 +132,12 @@ automatic:** it's a deliberate manual promotion you run from the **deploy** work
 needs no trust-policy change.
 
 **Deploy dev** — usually automatic on merge to `main`; to redeploy on demand, run the **deploy**
-workflow with `environment: dev` (it skips termination protection so the stack stays deletable). Locally,
-dev is just the default (prod) config with two flags changed — there's no separate `dev` config env (SAM
-config envs don't inherit, so one would only duplicate the default):
+workflow with `environment: dev` (it skips termination protection so the stack stays deletable). Locally
+it's the codified `dev` samconfig section (which just sets `stack_name = "tldr-app-dev"`):
 ```bash
 sam build
-sam deploy --stack-name tldr-app-dev \
-  --parameter-overrides "GoogleClientId=<web-client-id> AllowedExtensionOrigin=* EmailHashSalt=<secret> Environment=dev"
+sam deploy --config-env dev \
+  --parameter-overrides "GoogleClientId=<web-client-id> AllowedExtensionOrigin=* EmailHashSalt=<secret>"
 ```
 The dev stack reuses the **prod** Google OAuth Web client (simplest; the locked decision in #27).
 
@@ -150,15 +153,15 @@ uses the unsuffixed prod values unchanged.
 **Seed** the dev table with sample comments (dev-only; it refuses to target the prod table):
 ```bash
 cd ../server
-TABLE_NAME=tldr-comments-dev AWS_REGION=il-central-1 node scripts/seed-dev.mjs
+TABLE_NAME=tldr-app-dev-comments AWS_REGION=il-central-1 node scripts/seed-dev.mjs
 ```
 
-**Teardown**: `sam delete --stack-name tldr-app-dev`. Because the table is `Retain`, it survives as an orphan
-(`DELETE_SKIPPED`) — delete `tldr-comments-dev` by hand if you want it gone.
+**Teardown**: `sam delete --config-env dev`. Because the table is `Retain`, it survives as an orphan
+(`DELETE_SKIPPED`) — delete `tldr-app-dev-comments` by hand if you want it gone.
 
-> The deploy role's IAM policy scopes DynamoDB to `table/tldr-comments*` (note the wildcard) so it can
-> create/manage `tldr-comments-dev` as well as prod's `tldr-comments`. `tldr-app-*` already covers the
-> dev stack's Lambda/Logs/IAM roles.
+> The deploy role's IAM policy scopes DynamoDB to prod's exact `table/tldr-comments` plus
+> `table/tldr-app-*` (which covers `tldr-app-dev-comments` and any ad-hoc `tldr-app-<x>-comments`).
+> `tldr-app-*` already covers the dev stack's Lambda/Logs/IAM roles too.
 
 ## Deploy discipline
 - **Review every changeset** (`confirm_changeset = true` in `samconfig.toml`). `Replacement: True` on `CommentsTable` is a **hard stop** — replacement makes a new empty table and the data does not follow. The frozen attributes are `KeySchema` and `AttributeDefinitions`.

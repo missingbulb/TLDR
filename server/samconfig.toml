@@ -1,7 +1,15 @@
-# SAM deploy config. CI passes GoogleClientId/AllowedExtensionOrigin explicitly; these defaults are
-# for manual deploys. Replace the placeholder client id before deploying by hand.
+# SAM deploy config. One codified section per environment — deliberately NOT factored into a single
+# parametric definition: each environment's stack name (and therefore its identity) is spelled out
+# here, not chosen by a flag at invocation. CI injects the secret/variable parameters (GoogleClientId,
+# EmailHashSalt) via --parameter-overrides; the placeholders below are for manual deploys.
+#
+# The template derives "which environment" from the STACK NAME (see template.yaml Conditions): the
+# canonical `tldr-app` stack is prod and its table is pinned to `tldr-comments`; any other stack name
+# is non-prod and gets a stack-scoped table (tldr-app-dev => tldr-app-dev-comments). So the ONLY thing
+# that distinguishes prod from dev here is `stack_name` — there's no Environment parameter to pass.
 version = 0.1
 
+# --- prod (the canonical, strict stack) ---------------------------------------------------------
 [default.deploy.parameters]
 stack_name = "tldr-app"
 region = "il-central-1"
@@ -14,19 +22,22 @@ parameter_overrides = "GoogleClientId=\"REPLACE_WITH_GOOGLE_WEB_CLIENT_ID\" Allo
 cached = true
 parallel = true
 
-# Dev/sandbox app stack. Same account, same region, same build settings as prod — it differs from the
-# default (prod) config in only TWO things: the stack name and Environment="dev". SAM config envs do
-# NOT inherit from one another, so a `[dev.*]` section would have to repeat every default field just to
-# change those two — pure duplication. Instead, deploy dev as "default + two flags":
-#   sam build
-#   sam deploy --stack-name tldr-app-dev \
-#     --parameter-overrides "GoogleClientId=<web-client-id> AllowedExtensionOrigin=* EmailHashSalt=<secret> Environment=dev"
-# (Environment="dev" => a distinct table, tldr-comments-dev, so dev testing can never touch prod data.)
-# This mirrors how CI deploys dev (explicit --stack-name + Environment, no config env). In CI the dev
-# stack is the AUTO-deploy target: a push to main with server changes redeploys it; prod is a separate
-# manual promotion. No dev CDN — point the dev extension build straight at the stack's ApiUrl output.
-# Teardown: sam delete --stack-name tldr-app-dev (the table is Retain, so it survives as an orphan —
-# delete tldr-comments-dev by hand if you want it gone).
+# --- dev/sandbox (same account & region; distinct stack => distinct table) ----------------------
+# Deploy with `sam deploy --config-env dev`. In CI this stack is the AUTO-deploy target (a push to main
+# with server changes redeploys it; prod is a separate manual promotion). No dev CDN — point the dev
+# extension build straight at this stack's ApiUrl output. Teardown: `sam delete --config-env dev` (the
+# table is Retain, so it survives as an orphan — delete tldr-app-dev-comments by hand if you want it gone).
+[dev.deploy.parameters]
+stack_name = "tldr-app-dev"
+region = "il-central-1"
+capabilities = "CAPABILITY_IAM"
+resolve_s3 = true
+confirm_changeset = true
+parameter_overrides = "GoogleClientId=\"REPLACE_WITH_GOOGLE_WEB_CLIENT_ID\" AllowedExtensionOrigin=\"*\""
+
+[dev.build.parameters]
+cached = true
+parallel = true
 
 # CDN stack (deploy AFTER the app stack; pass its ApiDomain output). Invoke with:
 #   sam deploy --config-env cdn --template cdn-template.yaml --parameter-overrides ApiDomain=<app ApiDomain output>
