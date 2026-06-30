@@ -157,6 +157,17 @@ export async function getIdToken({ forceRefresh = false, interactive = false } =
   try {
     return await mintToken({ interactive: false, loginHint });
   } catch (err) {
+    // Record WHY the silent refresh failed — the Google error string (login_required /
+    // interaction_required / consent_required, a multi-account ambiguity, cookie partitioning) is the
+    // datapoint a re-prompt recurrence (#24) needs. Console-only; never log the token or the account
+    // email (the hint stays on-device). hadHint distinguishes "couldn't pick an account" from a true
+    // re-consent without revealing which account.
+    console.warn('[tldr auth] silent token refresh failed', {
+      reason: err?.message ?? String(err),
+      interactive,
+      forceRefresh,
+      hadHint: Boolean(loginHint),
+    });
     // Escalate to visible UI only on the deliberate Post-gesture retry — never elsewhere.
     if (!(interactive && forceRefresh)) throw err;
     return await mintToken({ interactive: true, loginHint });
