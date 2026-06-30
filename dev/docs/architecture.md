@@ -283,6 +283,14 @@ job-level `if:` can skip cleanly → the run is *gray/skipped*, never red, until
   the app's API endpoint as a parameter. The table (the one stateful resource) stays in the app stack, guarded by
   Retain + PITR + termination protection.
 - **Greenfield IaC:** no "import existing console resources" step.
+- **Dev / sandbox environment** (🔧 owner decision, #27): an `Environment` SAM parameter (`dev`|`prod`,
+  default `prod`) suffixes non-prod resource names, so a dev deploy (`tldr-app-dev`) gets a physically
+  distinct table (`tldr-comments-dev`) in the **same account** — dev testing can't read or write prod
+  data. prod keeps the exact legacy names (a rename would replace the live table). Dev deploys run from
+  `main` via the deploy workflow's `workflow_dispatch` `environment` input, so the OIDC trust policy
+  stays scoped to `refs/heads/main` (no broadening). No dev CDN (the dev client hits `ApiUrl` directly);
+  the dev client build is `npm run build:dev`. Seed/teardown: `server/scripts/seed-dev.mjs` /
+  `sam delete --config-env dev`.
 
 See `server/README.md` for the exact one-time setup (Google OAuth client, OIDC role + trust policy, deploy
 commands, termination protection).

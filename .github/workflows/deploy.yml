@@ -11,8 +11,13 @@ on:
     paths: ['server/**', 'shared/**', '.github/workflows/deploy.yml']
   workflow_dispatch:
     inputs:
+      environment:
+        description: 'Which environment to deploy (dev = isolated sandbox stack tldr-app-dev / table tldr-comments-dev)'
+        type: choice
+        options: [prod, dev]
+        default: prod
       deploy_cdn:
-        description: 'Also deploy the CDN stack (CloudFront — slow, ~15-20 min)'
+        description: 'Also deploy the CDN stack (CloudFront — slow, ~15-20 min). prod only.'
         type: boolean
         default: false
 
@@ -30,6 +35,22 @@ jobs:
     if: ${{ vars.AWS_DEPLOY_ROLE_ARN != '' && vars.GOOGLE_CLIENT_ID != '' }}
     steps:
       - uses: actions/checkout@v5
+
+      # Resolve the target environment once. A push to main is always prod; a manual run honors the
+      # dispatch input. The dev stack is name-suffixed (tldr-app-dev) so it can't touch prod resources;
+      # the OIDC role stays scoped to refs/heads/main, so dev deploys run from main via workflow_dispatch.
+      - name: Resolve target environment
+        id: env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ inputs.environment }}"
+          else
+            ENV="prod"
+          fi
+          if [ "$ENV" = "prod" ]; then STACK="tldr-app"; else STACK="tldr-app-$ENV"; fi
+          echo "name=$ENV" >> "$GITHUB_OUTPUT"
+          echo "stack=$STACK" >> "$GITHUB_OUTPUT"
+          echo "Deploying environment '$ENV' to stack '$STACK'." >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/setup-node@v5
         with:
@@ -62,21 +83,24 @@ jobs:
         working-directory: server
         run: |
           sam deploy \
+            --stack-name ${{ steps.env.outputs.stack }} \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
-            --parameter-overrides "GoogleClientId=${{ vars.GOOGLE_CLIENT_ID }} AllowedExtensionOrigin=${{ vars.ALLOWED_EXTENSION_ORIGIN || '*' }} EmailHashSalt=${{ secrets.EMAIL_HASH_SALT }}"
+            --parameter-overrides "GoogleClientId=${{ vars.GOOGLE_CLIENT_ID }} AllowedExtensionOrigin=${{ vars.ALLOWED_EXTENSION_ORIGIN || '*' }} EmailHashSalt=${{ secrets.EMAIL_HASH_SALT }} Environment=${{ steps.env.outputs.name }}"
 
       # Stack termination protection can't be expressed in the template body; set it via the API after
       # deploy. Idempotent — re-enabling an already-protected stack is a no-op — so it runs every deploy.
+      # prod only: the dev stack must stay deletable (`sam delete --config-env dev`) for teardown.
       - name: Enable termination protection on the app stack
+        if: ${{ steps.env.outputs.name == 'prod' }}
         run: |
           aws cloudformation update-termination-protection \
             --enable-termination-protection \
-            --stack-name tldr-app \
+            --stack-name ${{ steps.env.outputs.stack }} \
             --region il-central-1
 
       - name: sam deploy (CDN stack, on request)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_cdn }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_cdn && steps.env.outputs.name == 'prod' }}
         working-directory: server
         run: |
           API_DOMAIN="$(aws cloudformation describe-stacks --stack-name tldr-app \

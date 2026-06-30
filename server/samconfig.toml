@@ -14,6 +14,24 @@ parameter_overrides = "GoogleClientId=\"REPLACE_WITH_GOOGLE_WEB_CLIENT_ID\" Allo
 cached = true
 parallel = true
 
+# Dev/sandbox app stack. Same account, same region as prod, but a distinct stack + DynamoDB table
+# (Environment="dev" => tldr-comments-dev) so dev testing can never touch prod data. Deploy with:
+#   sam deploy --config-env dev --parameter-overrides "GoogleClientId=<web-client-id> EmailHashSalt=<secret>"
+# (CI deploys it via the deploy workflow's workflow_dispatch "environment: dev" input.) No dev CDN —
+# point the dev extension build straight at this stack's ApiUrl output. Teardown: sam delete --config-env dev
+# (the table is Retain, so it survives as an orphan — delete tldr-comments-dev by hand if you want it gone).
+[dev.deploy.parameters]
+stack_name = "tldr-app-dev"
+region = "il-central-1"
+capabilities = "CAPABILITY_IAM"
+resolve_s3 = true
+confirm_changeset = true
+parameter_overrides = "GoogleClientId=\"REPLACE_WITH_GOOGLE_WEB_CLIENT_ID\" AllowedExtensionOrigin=\"*\" Environment=\"dev\""
+
+[dev.build.parameters]
+cached = true
+parallel = true
+
 # CDN stack (deploy AFTER the app stack; pass its ApiDomain output). Invoke with:
 #   sam deploy --config-env cdn --template cdn-template.yaml --parameter-overrides ApiDomain=<app ApiDomain output>
 [cdn.deploy.parameters]

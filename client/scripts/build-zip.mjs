@@ -53,6 +53,20 @@ export function injectConfig(stageDir, env = process.env) {
   }
 }
 
+// Resolve which env vars feed the injector for a build flavor. The dev flavor prefers *_DEV overrides
+// (so a dev build points the extension at the dev app-stack API, never prod), falling back to the
+// unsuffixed value when no dev-specific one is set. prod (the default) uses the unsuffixed values as-is,
+// so `npm run build` / `build:prod` behave identically to before flavors existed. Only the three keys
+// the injector reads are mapped — nothing else.
+export function flavorEnv(flavor = 'prod', env = process.env) {
+  const pick = (key) => (flavor === 'dev' ? env[`${key}_DEV`] ?? env[key] : env[key]);
+  return {
+    API_BASE_URL: pick('API_BASE_URL'),
+    GOOGLE_CLIENT_ID: pick('GOOGLE_CLIENT_ID'),
+    EXTENSION_PUBLIC_KEY: pick('EXTENSION_PUBLIC_KEY'),
+  };
+}
+
 export function buildZip(env = process.env) {
   const distDir = resolve(clientDir, 'dist');
   const stageDir = resolve(distDir, 'staging');
@@ -76,5 +90,7 @@ export function buildZip(env = process.env) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  console.log(`built ${buildZip()}`);
+  // Optional first arg selects the build flavor (dev|prod); default prod keeps `npm run build` unchanged.
+  const flavor = process.argv[2] || 'prod';
+  console.log(`built ${buildZip(flavorEnv(flavor))} (${flavor})`);
 }

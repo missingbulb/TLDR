@@ -63,8 +63,8 @@ The deploy workflow assumes an IAM role via GitHub OIDC — no long-lived AWS ke
        { "Sid": "ApiGateway", "Effect": "Allow", "Action": "apigateway:*",
          "Resource": "arn:aws:apigateway:il-central-1::*" },
        { "Sid": "DynamoDB", "Effect": "Allow", "Action": "dynamodb:*", "Resource": [
-         "arn:aws:dynamodb:il-central-1:<ACCOUNT_ID>:table/tldr-comments",
-         "arn:aws:dynamodb:il-central-1:<ACCOUNT_ID>:table/tldr-comments/*" ] },
+         "arn:aws:dynamodb:il-central-1:<ACCOUNT_ID>:table/tldr-comments*",
+         "arn:aws:dynamodb:il-central-1:<ACCOUNT_ID>:table/tldr-comments*/*" ] },
        { "Sid": "Logs", "Effect": "Allow", "Action": "logs:*", "Resource": [
          "arn:aws:logs:il-central-1:<ACCOUNT_ID>:log-group:/aws/lambda/tldr-app-*",
          "arn:aws:logs:il-central-1:<ACCOUNT_ID>:log-group:/aws/lambda/tldr-app-*:*" ] },
@@ -110,6 +110,47 @@ aws cloudformation update-termination-protection --enable-termination-protection
   --stack-name tldr-app --region il-central-1
 ```
 PITR is enabled in the template; you can confirm it in the DynamoDB console.
+
+## Dev / sandbox environment
+
+A second, isolated copy of the app stack so new versions can be exercised end-to-end **without
+touching prod data**. Same AWS account, same region — but a distinct stack (`tldr-app-dev`) and,
+critically, a distinct DynamoDB table (`tldr-comments-dev`), so a dev write can never land in prod.
+The `Environment` parameter (`dev`|`prod`, default `prod`) drives the naming; prod keeps the exact
+legacy names (a rename would replace the live table). There is **no dev CDN** — point the dev
+extension build straight at the dev stack's `ApiUrl`.
+
+**Deploy dev** — from CI, run the **deploy** workflow via *Run workflow* (workflow_dispatch) and pick
+`environment: dev`. It runs from `main`, reusing the existing OIDC role as-is (no trust-policy change),
+and skips termination protection so the stack stays deletable. Locally:
+```bash
+sam build
+sam deploy --config-env dev \
+  --parameter-overrides "GoogleClientId=<web-client-id> AllowedExtensionOrigin=* EmailHashSalt=<secret> Environment=dev"
+```
+The dev stack reuses the **prod** Google OAuth Web client (simplest; the locked decision in #27).
+
+**Build a dev extension** pointed at the dev API:
+```bash
+cd ../client
+API_BASE_URL_DEV="<dev stack ApiUrl output>" GOOGLE_CLIENT_ID="<web-client-id>" npm run build:dev
+```
+`build:dev` prefers `*_DEV` env vars (`API_BASE_URL_DEV`, `GOOGLE_CLIENT_ID_DEV`,
+`EXTENSION_PUBLIC_KEY_DEV`), falling back to the unsuffixed value; `build:prod` (= `npm run build`)
+uses the unsuffixed prod values unchanged.
+
+**Seed** the dev table with sample comments (dev-only; it refuses to target the prod table):
+```bash
+cd ../server
+TABLE_NAME=tldr-comments-dev AWS_REGION=il-central-1 node scripts/seed-dev.mjs
+```
+
+**Teardown**: `sam delete --config-env dev`. Because the table is `Retain`, it survives as an orphan
+(`DELETE_SKIPPED`) — delete `tldr-comments-dev` by hand if you want it gone.
+
+> The deploy role's IAM policy scopes DynamoDB to `table/tldr-comments*` (note the wildcard) so it can
+> create/manage `tldr-comments-dev` as well as prod's `tldr-comments`. `tldr-app-*` already covers the
+> dev stack's Lambda/Logs/IAM roles.
 
 ## Deploy discipline
 - **Review every changeset** (`confirm_changeset = true` in `samconfig.toml`). `Replacement: True` on `CommentsTable` is a **hard stop** — replacement makes a new empty table and the data does not follow. The frozen attributes are `KeySchema` and `AttributeDefinitions`.

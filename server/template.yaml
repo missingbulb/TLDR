@@ -6,6 +6,16 @@ Description: >
   never slows this fast-iterating stack.
 
 Parameters:
+  Environment:
+    Type: String
+    Default: prod
+    AllowedValues: [dev, prod]
+    Description: >
+      Which environment this stack instance is. Suffixes non-prod resource names so a dev stack
+      (deployed as tldr-app-dev) gets a physically distinct DynamoDB table (tldr-comments-dev) and
+      can NEVER read or write prod data. prod is the default and keeps the exact legacy names — see
+      CommentsTable.TableName, which only suffixes when Environment != prod (renaming the live prod
+      table would REPLACE it with an empty one). Pair with stack_name=tldr-app-${Environment}.
   GoogleClientId:
     Type: String
     # Intentionally no default: an empty JWT-authorizer audience would accept ID tokens minted for
@@ -43,6 +53,11 @@ Parameters:
       Server secret salting the stored one-way email hash (used for moderation only; the hash is never
       returned). Set to a long random string; rotating it disconnects old hashes from new ones.
 
+Conditions:
+  # prod keeps the legacy names verbatim; everything else is suffixed. Gates the table name so adding
+  # the Environment parameter never renames (= replaces) the live prod table.
+  IsProd: !Equals [!Ref Environment, prod]
+
 Globals:
   Function:
     Runtime: nodejs22.x
@@ -66,7 +81,9 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      TableName: !Ref CommentsTableName
+      # prod => the exact legacy name (renaming would REPLACE the table — see UpdateReplacePolicy and
+      # the frozen-KeySchema note below); non-prod => suffixed, so dev gets its own physical table.
+      TableName: !If [IsProd, !Ref CommentsTableName, !Sub '${CommentsTableName}-${Environment}']
       BillingMode: PAY_PER_REQUEST
       # FROZEN: editing KeySchema / AttributeDefinitions REPLACES the table — a new EMPTY table; the
       # data does NOT follow. Treat any changeset showing "Replacement: True" here as a hard stop.
