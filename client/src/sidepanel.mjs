@@ -12,6 +12,10 @@ import { makeOptimisticComment, mergeComments, reconcileSuccess, markFailed } fr
 
 const DENYLIST_STORAGE_KEY = 'userDenylist';
 const REFRESH_DEBOUNCE_MS = 300;
+// The extension's own version, read once and attached to every API request as X-Client-Version so the
+// server can log which client versions are still calling (dev/docs/architecture.md §9.1). Read here
+// (not inside api.mjs) so the api module stays Chrome-free and unit-testable.
+const CLIENT_VERSION = chrome.runtime.getManifest().version;
 // Cap the per-page cache so a long browsing session can't grow it unbounded. Comments are sparse
 // (this isn't a live thread) so this is generous; eviction is oldest-first (Map insertion order).
 const MAX_CACHE_PAGES = 100;
@@ -166,7 +170,7 @@ async function refresh({ useCache = false } = {}) {
   if (cached && useCache) return;
 
   try {
-    const { comments } = await getComments(pageId);
+    const { comments } = await getComments(pageId, { clientVersion: CLIENT_VERSION });
     // Ignore a response that arrived after the user navigated away.
     if (state.pageId !== pageId) return;
     const bucket = bucketFor(pageId);
@@ -213,7 +217,7 @@ async function onSubmit(event) {
   render();
 
   try {
-    const { comment } = await postComment(pageId, body, getIdToken);
+    const { comment } = await postComment(pageId, body, getIdToken, { clientVersion: CLIENT_VERSION });
     bucket.localComments = reconcileSuccess(bucket.localComments, tempId, comment);
   } catch (err) {
     console.warn('post failed', err);

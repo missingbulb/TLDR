@@ -214,6 +214,13 @@ export const handler = async (event) => {
   const route =
     event.requestContext?.routeKey ??
     `${event.requestContext?.http?.method} ${event.requestContext?.http?.path ?? event.rawPath}`;
+  // Version telemetry (issue #29): log the calling client's version on EVERY request — both routes,
+  // and `null` when absent, since a client too old to send the header is exactly the cohort we need
+  // to count before retiring an old behavior. HTTP API v2 lowercases header keys. This is just a
+  // CloudWatch line (queryable via Logs Insights); it never affects the response. Note GET is
+  // CloudFront-cached, so read telemetry lands only on cache misses; POST always reaches the origin.
+  const clientVersion = event.headers?.['x-client-version'] ?? null;
+  console.log('request', { route, clientVersion });
   try {
     if (route === 'POST /comments') return await handlePost(event);
     if (route === 'GET /comments') return await handleGet(event);
