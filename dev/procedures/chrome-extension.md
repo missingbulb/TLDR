@@ -22,6 +22,23 @@ versions are what would propagate to the corpus `technologies/chrome-extension.m
   interaction and so always fails silently — reserve it (or omit `prompt`) for the interactive fallback.
   Worked example: `client/src/auth.mjs` (`mintToken` passes `prompt: interactive ? undefined : 'none'`).
 
+- **`prompt=none` can't pick among multiple signed-in accounts — pass `login_hint`.** With several Google
+  accounts signed in, a silent refresh with no account hint errors (Google can't choose without UI), so a
+  *signed-in* user gets a needless prompt. Fix: remember the account **email** (the `email` claim — non-secret,
+  not a credential) and pass it as `login_hint` on the silent mint (OIDC Core §3.1.2.1). Persist only the
+  email to `storage.local`; the **ID token stays in `storage.session`** (in-memory) — never write a bearer
+  credential to disk (extension storage is unencrypted), and don't adopt a refresh-token flow to "fix"
+  restarts (that puts a *longer-lived* credential at rest — worse). Worked example: `client/src/auth.mjs`
+  (`cacheToken` remembers the email; `loadLoginHint`/`buildAuthUrl` thread it through).
+
+- **Escalate to interactive auth only from a real user gesture, and only as a last resort.** Reads send no
+  token, so the panel-open/read path can't prompt. The write path must too: the first POST uses a
+  silent-only token, and a *visible* Google prompt is permitted **only** on the 401 retry — which already
+  runs inside the Post click. Encode it as a hard rule: `getIdToken` escalates to interactive **iff**
+  `interactive && forceRefresh` (both default false), so no other caller can surface UI by accident. Worked
+  example: `client/src/auth.mjs` (`getIdToken` escalation guard) + `client/src/api.mjs` (`postComment`
+  silent-first, interactive-on-401). Unit-tested by stubbing `chrome.*` in `client/test/auth.test.mjs`.
+
 - **Reach the API via the server's CORS, not `host_permissions`.** Our backend returns
   `Access-Control-Allow-Origin: *` (API Gateway CORS — it's `*` because HTTP API v2 rejects the
   `chrome-extension://` scheme), which already permits the extension origin, so the side-panel `fetch`es

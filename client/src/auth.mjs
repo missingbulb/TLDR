@@ -11,6 +11,10 @@ import { GOOGLE_CLIENT_ID } from '../config.mjs';
 
 const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_CACHE_KEY = 'tldr_id_token';
+// The signed-in account's email. NON-SECRET (not a credential) — persisted to storage.local purely so a
+// silent refresh can pass it as login_hint and let Google pick the right account with no UI. The token
+// itself never goes to disk (see loadValidCachedToken/cacheToken: storage.session, in-memory only).
+const LOGIN_HINT_KEY = 'tldr_login_hint';
 const EXPIRY_SKEW_SECONDS = 300; // refresh 5 min before the token actually expires
 
 // --- pure helpers -----------------------------------------------------------
@@ -21,7 +25,7 @@ export function randomToken(bytes = 16) {
   return Array.from(buf, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export function buildAuthUrl({ clientId, redirectUri, nonce, state, prompt }) {
+export function buildAuthUrl({ clientId, redirectUri, nonce, state, prompt, loginHint }) {
   const params = new URLSearchParams({
     client_id: clientId,
     response_type: 'id_token',
@@ -34,6 +38,10 @@ export function buildAuthUrl({ clientId, redirectUri, nonce, state, prompt }) {
   // consented, else an error we fall back on). The interactive flow omits prompt so Google shows
   // login/consent only when actually needed — not on every refresh.
   if (prompt) params.set('prompt', prompt);
+  // login_hint names the account so prompt=none can resolve silently when several Google accounts are
+  // signed in (OIDC Core §3.1.2.1). Without it, a multi-account user's silent refresh errors —
+  // Google can't pick an account without UI — and we'd needlessly escalate to a visible prompt.
+  if (loginHint) params.set('login_hint', loginHint);
   return `${GOOGLE_AUTH_ENDPOINT}?${params.toString()}`;
 }
 
@@ -78,10 +86,25 @@ async function loadValidCachedToken() {
 }
 
 async function cacheToken(idToken) {
+  // Token stays in storage.session — in-memory, dies with the browser session. NEVER storage.local:
+  // an ID token is a bearer credential and extension storage is unencrypted on disk.
   await chrome.storage.session.set({ [TOKEN_CACHE_KEY]: { idToken } });
+  // The email is not a credential — persist it (storage.local) so the next session's silent refresh
+  // can hint the right account even after the in-memory token is gone.
+  try {
+    const { email } = decodeJwtPayload(idToken);
+    if (email) await chrome.storage.local.set({ [LOGIN_HINT_KEY]: email });
+  } catch {
+    // A token we can't decode just means no hint to remember — non-fatal.
+  }
 }
 
-async function mintToken({ interactive }) {
+async function loadLoginHint() {
+  const stored = await chrome.storage.local.get(LOGIN_HINT_KEY);
+  return stored[LOGIN_HINT_KEY] || undefined;
+}
+
+async function mintToken({ interactive, loginHint }) {
   const redirectUri = chrome.identity.getRedirectURL();
   const nonce = randomToken();
   const state = randomToken();
@@ -93,6 +116,7 @@ async function mintToken({ interactive }) {
     // Silent refresh must use prompt=none (Google returns a token with no UI, or an error we fall
     // back on). The interactive attempt omits prompt so consent shows only when actually needed.
     prompt: interactive ? undefined : 'none',
+    loginHint,
   });
 
   const redirectUrl = await chrome.identity.launchWebAuthFlow({ url: authUrl, interactive });
@@ -114,19 +138,27 @@ async function mintToken({ interactive }) {
 /**
  * Get a valid Google ID token, refreshing as needed.
  * - Uses the cached token if still valid.
- * - Otherwise tries a SILENT refresh (interactive:false, no user gesture needed).
- * - Falls back to an INTERACTIVE flow only when allowed (call from a user-gesture handler).
+ * - Otherwise tries a SILENT refresh (prompt=none, hinted by the remembered account — no UI for an
+ *   already-signed-in, already-consented user).
+ * - Falls back to an INTERACTIVE flow (visible Google UI) ONLY on the deliberate forced-refresh retry,
+ *   which the caller runs inside a real user gesture (the Post click). Every other path stays silent,
+ *   so opening the panel or the first send can never surface a prompt on their own.
+ *
+ * Defaults are the safe ones: no force, no interactive escalation. A caller must explicitly ask for
+ * BOTH ({ forceRefresh: true, interactive: true }) to permit Google UI.
  * @param {{forceRefresh?: boolean, interactive?: boolean}} opts
  */
-export async function getIdToken({ forceRefresh = false, interactive = true } = {}) {
+export async function getIdToken({ forceRefresh = false, interactive = false } = {}) {
   if (!forceRefresh) {
     const cached = await loadValidCachedToken();
     if (cached) return cached;
   }
+  const loginHint = await loadLoginHint();
   try {
-    return await mintToken({ interactive: false });
+    return await mintToken({ interactive: false, loginHint });
   } catch (err) {
-    if (!interactive) throw err;
-    return await mintToken({ interactive: true });
+    // Escalate to visible UI only on the deliberate Post-gesture retry — never elsewhere.
+    if (!(interactive && forceRefresh)) throw err;
+    return await mintToken({ interactive: true, loginHint });
   }
 }
