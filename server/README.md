@@ -141,14 +141,16 @@ sam deploy --config-env dev \
 ```
 The dev stack reuses the **prod** Google OAuth Web client (simplest; the locked decision in #27).
 
-**Build a dev extension** pointed at the dev API:
+**Build a dev extension.** The committed `client/config.mjs` already defaults to dev, so a plain
+`npm run build` (or loading `client/` unpacked) talks to dev — never prod. To point at a specific dev
+API without editing the committed default:
 ```bash
 cd ../client
 API_BASE_URL_DEV="<dev stack ApiUrl output>" GOOGLE_CLIENT_ID="<web-client-id>" npm run build:dev
 ```
 `build:dev` prefers `*_DEV` env vars (`API_BASE_URL_DEV`, `GOOGLE_CLIENT_ID_DEV`,
-`EXTENSION_PUBLIC_KEY_DEV`), falling back to the unsuffixed value; `build:prod` (= `npm run build`)
-uses the unsuffixed prod values unchanged.
+`EXTENSION_PUBLIC_KEY_DEV`), falling back to the committed default. Only the release pipeline injects
+prod (see `client/README.md`).
 
 **Seed** the dev table with sample comments (dev-only; it refuses to target the prod table):
 ```bash

@@ -1,11 +1,11 @@
 // Packages the extension into dist/tldr-extension.zip — ONLY the shippable files, never dev/test
 // tooling. Uses the system `zip` (present on CI runners). Run with `npm run build`.
 //
-// Build-time config injection: the committed source carries only PLACEHOLDERS. The real values live
-// in GitHub variables (they're public — the client id and key ship in every install), not in the
-// repo, and are injected here into STAGED copies of the files (never the committed source). The
-// release workflow passes them in via the environment. With no env set, the build still produces a
-// valid placeholder zip (e.g. for reserving the store id).
+// Build-time config injection: the committed source points at the DEV stack (API_BASE_URL), with the
+// client id and `key` left as placeholders. The PROD URL lives only in a GitHub variable (it's public,
+// but kept out of the repo) and is injected here into STAGED copies of the files (never the committed
+// source) — so only the release workflow ever produces a prod-pointed build, and a plain build stays
+// on dev. With no env set, the build produces a dev-pointed zip from the committed defaults.
 
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync, cpSync, readFileSync, writeFileSync } from 'node:fs';

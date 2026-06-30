@@ -12,7 +12,7 @@
     "webNavigation"
   ],
   "host_permissions": [
-    "https://api.tldr.example/*"
+    "https://dev-api.tldr.invalid/*"
   ],
   "background": {
     "service_worker": "src/service-worker.mjs",

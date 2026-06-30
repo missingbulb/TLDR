@@ -23,12 +23,18 @@ client/
 ```
 
 ## Configuration (injected at build time)
-The committed `config.mjs` and `manifest.json` carry only placeholders. The release workflow
-(`.github/workflows/release.yml`) builds the zip in CI and injects the real values from GitHub
-repository variables — there is no local checkout to hand-edit:
-- **`API_BASE_URL`** (dev: the app stack `ApiUrl`; prod: `https://<cloudfront-domain>`) →
-  `config.mjs` `API_BASE_URL` **and** `manifest.json` `host_permissions` (as `<origin>/*`, the
-  API/CloudFront host).
+The committed `config.mjs` `API_BASE_URL` points at the **dev** stack on purpose, so any build that
+isn't the official store release talks to dev — **never prod**. PROD is reachable in exactly one way:
+the release workflow (`.github/workflows/release.yml`) injects the prod URL from a GitHub repository
+variable at build time. A plain/local/unpacked build keeps the committed dev default and cannot reach
+production. (`GOOGLE_CLIENT_ID` and the manifest `key` stay placeholders, injected the same way.)
+- **`API_BASE_URL`** — committed default = the **dev** app stack `ApiUrl`
+  (`https://<id>.execute-api.<region>.amazonaws.com`); the release build overrides it with prod
+  (`https://<cloudfront-domain>`). Injected into `config.mjs` **and** `manifest.json` `host_permissions`
+  (as `<origin>/*`). The two committed files must name the same origin — a test guards against drift.
+  > **Follow-up:** the committed default is a non-resolving placeholder until the dev stack exists —
+  > after the first dev deploy, set `config.mjs` `API_BASE_URL` (and the matching `host_permissions`)
+  > to the dev stack's `ApiUrl` output.
 - **`GOOGLE_CLIENT_ID`** (the Google "Web application" client id — see `server/README.md`) →
   `config.mjs`.
 
@@ -45,7 +51,7 @@ The OAuth redirect URI is `https://<EXTENSION_ID>.chromiumapp.org/`, and CORS is
 ## Build
 The shippable zip is produced by CI — the release workflow runs `npm run build`, injecting the repo
 variables above into staged copies (the committed source is never touched). The build itself runs
-anywhere; with no env set it still produces a valid placeholder zip:
+anywhere; with no env set it produces a **dev-pointed** zip from the committed defaults:
 ```bash
 cd client
 npm run build      # -> dist/tldr-extension.zip (only the shippable files)

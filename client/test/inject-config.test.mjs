@@ -34,6 +34,21 @@ test('injectConfig writes env values into staged config.mjs and manifest.json', 
   }
 });
 
+test('the committed default points at dev (never prod), and config + manifest agree on the origin', () => {
+  // "Dev as the committed default": any build that isn't the release pipeline talks to dev, never prod.
+  // PROD is only ever the release-injected value, so the committed default must NOT be a prod URL, and
+  // the two committed files that carry the origin must not drift apart.
+  const config = readFileSync(resolve(clientDir, 'config.mjs'), 'utf8');
+  const manifest = JSON.parse(readFileSync(resolve(clientDir, 'manifest.json'), 'utf8'));
+  const apiBaseUrl = config.match(/export const API_BASE_URL = '([^']*)'/)?.[1];
+  assert.ok(apiBaseUrl, 'config.mjs must export API_BASE_URL');
+  // A prod build is the CloudFront domain; the committed default must never be that.
+  assert.doesNotMatch(apiBaseUrl, /cloudfront\.net/, 'committed default must not point at prod (CloudFront)');
+  // config + manifest must name the same origin (injectConfig keeps them in sync; the committed
+  // defaults must too, or an un-injected build would request a host it lacks permission for).
+  assert.deepEqual(manifest.host_permissions, [`${new URL(apiBaseUrl).origin}/*`]);
+});
+
 test('injectConfig leaves committed placeholders untouched when env is empty', () => {
   const dir = stage();
   try {
