@@ -11,9 +11,6 @@
     "tabs",
     "webNavigation"
   ],
-  "host_permissions": [
-    "https://dev-api.tldr.invalid/*"
-  ],
   "background": {
     "service_worker": "src/service-worker.mjs",
     "type": "module"

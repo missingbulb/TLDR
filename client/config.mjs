@@ -9,7 +9,8 @@
 //                 (https://<id>.execute-api.<region>.amazonaws.com). Set the value below to the dev
 //                 stack's ApiUrl after the first dev deploy; until then it's a non-resolving
 //                 placeholder. The release build overrides it with the prod CloudFront domain. No
-//                 trailing slash. (Keep manifest.json host_permissions in sync — guarded by a test.)
+//                 trailing slash. (The extension reaches the API via the server's '*' CORS, so there's
+//                 no manifest host_permissions to keep in sync — a test guards this isn't a prod URL.)
 // GOOGLE_CLIENT_ID — the Google Cloud OAuth "Web application" client id (same value the server's JWT
 //                 authorizer uses as its audience); injected at build time, stays a placeholder here.
 

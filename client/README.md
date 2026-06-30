@@ -32,17 +32,18 @@ prod**, while a plain/local/unpacked/`build:dev` build keeps the committed dev d
 and the manifest `key` stay placeholders, injected the same way.)
 - **`API_BASE_URL`** — committed default = the **dev** app stack `ApiUrl`
   (`https://<id>.execute-api.<region>.amazonaws.com`); the release build overrides it with prod
-  (`https://<cloudfront-domain>`). Injected into `config.mjs` **and** `manifest.json` `host_permissions`
-  (as `<origin>/*`). The two committed files must name the same origin — a test guards against drift.
+  (`https://<cloudfront-domain>`) → `config.mjs` `API_BASE_URL`. The extension reaches the API via the
+  server's `*` CORS, so **no** `manifest.json` `host_permissions` is injected. A test guards that the
+  committed default is never a prod (CloudFront) URL.
   > **Follow-up:** the committed default is a non-resolving placeholder until the dev stack exists —
-  > after the first dev deploy, set `config.mjs` `API_BASE_URL` (and the matching `host_permissions`)
-  > to the dev stack's `ApiUrl` output.
+  > after the first dev deploy, set `config.mjs` `API_BASE_URL` to the dev stack's `ApiUrl` output.
 - **`GOOGLE_CLIENT_ID`** (the Google "Web application" client id — see `server/README.md`) →
   `config.mjs`.
 
 ## The extension id (and why it matters)
-The OAuth redirect URI is `https://<EXTENSION_ID>.chromiumapp.org/`, and CORS is locked to
-`chrome-extension://<EXTENSION_ID>`. So the id must be **stable**:
+The OAuth redirect URI is `https://<EXTENSION_ID>.chromiumapp.org/`, so the id must be **stable**
+(server CORS is `*`, not the extension origin — API Gateway v2 rejects the `chrome-extension://` scheme —
+so the id matters for the redirect URI, not for API access):
 - **Unpacked dev:** Chrome derives the id from the load path; run `chrome.identity.getRedirectURL()`
   in the side panel devtools to read the exact redirect URI, and register that on the Google client.
 - **Stable id across machines / for production:** the manifest needs a `"key"` (the public key of a

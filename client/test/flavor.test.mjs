@@ -36,14 +36,12 @@ test('prod flavor uses the unsuffixed values (unchanged from before flavors exis
   assert.equal(env.GOOGLE_CLIENT_ID, ENV.GOOGLE_CLIENT_ID);
 });
 
-test('build:dev injects the dev API into staged config.mjs + manifest host_permissions', () => {
+test('build:dev injects the dev API into staged config.mjs', () => {
   const dir = stage();
   try {
     injectConfig(dir, flavorEnv('dev', ENV));
     const config = readFileSync(resolve(dir, 'config.mjs'), 'utf8');
     assert.match(config, /export const API_BASE_URL = 'https:\/\/abc123\.execute-api\.il-central-1\.amazonaws\.com';/);
-    const manifest = JSON.parse(readFileSync(resolve(dir, 'manifest.json'), 'utf8'));
-    assert.deepEqual(manifest.host_permissions, ['https://abc123.execute-api.il-central-1.amazonaws.com/*']);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -55,8 +53,6 @@ test('build:prod injects the prod (CloudFront) API — distinct from dev', () =>
     injectConfig(dir, flavorEnv('prod', ENV));
     const config = readFileSync(resolve(dir, 'config.mjs'), 'utf8');
     assert.match(config, /export const API_BASE_URL = 'https:\/\/d123\.cloudfront\.net';/);
-    const manifest = JSON.parse(readFileSync(resolve(dir, 'manifest.json'), 'utf8'));
-    assert.deepEqual(manifest.host_permissions, ['https://d123.cloudfront.net/*']);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
