@@ -6,6 +6,7 @@ import {
   decodeJwtPayload,
   isExpired,
   randomToken,
+  getIdToken,
 } from '../src/auth.mjs';
 
 function b64url(obj) {
@@ -33,6 +34,15 @@ test('buildAuthUrl omits prompt by default and sets prompt=none for a silent ref
   assert.equal(interactive.searchParams.get('prompt'), null, 'interactive must not force prompt');
   const silent = new URL(buildAuthUrl({ clientId: 'c', redirectUri: 'r', nonce: 'n', state: 's', prompt: 'none' }));
   assert.equal(silent.searchParams.get('prompt'), 'none');
+});
+
+test('buildAuthUrl omits login_hint by default and sets it when given', () => {
+  const none = new URL(buildAuthUrl({ clientId: 'c', redirectUri: 'r', nonce: 'n', state: 's' }));
+  assert.equal(none.searchParams.get('login_hint'), null);
+  const hinted = new URL(
+    buildAuthUrl({ clientId: 'c', redirectUri: 'r', nonce: 'n', state: 's', loginHint: 'a@b.com' }),
+  );
+  assert.equal(hinted.searchParams.get('login_hint'), 'a@b.com');
 });
 
 test('parseRedirectFragment extracts id_token and state from the URL fragment', () => {
@@ -73,4 +83,51 @@ test('randomToken returns a unique-ish hex string of the requested length', () =
   const b = randomToken(16);
   assert.match(a, /^[0-9a-f]{32}$/);
   assert.notEqual(a, b);
+});
+
+// --- getIdToken escalation rule (the panel-never-prompts guarantee) ----------
+// Stubs chrome.* so the otherwise real-browser-only orchestration is exercised in node. We make
+// launchWebAuthFlow record its `interactive` arg and throw, so we can assert WHICH attempts happen.
+
+function stubChrome({ cachedToken } = {}) {
+  const flowCalls = [];
+  globalThis.chrome = {
+    storage: {
+      session: { get: async () => (cachedToken ? { tldr_id_token: { idToken: cachedToken } } : {}), set: async () => {} },
+      local: { get: async () => ({}), set: async () => {} },
+    },
+    identity: {
+      getRedirectURL: () => 'https://abc.chromiumapp.org/',
+      launchWebAuthFlow: async ({ interactive }) => {
+        flowCalls.push(interactive);
+        throw new Error(interactive ? 'interactive-attempted' : 'silent-failed');
+      },
+    },
+  };
+  return flowCalls;
+}
+
+test('getIdToken with defaults attempts only a silent mint, never escalates (panel-open is safe)', async () => {
+  const flowCalls = stubChrome();
+  await assert.rejects(() => getIdToken(), /silent-failed/);
+  assert.deepEqual(flowCalls, [false], 'no interactive (visible) flow may be attempted');
+});
+
+test('getIdToken({interactive:true}) without forceRefresh still does NOT escalate', async () => {
+  const flowCalls = stubChrome();
+  await assert.rejects(() => getIdToken({ interactive: true }), /silent-failed/);
+  assert.deepEqual(flowCalls, [false], 'interactive needs BOTH flags; alone it stays silent');
+});
+
+test('getIdToken({forceRefresh:true, interactive:true}) escalates: silent first, then interactive', async () => {
+  const flowCalls = stubChrome();
+  await assert.rejects(() => getIdToken({ forceRefresh: true, interactive: true }), /interactive-attempted/);
+  assert.deepEqual(flowCalls, [false, true]);
+});
+
+test('getIdToken short-circuits on a valid cached token — no mint at all', async () => {
+  const jwt = makeJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
+  const flowCalls = stubChrome({ cachedToken: jwt });
+  assert.equal(await getIdToken(), jwt);
+  assert.deepEqual(flowCalls, [], 'a valid cache must not trigger any auth flow');
 });

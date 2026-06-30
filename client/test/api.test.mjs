@@ -46,7 +46,9 @@ test('postComment refreshes the token once on a 401 and retries', async () => {
   assert.equal(out.comment.commentId, 'y');
   assert.equal(attempt, 2);
   assert.equal(tokenCalls.length, 2);
-  assert.deepEqual(tokenCalls[1], { forceRefresh: true });
+  // First send is silent-only; the 401 retry is the one place a visible prompt is permitted.
+  assert.deepEqual(tokenCalls[0], { interactive: false });
+  assert.deepEqual(tokenCalls[1], { forceRefresh: true, interactive: true });
 });
 
 test('postComment throws on a non-401 error', async () => {

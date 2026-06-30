@@ -22,10 +22,12 @@ export async function postComment(pageUrl, body, getIdToken, { fetchImpl = fetch
       body: JSON.stringify({ pageUrl, body }),
     });
 
-  let res = await send(await getIdToken());
+  // First send uses a SILENT token only (no UI). This runs inside the Post user gesture, so the 401
+  // retry is the one place we permit an interactive prompt — and only if the silent refresh fails.
+  let res = await send(await getIdToken({ interactive: false }));
   if (res.status === 401) {
-    // Token rejected (likely expired) — refresh once and retry.
-    res = await send(await getIdToken({ forceRefresh: true }));
+    // Token rejected (likely expired) — force-refresh once, allowing a visible prompt as a last resort.
+    res = await send(await getIdToken({ forceRefresh: true, interactive: true }));
   }
   if (!res.ok) throw new Error(`post failed: ${res.status}`);
   return res.json();
