@@ -116,6 +116,23 @@ the client write under `pageId` A and a read look under `pageId` B — a silent 
 > ⚠️ **Remaining limitation:** dropping the fragment still collapses hash-routed SPAs (`example.com/#/a` vs
 > `/#/b`) into one `pageId`. Acceptable for v1; revisit if a target SPA family matters.
 
+### 4.4 Per-page response cache (no refetch on tab return)
+The side panel keeps an in-memory `pageId → comments` cache for the panel's lifetime (≈ until the window's
+panel is closed). **A plain tab switch back to an already-fetched page renders from this cache with no network
+call;** the panel only fetches on initial load and on a *real* navigation/reload of the active tab
+(`onUpdated` URL-change or `status: 'complete'`, and SPA `onHistoryStateUpdated`). So tab 1 → tab 2 → tab 1
+costs one fetch, not two. Bounded at `MAX_CACHE_PAGES` (oldest-evicted) so a long session can't grow it
+unbounded. Worked example: `client/src/sidepanel.mjs` (`bucketFor`/`syncView`, the `useCache` flag on `refresh`).
+
+🔧 **Decision (owner-chosen — cache until close, don't revalidate):** the primary use case is **not** a live
+thread — comments arrive sparsely and far apart — so the value of showing freshly-fetched comments every time
+a tab regains focus is near zero, while the cost (a round-trip, a re-render, a brief loading flash) is paid on
+every switch. We therefore cache-until-closed rather than stale-while-revalidate or a TTL: a tab switch trusts
+the cache outright, and only an explicit reload/navigation refetches. This layers under the §4.1 side-pane
+gate and the §6 CDN: even a cache miss is usually a cheap edge hit, and now repeat views skip the network
+entirely. (The per-page bucket also scopes optimistic local comments per page, so a pending post on one tab
+can't leak onto another tab's view.)
+
 ---
 
 ## 5. DynamoDB table design
