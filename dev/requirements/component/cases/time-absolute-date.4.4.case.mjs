@@ -6,6 +6,7 @@
 import { REFERENCE_NOW_MS } from "../../shared/reference-time.mjs";
 
 export default {
+  selector: "li.comment",
   description: "a note a day or more old reads the absolute locale date",
   tabUrl: "https://example.com/article",
   // Reference instant is 2026-06-28T12:00:00Z; two days earlier is 2026-06-26 (en-US: 6/26/2026).

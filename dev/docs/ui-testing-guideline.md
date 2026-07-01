@@ -248,6 +248,25 @@ content rules, and accessibility** to their own kinds. The big investment is the
 the real UI**; the image renderer rides on top of it, and every non-visual kind reuses it too. Get the
 harness right and the pixel layer is a thin, deterministic cap.
 
+### 6.5 Crop to the element under test — don't re-approve the whole screen for a chrome change
+A requirement about *one element's internal appearance* (a row's byline, a badge, a vote control)
+shouldn't be pinned by a snapshot of the **whole screen**. If it is, every cross-cutting change — a
+header title, a nav item, surrounding copy — re-renders and forces re-approval of **every** such
+golden, though the thing each leaf tests didn't move. The diffs go noisy and the approval surface goes
+dilute: a reviewer can't separate "the element this leaf pins changed" from "unrelated chrome shifted".
+
+Make **cropped-element snapshots** a first-class option: render the **same real screen** through the
+**same** harness, then rasterize **only** the element the leaf is about (name it by selector). Same
+pixel-exact gate, same owner-owned golden — just scoped, so it's **byte-identical** to any change
+outside that element and moves *only* when the element does. Split render leaves by **altitude**:
+whole-screen snapshots for page/panel-level *states* (what's shown/hidden, an empty/error state,
+overall layout), cropped snapshots for a single element's *internal* look. Rule of thumb: **if the
+requirement names an element, crop to it; if it names the screen's state, render the screen.** Two
+fidelity notes when lifting a subtree out of context: render it at the width it has in place so text
+wraps identically, and fold the inherited text properties (font, colour) from the excluded ancestors
+onto the crop root — a static rasterizer won't cascade from a parent you didn't render. (Worked
+example: this repo's `component` kind, `dev/requirements/component/`, beside the whole-panel `dom` kind.)
+
 ## 7. Anti-patterns to avoid
 
 - **One-mechanism coverage.** A snapshot gate that "covers" clicks and unreachable states. Segment by

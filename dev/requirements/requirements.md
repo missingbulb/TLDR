@@ -72,7 +72,7 @@ the page line shows the page's normalized id (mirrored in its `title` tooltip), 
 <tr>
 <td valign="top" width="340">
 
-![notes-list.1.3](dom/cases/notes-list.1.3.png) <!-- req-gallery:1.3 -->
+![notes-list.1.3](component/cases/notes-list.1.3.png) <!-- req-gallery:1.3 -->
 
 </td>
 <td valign="top">
@@ -104,7 +104,7 @@ the page line shows the page's normalized id (mirrored in its `title` tooltip), 
 <tr>
 <td valign="top" width="340">
 
-![author-fallback.1.5](dom/cases/author-fallback.1.5.png) <!-- req-gallery:1.5 -->
+![author-fallback.1.5](component/cases/author-fallback.1.5.png) <!-- req-gallery:1.5 -->
 
 </td>
 <td valign="top">
@@ -119,7 +119,7 @@ the page line shows the page's normalized id (mirrored in its `title` tooltip), 
 <tr>
 <td valign="top" width="340">
 
-![literal-body.1.6](dom/cases/literal-body.1.6.png) <!-- req-gallery:1.6 -->
+![literal-body.1.6](component/cases/literal-body.1.6.png) <!-- req-gallery:1.6 -->
 
 </td>
 <td valign="top">
@@ -354,7 +354,7 @@ approved artifact.
 <tr>
 <td valign="top" width="340">
 
-![time-just-now.4.1](dom/cases/time-just-now.4.1.png) <!-- req-gallery:4.1 -->
+![time-just-now.4.1](component/cases/time-just-now.4.1.png) <!-- req-gallery:4.1 -->
 
 </td>
 <td valign="top">
@@ -369,7 +369,7 @@ approved artifact.
 <tr>
 <td valign="top" width="340">
 
-![time-minutes.4.2](dom/cases/time-minutes.4.2.png) <!-- req-gallery:4.2 -->
+![time-minutes.4.2](component/cases/time-minutes.4.2.png) <!-- req-gallery:4.2 -->
 
 </td>
 <td valign="top">
@@ -384,7 +384,7 @@ approved artifact.
 <tr>
 <td valign="top" width="340">
 
-![time-hours.4.3](dom/cases/time-hours.4.3.png) <!-- req-gallery:4.3 -->
+![time-hours.4.3](component/cases/time-hours.4.3.png) <!-- req-gallery:4.3 -->
 
 </td>
 <td valign="top">
@@ -399,7 +399,7 @@ approved artifact.
 <tr>
 <td valign="top" width="340">
 
-![time-absolute-date.4.4](dom/cases/time-absolute-date.4.4.png) <!-- req-gallery:4.4 -->
+![time-absolute-date.4.4](component/cases/time-absolute-date.4.4.png) <!-- req-gallery:4.4 -->
 
 </td>
 <td valign="top">
@@ -414,7 +414,7 @@ approved artifact.
 <tr>
 <td valign="top" width="340">
 
-![time-missing.4.5](dom/cases/time-missing.4.5.png) <!-- req-gallery:4.5 -->
+![time-missing.4.5](component/cases/time-missing.4.5.png) <!-- req-gallery:4.5 -->
 
 </td>
 <td valign="top">
@@ -576,7 +576,7 @@ look is a `dom` image; the optimistic toggle + rollback are `behavior` gestures;
 <tr>
 <td valign="top" width="340">
 
-![upvote-control.9.1](dom/cases/upvote-control.9.1.png) <!-- req-gallery:9.1 -->
+![upvote-control.9.1](component/cases/upvote-control.9.1.png) <!-- req-gallery:9.1 -->
 
 </td>
 <td valign="top">
@@ -592,7 +592,7 @@ look is a `dom` image; the optimistic toggle + rollback are `behavior` gestures;
 <tr>
 <td valign="top" width="340">
 
-![upvote-voted.9.2](dom/cases/upvote-voted.9.2.png) <!-- req-gallery:9.2 -->
+![upvote-voted.9.2](component/cases/upvote-voted.9.2.png) <!-- req-gallery:9.2 -->
 
 </td>
 <td valign="top">
@@ -608,7 +608,7 @@ count including your vote), so it's clear you've already voted.
 <tr>
 <td valign="top" width="340">
 
-![upvote-zero.9.3](dom/cases/upvote-zero.9.3.png) <!-- req-gallery:9.3 -->
+![upvote-zero.9.3](component/cases/upvote-zero.9.3.png) <!-- req-gallery:9.3 -->
 
 </td>
 <td valign="top">

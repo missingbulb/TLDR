@@ -6,6 +6,7 @@
 import { REFERENCE_NOW_MS } from "../../shared/reference-time.mjs";
 
 export default {
+  selector: "li.comment",
   description: "a note under a minute old reads \"just now\"",
   tabUrl: "https://example.com/article",
   comments: [{ commentId: "t", body: "Solid summary.", authorName: "Ann", createdAt: REFERENCE_NOW_MS - 30_000 }],

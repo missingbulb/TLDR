@@ -7,6 +7,7 @@
 import { REFERENCE_NOW_MS } from "../../shared/reference-time.mjs";
 
 export default {
+  selector: "li.comment",
   description: "an HTML-looking note body renders as literal text, not parsed markup",
   tabUrl: "https://example.com/article",
   comments: [

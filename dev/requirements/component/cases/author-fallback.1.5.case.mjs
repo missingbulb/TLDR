@@ -4,6 +4,7 @@
 import { REFERENCE_NOW_MS } from "../../shared/reference-time.mjs";
 
 export default {
+  selector: "li.comment",
   description: "a note with no author name is attributed to \"Someone\"",
   tabUrl: "https://example.com/article",
   comments: [{ commentId: "c1", body: "Anonymous but useful.", authorName: "", createdAt: REFERENCE_NOW_MS - 2 * 86_400_000 }],

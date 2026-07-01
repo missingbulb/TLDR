@@ -1,16 +1,19 @@
 // One entry point that renders ANY snapshot case to its PNG. A case's `kind` — set from the
 // folder it lives in (loadCases), so it's always present and never guessed — picks the producer.
-// Today there is one snapshot kind, `dom`; adding another rendered surface is a new entry in
-// PRODUCERS plus a kind folder that names it, and nothing else here changes.
+// Two snapshot kinds ship today: `dom` (the whole panel) and `component` (a cropped element, e.g. a
+// single comment block); adding another rendered surface is a new entry in PRODUCERS plus a kind
+// folder that names it, and nothing else here changes.
 "use strict";
 
-import { renderCaseImage } from "./image-renderer.mjs";
+import { renderCaseImage, renderComponentImage } from "./image-renderer.mjs";
 
 // kind -> (case) => Promise<Buffer>. A snapshot case is rasterized by exactly one of these. The
 // returned PNG buffer is both the committed expected (refresh-snapshots) and the compared actual
 // (dom-snapshots), and is embedded inline in the requirements gallery for visual approval.
 const PRODUCERS = {
   dom: (testCase) => renderCaseImage(testCase),
+  // `component` crops to the case's `selector` — same render, just the interesting element.
+  component: (testCase) => renderComponentImage(testCase),
 };
 
 export async function renderSnapshot(testCase) {

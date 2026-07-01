@@ -196,33 +196,47 @@ function toVDom(el) {
   return { type: "div", props: { style, children: childProp } };
 }
 
-// Render one dom case to a PNG buffer. Builds the case's real DOM via the harness, inlines the real
-// CSS, and rasterizes <body> at the fixed width on a white background (the panel body has no
-// background, so Chrome paints it white — match that, so there are no transparent corners).
+// Fold the real CSS onto the panel's DOM and project textarea values, returning <body> ready to
+// rasterize. Shared by the full-panel (`dom`) and cropped (`component`) renders, so BOTH go through
+// the exact same real DOM + real styles — a crop is only a different root element, never a
+// re-implementation of the markup.
+function prepareBody(session) {
+  const body = session.document.body;
+  // Chrome's UA stylesheet hides `[hidden]` elements (display:none); satori has no UA stylesheet,
+  // so remove them to match what Chrome actually paints (the panel toggles the composer and status
+  // via the `hidden` attribute). `disabled` elements, by contrast, are still painted (greyed), so
+  // they stay.
+  for (const el of body.querySelectorAll("[hidden]")) el.remove();
+  inlineCss(body);
+  // A textarea's text is its `.value` property (and an empty one shows its placeholder) — neither
+  // is a child text node, so satori would draw it empty. Project what the user sees: the live value
+  // (white-space preserved — e.g. the options page's seeded denylist, one host per line, 6.1), or
+  // the placeholder prompt in a muted tone when empty (the composer's "Add a tl;dr note…").
+  for (const ta of body.querySelectorAll("textarea")) {
+    if (ta.value) {
+      ta.textContent = ta.value;
+      ta.style.whiteSpace = "pre-wrap";
+    } else if (ta.getAttribute("placeholder")) {
+      ta.textContent = ta.getAttribute("placeholder");
+      ta.style.color = "#9ca3af"; // a muted placeholder tone (Chrome paints the prompt greyed)
+    }
+  }
+  return body;
+}
+
+// Rasterize a satori vdom at a fixed width on a white background (the panel body has no background,
+// so Chrome paints it white — match that, so there are no transparent corners).
+async function rasterize(vdom, width) {
+  const svg = await satori(vdom, { width, fonts: FONTS });
+  return new Resvg(svg, { font: { loadSystemFonts: false }, background: "#ffffff" }).render().asPng();
+}
+
+// Render one `dom` case to a PNG buffer: the case's real DOM (via the harness) + the real CSS,
+// rasterized as the whole <body> at the fixed panel width.
 export async function renderCaseImage(testCase) {
   const session = await openForSnapshot(testCase);
   try {
-    const body = session.document.body;
-    // Chrome's UA stylesheet hides `[hidden]` elements (display:none); satori has no UA stylesheet,
-    // so remove them to match what Chrome actually paints (the panel toggles the composer and status
-    // via the `hidden` attribute). `disabled` elements, by contrast, are still painted (greyed), so
-    // they stay.
-    for (const el of body.querySelectorAll("[hidden]")) el.remove();
-    inlineCss(body);
-    // A textarea's text is its `.value` property (and an empty one shows its placeholder) — neither
-    // is a child text node, so satori would draw it empty. Project what the user sees: the live value
-    // (white-space preserved — e.g. the options page's seeded denylist, one host per line, 6.1), or
-    // the placeholder prompt in a muted tone when empty (the composer's "Add a tl;dr note…").
-    for (const ta of body.querySelectorAll("textarea")) {
-      if (ta.value) {
-        ta.textContent = ta.value;
-        ta.style.whiteSpace = "pre-wrap";
-      } else if (ta.getAttribute("placeholder")) {
-        ta.textContent = ta.getAttribute("placeholder");
-        ta.style.color = "#9ca3af"; // a muted placeholder tone (Chrome paints the prompt greyed)
-      }
-    }
-    const vdom = toVDom(body);
+    const vdom = toVDom(prepareBody(session));
     Object.assign(vdom.props.style, {
       width: WIDTH,
       boxSizing: "border-box",
@@ -231,8 +245,50 @@ export async function renderCaseImage(testCase) {
       fontFamily: FONT_FAMILY,
       backgroundColor: "#fff",
     });
-    const svg = await satori(vdom, { width: WIDTH, fonts: FONTS });
-    return new Resvg(svg, { font: { loadSystemFonts: false }, background: "#ffffff" }).render().asPng();
+    return rasterize(vdom, WIDTH);
+  } finally {
+    session.close();
+  }
+}
+
+// The panel's CONTENT width — the width an element actually lays out at inside the panel (the fixed
+// WIDTH minus the body's 12px padding each side). A cropped element is rendered at this width so its
+// text wraps EXACTLY as it does in the full panel.
+const COMPONENT_WIDTH = WIDTH - 24;
+
+// Render a `component` case: the SAME real DOM + real CSS as a `dom` render, but rasterize ONLY the
+// element `testCase.selector` names (e.g. `li.comment`, `.comments`) — a faithful CROP of the panel.
+// Because it's driven through the real render, the crop can never drift from what the panel paints;
+// because it excludes the surrounding chrome, an unrelated change (the header title, the composer)
+// leaves it byte-identical, so the requirement it pins isn't re-approved for a change it doesn't test.
+export async function renderComponentImage(testCase) {
+  if (!testCase.selector) {
+    throw new Error(`component case "${testCase.name}" must set a \`selector\` (the element to crop)`);
+  }
+  const session = await openForSnapshot(testCase);
+  try {
+    const body = prepareBody(session);
+    const target = body.querySelector(testCase.selector);
+    if (!target) {
+      throw new Error(`component case "${testCase.name}": selector "${testCase.selector}" matched no element`);
+    }
+    const vdom = toVDom(target);
+    // The cropped element inherits font/colour from <body> in real CSS; satori doesn't cascade from an
+    // ancestor we're not rendering, so fold the body's inherited text properties onto the crop root
+    // (the element's own inlined styles still win via the spread order below).
+    const inherited = styleObject(body.getAttribute("style"));
+    const width = testCase.width ?? COMPONENT_WIDTH;
+    vdom.props.style = {
+      ...(inherited.fontSize != null && { fontSize: inherited.fontSize }),
+      ...(inherited.lineHeight != null && { lineHeight: inherited.lineHeight }),
+      ...(inherited.color != null && { color: inherited.color }),
+      ...vdom.props.style,
+      width,
+      boxSizing: "border-box",
+      fontFamily: FONT_FAMILY,
+      backgroundColor: "#fff",
+    };
+    return rasterize(vdom, width);
   } finally {
     session.close();
   }

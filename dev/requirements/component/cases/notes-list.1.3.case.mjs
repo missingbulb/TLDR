@@ -7,6 +7,7 @@ import { REFERENCE_NOW_MS } from "../../shared/reference-time.mjs";
 const DAY = 86_400_000;
 
 export default {
+  selector: ".comments",
   description: "each note is a list item with its body and a `<author> · <time>` meta, chronological",
   tabUrl: "https://example.com/article",
   comments: [
