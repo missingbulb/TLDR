@@ -1,0 +1,6 @@
+/* Spoiler category look & feel (issue #25) — DESIGN ONLY, scoped to body[data-category="spoiler"] so
+   it bites only while Spoiler is the active category and can NEVER affect another category. */
+body[data-category="spoiler"] {
+  --separator: #ef4444; /* red comment separators */
+  --accent: #dc2626; /* red Post button / accents */
+}

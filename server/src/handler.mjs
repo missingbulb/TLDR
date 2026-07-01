@@ -18,6 +18,7 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { ulid, decodeTime } from 'ulid';
 import { normalizePageUrl, InvalidPageUrlError } from './vendor/normalizeUrl.GENERATED.mjs';
+import { isValidCategory, normalizeCategory, DEFAULT_CATEGORY } from './vendor/categories.GENERATED.mjs';
 
 const TABLE_NAME = process.env.TABLE_NAME;
 const MAX_BODY_BYTES = Number(process.env.MAX_BODY_BYTES ?? 8192);
@@ -61,6 +62,18 @@ class HttpError extends Error {
     super(message);
     this.statusCode = statusCode;
   }
+}
+
+// Resolve the write-time category against the shared allowlist (issue #25, growable curated list).
+// An ABSENT category (older client, or a blank value) defaults to DEFAULT_CATEGORY — the additive-only
+// contract (§9.1): a new request field is optional with a server-side default, never newly-required.
+// A PRESENT but unknown category is a client bug (the client only offers the known list) → 400.
+function resolveCategory(raw) {
+  if (raw === undefined || raw === null) return DEFAULT_CATEGORY;
+  const id = normalizeCategory(raw);
+  if (id === '') return DEFAULT_CATEGORY;
+  if (!isValidCategory(id)) throw new HttpError(400, `unknown category: ${id}`);
+  return id;
 }
 
 function parseBody(event) {
@@ -132,6 +145,8 @@ async function handlePost(event) {
     throw new HttpError(413, `comment body exceeds ${MAX_BODY_BYTES} bytes`);
   }
 
+  const category = resolveCategory(input.category);
+
   await enforceRateLimit(authorSub);
 
   // ULID is unique + lexicographically time-sortable, so a Query returns comments in creation
@@ -145,6 +160,7 @@ async function handlePost(event) {
     authorSub,
     authorName,
     body: text,
+    category,
     createdAt,
     pageUrlRaw: typeof input.pageUrl === 'string' ? input.pageUrl : undefined,
     // Raw email is NEVER stored (public reads would expose it). We keep a salted one-way hash for
@@ -272,6 +288,10 @@ function toPublicComment(item) {
     authorName: item.authorName,
     authorId: item.authorSub, // stable Google sub — enables "is this mine"/moderation later; not PII
     createdAt: item.createdAt,
+    // The comment's category (issue #25). `?? DEFAULT_CATEGORY` makes the read safe over PRE-EXISTING
+    // rows written before categories existed (and any older client that posted without one) — the
+    // field is defaulted at read time, so there is no migration/backfill. Additive under §9.1.
+    category: item.category ?? DEFAULT_CATEGORY,
     // The endorsement count, maintained atomically with each vote item (handleVote). Default 0 so a
     // never-voted comment still carries the field (the UI always renders the affordance). The
     // viewer's OWN vote (`youVoted`) is deliberately NOT here: it can't ride the shared, CDN-cached

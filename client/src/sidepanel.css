@@ -3,6 +3,10 @@
   --fg: #1a1a1a;
   --muted: #6b7280;
   --border: #e5e7eb;
+  /* The comment SEPARATOR colour — a design token each category overrides in its own scoped
+     stylesheet (categories/<id>/<id>.css). Defaults to the neutral border for a category with no
+     override (issue #25). */
+  --separator: #e5e7eb;
   --accent: #2563eb;
   --pending: #9ca3af;
   --error: #dc2626;
@@ -12,6 +16,7 @@
     --fg: #e5e7eb;
     --muted: #9ca3af;
     --border: #374151;
+    --separator: #374151;
   }
 }
 
@@ -31,7 +36,9 @@ body {
 .status { color: var(--muted); font-size: 13px; padding: 16px 4px; text-align: center; }
 
 .comments { list-style: none; margin: 0; padding: 0; }
-.comment { padding: 10px 4px; border-bottom: 1px solid var(--border); }
+/* The comment separator uses the per-category --separator token (issue #25), so the line between
+   notes takes on the active category's colour. */
+.comment { padding: 10px 4px; border-bottom: 1px solid var(--separator); }
 .comment-body { margin: 0 0 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .comment-meta { font-size: 12px; color: var(--muted); }
 .comment.pending { opacity: 0.6; }

@@ -5,10 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>TLDR notes</title>
     <link rel="stylesheet" href="sidepanel.css" />
+    <!-- Per-category look & feel (issue #25). Each stylesheet is scoped to its own
+         body[data-category="<id>"], so only the active category's rules bite and a restyle of one
+         can't touch another. sidepanel.mjs sets body[data-category] to the current category. -->
+    <link rel="stylesheet" href="categories/tldr/tldr.css" />
+    <link rel="stylesheet" href="categories/spoiler/spoiler.css" />
+    <link rel="stylesheet" href="categories/chitchat/chitchat.css" />
   </head>
   <body>
     <header class="header">
-      <h1 class="title">TLDR</h1>
+      <!-- The title reflects the current category (issue #25); set by sidepanel.mjs. -->
+      <h1 id="title" class="title">TLDR</h1>
       <p id="page" class="page" title=""></p>
     </header>
 
@@ -17,12 +24,14 @@
     <ul id="comments" class="comments" aria-live="polite"></ul>
 
     <form id="composer" class="composer" hidden>
+      <!-- The placeholder + Post label are set per active category by sidepanel.mjs (issue #25);
+           these static values are the neutral fallback. -->
       <textarea
         id="body"
         class="body"
         rows="3"
         maxlength="8192"
-        placeholder="Add a tl;dr note for this page…"
+        placeholder="Add a note for this page…"
       ></textarea>
       <div class="composer-row">
         <span id="composer-error" class="composer-error" role="alert"></span>

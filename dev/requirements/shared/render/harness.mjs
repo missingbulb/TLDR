@@ -36,6 +36,8 @@ let loadCounter = 0; // makes each module load a fresh evaluation (its own modul
 const SURFACES = {
   sidepanel: { html: "src/sidepanel.html", mod: "src/sidepanel.mjs", form: "composer", input: "body" },
   options: { html: "src/options.html", mod: "src/options.mjs", form: "form", input: "denylist" },
+  // The toolbar-icon category menu (issue #25) — no form/input; a case clicks a category button.
+  menu: { html: "src/category-menu.html", mod: "src/category-menu.mjs" },
 };
 
 // Build the fake `fetch` the UI's read/post path hits. Returns the configured comments for a GET,
@@ -58,7 +60,9 @@ function makeFakeFetch(testCase, fetchLog) {
       ok: true,
       status: 200,
       json: async () => ({
-        comment: { commentId: "server-1", body: sent.body, authorName: "You", authorId: "user-123", createdAt: REFERENCE_NOW_MS },
+        // Echo the authoritative record the real handler returns — INCLUDING the category (issue #25),
+        // so a reconciled note keeps its badge instead of reverting to the default after a post settles.
+        comment: { commentId: "server-1", body: sent.body, authorName: "You", authorId: "user-123", createdAt: REFERENCE_NOW_MS, category: sent.category },
       }),
     };
   };

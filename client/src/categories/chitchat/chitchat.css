@@ -1,0 +1,6 @@
+/* Chitchat category look & feel (issue #25) — DESIGN ONLY, scoped to body[data-category="chitchat"]
+   so it bites only while Chitchat is the active category and can NEVER affect another category. */
+body[data-category="chitchat"] {
+  --separator: #22c55e; /* green comment separators */
+  --accent: #16a34a; /* green Post button / accents */
+}

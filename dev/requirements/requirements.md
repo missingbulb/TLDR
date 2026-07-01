@@ -748,4 +748,234 @@ count is shared, but who voted is not.
 
 </td>
 </tr>
+
+
+## 10. Categories
+
+A note's **category** is a **top-level mode**, not a per-note tag in the UI. The reader chooses the
+current category from the **toolbar icon** (a small menu; it also toggles the pane), and the panel then
+shows **only that category's notes**, wearing that category's **look & feel** (separator colour, accent),
+its **pane title**, and its **composer copy** ("Post tl;dr"). The panel makes no other mention of the
+selection — no badge, no filter bar. Categories come from the growable curated allowlist in `shared/categories.mjs` (seed **TLDR
+· Spoiler · Chitchat**); each category's *design* lives in its own encapsulated folder
+(`client/src/categories/<id>/`, strictly presentation) so a restyle of one can't touch another, and the
+shared panel code behaves identically for every category. Filtering to the current category is
+client-side over the one CDN-cached read per page (no refetch on a switch), and the server still stores
+& validates the category (allowlist; default `chitchat` at read time). The per-category look is a `dom`
+snapshot; the current-category view / switch / post are `behavior` leaves; the composer copy and the
+design-encapsulation contract are `logic` leaves; the server guarantees sit alongside as `server` leaves.
+
+> Per-category **ranking** (the top note per category by upvotes; what the hover preview #26 surfaces)
+> is a follow-up on the upvoting (§9.2) + categories substrate, deliberately **out of scope here**.
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![category-look-tldr.10.1](dom/cases/category-look-tldr.10.1.png) <!-- req-gallery:10.1 -->
+
+</td>
+<td valign="top">
+
+`10.1` In **TLDR** mode the panel wears TLDR's look — **blue** comment separators and a **"Post tl;dr"**
+composer — showing its notes.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![category-look-spoiler.10.2](dom/cases/category-look-spoiler.10.2.png) <!-- req-gallery:10.2 -->
+
+</td>
+<td valign="top">
+
+`10.2` The **same** panel in **Spoiler** mode wears a **different** look — **red** separators and a
+**"Post spoiler"** composer — so the categories are visibly distinct.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:10.3 -->
+
+</td>
+<td valign="top">
+
+`10.3` The panel shows **only the current category's** notes, and **switching** the current category
+re-renders to it **without a refetch** (client-side over the one cached read).
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:10.4 -->
+
+</td>
+<td valign="top">
+
+`10.4` Posting attaches the **current category** to the note (there's no per-note picker) — it rides
+the **POST body** and the new note appears in the current view. _(Cross-tier: server persistence is `10.8`.)_
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🔧 _Logic leaf — verified by `logic/logic.test.mjs`._ <!-- req-gallery:10.5 -->
+
+</td>
+<td valign="top">
+
+`10.5` The composer copy is **per-category** — the **Post** label and the textarea **placeholder** come
+from the active category's design (e.g. TLDR → **"Post tl;dr"**).
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🔧 _Logic leaf — verified by `logic/logic.test.mjs`._ <!-- req-gallery:10.6 -->
+
+</td>
+<td valign="top">
+
+`10.6` Each category's design is **encapsulated** — every rule in its folder is scoped to its own
+`body[data-category]` and is **tokens-only** (no behavior) — and the categories define **distinct**
+separator colours, so a restyle of one has **zero effect** on another.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:10.7 -->
+
+</td>
+<td valign="top">
+
+`10.7` Picking a category in the **toolbar-icon menu** records it as the **current category** and
+**opens the side panel** to it.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:10.8 -->
+
+</td>
+<td valign="top">
+
+`10.8` `POST /comments` **persists a valid category** and the public projection **returns it**.
+_(Cross-tier: the UI half is `10.4`.)_
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:10.9 -->
+
+</td>
+<td valign="top">
+
+`10.9` `POST /comments` with an **unknown category is rejected (400)** and writes nothing; with **no
+category** it stores the **default** (Chitchat) — the growable allowlist, not a frozen enum.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![category-look-chitchat.10.10](dom/cases/category-look-chitchat.10.10.png) <!-- req-gallery:10.10 -->
+
+</td>
+<td valign="top">
+
+`10.10` The panel in **Chitchat** mode wears a third distinct look — **green** separators and a
+**"Post chit-chat"** composer — completing the per-category look set (Chitchat is also the default view).
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:10.11 -->
+
+</td>
+<td valign="top">
+
+`10.11` The **toolbar icon toggles** the pane: with the pane **closed** the icon opens the **category
+menu** (pick → open); with the pane **open** the icon **closes** it. _(The open/close round-trip in a
+real browser is the e2e follow-up `8.1`.)_
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🔧 _Logic leaf — verified by `logic/logic.test.mjs`._ <!-- req-gallery:10.12 -->
+
+</td>
+<td valign="top">
+
+`10.12` The comments pane makes **no mention of the current selection** — **no badge**, **no filter
+bar**, and the notes never name the category; it just shows the relevant comments (the category is
+conveyed only by look & copy).
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![category-menu-popup.10.13](dom/cases/category-menu-popup.10.13.png) <!-- req-gallery:10.13 -->
+
+</td>
+<td valign="top">
+
+`10.13` The **toolbar-icon menu popup** renders a **"Show"** heading and **one button per category**
+(TLDR / Spoiler / Chitchat), built from the shared list — the visual for the popup the icon opens.
+_(Its click behaviour is `10.7`.)_
+
+</td>
+</tr>
 </table>

@@ -5,6 +5,8 @@
 // only a real reload/navigation refetches.
 
 import { normalizePageUrl } from '../vendor/normalizeUrl.GENERATED.mjs';
+import { DEFAULT_CATEGORY, isValidCategory } from '../vendor/categories.GENERATED.mjs';
+import { designFor } from './categories/registry.mjs';
 import { evaluatePage, DEFAULT_USER_DENYLIST } from './denylist.mjs';
 import { getComments, postComment, castVote, removeVote } from './api.mjs';
 import { getIdToken } from './auth.mjs';
@@ -24,7 +26,18 @@ const CLIENT_VERSION = chrome.runtime.getManifest().version;
 // (this isn't a live thread) so this is generous; eviction is oldest-first (Map insertion order).
 const MAX_CACHE_PAGES = 100;
 
+// The CURRENT category is a top-level mode (issue #25), chosen from the toolbar icon and stored here.
+// The panel shows ONLY this category's notes and wears its look & feel; it makes no other mention of
+// the selection (no badge, no filter bar). Stored in chrome.storage.local (a per-device mode).
+const CURRENT_CATEGORY_STORAGE_KEY = 'currentCategory';
+// The category the panel shows before one has ever been chosen. It equals DEFAULT_CATEGORY (the
+// read-time default an untagged/legacy note counts under) ON PURPOSE: the default view shows the
+// catch-all category, so notes written before categories existed stay visible by default rather than
+// hiding behind a category switch. (A user picks a specific category from the toolbar icon.)
+const DEFAULT_VIEW_CATEGORY = DEFAULT_CATEGORY;
+
 const els = {
+  title: document.getElementById('title'),
   page: document.getElementById('page'),
   status: document.getElementById('status'),
   comments: document.getElementById('comments'),
@@ -38,6 +51,7 @@ const state = {
   pageId: null, // normalized URL currently shown; also the dedupe key for refreshes
   serverComments: [], // live mirror of the active page's bucket (what render() draws)
   localComments: [], // optimistic + just-confirmed, not yet guaranteed in the CDN-cached read
+  currentCategory: DEFAULT_VIEW_CATEGORY, // the active top-level category (the only notes shown)
   userDenylist: DEFAULT_USER_DENYLIST,
   myVotes: new Set(), // commentIds the viewer has upvoted (the durable source of `youVoted`)
   // Per-page comment cache, kept for the panel's lifetime (≈ "until the tab is closed"). Comments
@@ -106,7 +120,12 @@ function timeAgo(createdAt) {
 }
 
 function render() {
-  const comments = mergeComments(state.serverComments, state.localComments);
+  // Show ONLY the current category's notes — a pure client-side filter over the already-fetched notes
+  // (no refetch, so the single CDN-cached read per page is preserved). An untagged/legacy note counts
+  // under DEFAULT_CATEGORY. The panel makes no other mention of the selection (issue #25). (§4.4)
+  const comments = mergeComments(state.serverComments, state.localComments).filter(
+    (c) => (c.category ?? DEFAULT_CATEGORY) === state.currentCategory,
+  );
   els.comments.replaceChildren();
   for (const c of comments) {
     const li = document.createElement('li');
@@ -144,6 +163,18 @@ function render() {
   } else if (!els.composer.hidden) {
     els.status.hidden = true;
   }
+}
+
+// Wear the current category's look & feel (issue #25): tag <body> with its id (so its scoped
+// stylesheet's colour tokens bite) and apply its composer copy (post button + placeholder). Strictly
+// presentation, read from the category's design descriptor — the panel BEHAVES identically for every
+// category; only the look/copy differ.
+function applyCategoryDesign() {
+  const design = designFor(state.currentCategory);
+  document.body.dataset.category = state.currentCategory;
+  els.title.textContent = design.title; // the pane title reflects the current category
+  els.post.textContent = design.postLabel;
+  els.body.placeholder = design.placeholder;
 }
 
 // The per-comment vote rail (left of the comment): the ▲ button on top, the count below in a larger
@@ -249,13 +280,14 @@ async function onSubmit(event) {
   if (!state.pageId) return;
 
   const pageId = state.pageId;
+  const category = state.currentCategory; // a note is posted under the active top-level category (issue #25)
   // Mutate the page's bucket (not just the live view) so the optimistic comment survives a tab
   // switch away and back, and so it never leaks onto another tab's view.
   const bucket = bucketFor(pageId);
   const tempId = `temp-${crypto.randomUUID()}`;
   bucket.localComments = [
     ...bucket.localComments,
-    makeOptimisticComment({ tempId, body, authorName: 'You', authorId: 'me', createdAt: Date.now() }),
+    makeOptimisticComment({ tempId, body, authorName: 'You', authorId: 'me', createdAt: Date.now(), category }),
   ];
   syncView(pageId);
   els.body.value = '';
@@ -263,7 +295,7 @@ async function onSubmit(event) {
   render();
 
   try {
-    const { comment } = await postComment(pageId, body, getIdToken, { clientVersion: CLIENT_VERSION });
+    const { comment } = await postComment(pageId, body, getIdToken, { clientVersion: CLIENT_VERSION, category });
     bucket.localComments = reconcileSuccess(bucket.localComments, tempId, comment);
   } catch (err) {
     console.warn('post failed', err);
@@ -320,6 +352,30 @@ function persistMyVotes() {
 
 // --- wiring -----------------------------------------------------------------
 
+// Announce "the pane is open" to the service worker via a Port (issue #25): while it's connected the
+// SW clears the toolbar popup so a click toggles the pane closed (the SW messages us to window.close());
+// on disconnect the SW restores the category-menu popup. Reconnect if the SW recycles, so the toggle
+// keeps working for the pane's lifetime.
+
+// Set once this pane is actually going away (its own X, or our window.close). A port disconnect during
+// teardown must NOT be mistaken for an SW recycle — otherwise we'd spawn a phantom reconnect that
+// leaves the SW holding a port for a dead pane (and the popup wrongly cleared).
+let paneClosing = false;
+window.addEventListener('pagehide', () => {
+  paneClosing = true;
+});
+
+function connectToWorker() {
+  const port = chrome.runtime.connect({ name: 'panel' });
+  port.onMessage.addListener((msg) => {
+    if (msg?.type === 'close') window.close();
+  });
+  port.onDisconnect.addListener(() => {
+    // Reconnect ONLY when the SW recycled (the pane is still up) — never while the pane itself closes.
+    if (!paneClosing && chrome.runtime?.id) connectToWorker();
+  });
+}
+
 async function init() {
   const stored = await chrome.storage.sync.get(DENYLIST_STORAGE_KEY);
   if (Array.isArray(stored[DENYLIST_STORAGE_KEY])) state.userDenylist = stored[DENYLIST_STORAGE_KEY];
@@ -327,6 +383,16 @@ async function init() {
   // Load the viewer's own votes before the first refresh so its youVoted overlay is seeded.
   const storedVotes = await chrome.storage.local.get(MY_VOTES_STORAGE_KEY);
   if (Array.isArray(storedVotes[MY_VOTES_STORAGE_KEY])) state.myVotes = new Set(storedVotes[MY_VOTES_STORAGE_KEY]);
+
+  // Load the current top-level category (chosen from the toolbar icon) and wear its design before the
+  // first render (issue #25). An unknown/absent value falls back to the default view category.
+  const storedCat = await chrome.storage.local.get(CURRENT_CATEGORY_STORAGE_KEY);
+  if (isValidCategory(storedCat[CURRENT_CATEGORY_STORAGE_KEY])) {
+    state.currentCategory = storedCat[CURRENT_CATEGORY_STORAGE_KEY];
+  }
+  applyCategoryDesign();
+
+  connectToWorker(); // let the toolbar icon toggle this pane closed (issue #25)
 
   els.composer.addEventListener('submit', onSubmit);
 
@@ -343,6 +409,16 @@ async function init() {
     if (area === 'sync' && changes[DENYLIST_STORAGE_KEY]) {
       state.userDenylist = changes[DENYLIST_STORAGE_KEY].newValue ?? DEFAULT_USER_DENYLIST;
       debouncedRefreshForce();
+    }
+    // The toolbar icon menu changed the current category while the panel is open: switch the view to
+    // it — re-style + re-filter the already-fetched notes, no refetch (issue #25).
+    if (area === 'local' && changes[CURRENT_CATEGORY_STORAGE_KEY]) {
+      const next = changes[CURRENT_CATEGORY_STORAGE_KEY].newValue;
+      if (isValidCategory(next) && next !== state.currentCategory) {
+        state.currentCategory = next;
+        applyCategoryDesign();
+        render();
+      }
     }
   });
 

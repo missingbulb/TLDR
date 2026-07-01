@@ -40,8 +40,6 @@ export const FONTS = [
 // fixed width makes the snapshot deterministic). The body's 12px padding lives in sidepanel.css.
 const WIDTH = 360;
 
-const CSS = fs.readFileSync(path.join(CLIENT, "src", "sidepanel.css"), "utf8");
-
 // --- CSS parsing (flat rules; @media blocks stripped; :root variables resolved) -----------------
 
 // Remove every `@media ... { ... }` block (brace-balanced) so the flat parser below — which assumes
@@ -83,35 +81,89 @@ function parseCssRules(css) {
   return rules;
 }
 
-const RULES = parseCssRules(stripAtRulesAndComments(CSS));
-
-// The light-theme custom properties from :root, e.g. { "--fg": "#1a1a1a", ... }.
-const VARS = (() => {
-  const map = {};
+// Load + parse a surface's stylesheet (memoized). satori has no CSS engine, so we fold the whole real
+// CSS onto the rendered DOM before drawing. Each surface uses its OWN stylesheet, mirroring its HTML
+// <link>: the side panel and options page share sidepanel.css; the toolbar menu uses category-menu.css.
+const SHEETS = new Map();
+function loadSheet(cssFileName) {
+  const cached = SHEETS.get(cssFileName);
+  if (cached) return cached;
+  const css = fs.readFileSync(path.join(CLIENT, "src", cssFileName), "utf8");
+  const RULES = parseCssRules(stripAtRulesAndComments(css));
+  // The light-theme custom properties from :root, e.g. { "--fg": "#1a1a1a", ... }.
+  const VARS = {};
   const root = RULES.find((r) => r.selector === ":root");
   if (root) {
     for (const decl of root.body.split(";")) {
       const i = decl.indexOf(":");
       if (i < 0) continue;
       const prop = decl.slice(0, i).trim();
-      if (prop.startsWith("--")) map[prop] = decl.slice(i + 1).trim();
+      if (prop.startsWith("--")) VARS[prop] = decl.slice(i + 1).trim();
     }
   }
-  return map;
-})();
+  const sheet = { RULES, VARS, BODY_RULE: RULES.find((r) => r.selector === "body") };
+  SHEETS.set(cssFileName, sheet);
+  return sheet;
+}
 
-// Replace var(--name) / var(--name, fallback) with the resolved value (or the fallback).
-function resolveVars(value) {
+// The stylesheet file a surface loads (mirrors its HTML <link>): the toolbar menu has its own; the
+// side panel and options page share sidepanel.css.
+function cssFor(surface) {
+  return surface === "menu" ? "category-menu.css" : "sidepanel.css";
+}
+
+// Replace var(--name) / var(--name, fallback) with the resolved value (or the fallback), against the
+// given variable map (a sheet's :root vars, optionally overlaid with the active category's tokens).
+function resolveVars(value, vars) {
   return value.replace(/var\(\s*(--[\w-]+)\s*(?:,\s*([^)]+))?\)/g, (_, name, fallback) =>
-    (VARS[name] ?? (fallback ? fallback.trim() : "")).trim()
+    (vars[name] ?? (fallback ? fallback.trim() : "")).trim()
   );
 }
 
-const BODY_RULE = RULES.find((r) => r.selector === "body");
+// Per-category design tokens (issue #25): each client/src/categories/<id>/<id>.css scopes its colour
+// tokens to `body[data-category="<id>"] { --separator: …; --accent: … }`. satori has no CSS engine and
+// resolves vars only from :root, so read those per-category token blocks here and, at render time,
+// overlay the ACTIVE category's tokens (from body[data-category]) onto the base vars — so a snapshot
+// shows the category's separators/accent exactly as the real browser cascades them. (Category CSS is
+// tokens-only by contract — enforced by the design-encapsulation requirement leaf — so nothing else
+// needs modelling.)
+const CATEGORIES_DIR = path.join(CLIENT, "src", "categories");
+const CATEGORY_VARS = (() => {
+  const out = {};
+  let entries;
+  try {
+    entries = fs.readdirSync(CATEGORIES_DIR, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const ent of entries) {
+    if (!ent.isDirectory()) continue;
+    const cssPath = path.join(CATEGORIES_DIR, ent.name, `${ent.name}.css`);
+    if (!fs.existsSync(cssPath)) continue;
+    for (const { selector, body } of parseCssRules(stripAtRulesAndComments(fs.readFileSync(cssPath, "utf8")))) {
+      const m = /data-category="([^"]+)"/.exec(selector);
+      if (!m) continue;
+      const vars = (out[m[1]] ||= {});
+      for (const decl of body.split(";")) {
+        const i = decl.indexOf(":");
+        if (i < 0) continue;
+        const prop = decl.slice(0, i).trim();
+        if (prop.startsWith("--")) vars[prop] = decl.slice(i + 1).trim();
+      }
+    }
+  }
+  return out;
+})();
 
-// Fold sidepanel.css onto the panel's <body> subtree as inline styles (var()s resolved). The
-// element's own inline style is appended last so a case's action (e.g. an inline override) wins.
-function inlineCss(bodyEl) {
+// A sheet's base vars overlaid with the active category's tokens (body[data-category] on the DOM).
+function effectiveVars(bodyEl, baseVars) {
+  const cat = bodyEl?.dataset?.category;
+  return cat && CATEGORY_VARS[cat] ? { ...baseVars, ...CATEGORY_VARS[cat] } : baseVars;
+}
+
+// Fold a sheet's rules onto the <body> subtree as inline styles (var()s resolved against the effective
+// vars). The element's own inline style is appended last so a case's action (an inline override) wins.
+function inlineCss(bodyEl, { RULES, BODY_RULE }, vars) {
   for (const { selector, body } of RULES) {
     if (selector === "body" || selector === ":root") continue;
     let matched;
@@ -120,9 +172,9 @@ function inlineCss(bodyEl) {
     } catch {
       continue; // a selector jsdom can't evaluate — skip
     }
-    for (const el of matched) el.setAttribute("style", `${resolveVars(body)};${el.getAttribute("style") || ""}`);
+    for (const el of matched) el.setAttribute("style", `${resolveVars(body, vars)};${el.getAttribute("style") || ""}`);
   }
-  if (BODY_RULE) bodyEl.setAttribute("style", `${resolveVars(BODY_RULE.body)};${bodyEl.getAttribute("style") || ""}`);
+  if (BODY_RULE) bodyEl.setAttribute("style", `${resolveVars(BODY_RULE.body, vars)};${bodyEl.getAttribute("style") || ""}`);
 }
 
 // --- inline-style string -> satori style object -------------------------------------------------
@@ -202,14 +254,16 @@ function toVDom(el) {
 // rasterize. Shared by the full-panel (`dom`) and cropped (`component`) renders, so BOTH go through
 // the exact same real DOM + real styles — a crop is only a different root element, never a
 // re-implementation of the markup.
-function prepareBody(session) {
+function prepareBody(session, sheet) {
   const body = session.document.body;
   // Chrome's UA stylesheet hides `[hidden]` elements (display:none); satori has no UA stylesheet,
   // so remove them to match what Chrome actually paints (the panel toggles the composer and status
   // via the `hidden` attribute). `disabled` elements, by contrast, are still painted (greyed), so
   // they stay.
   for (const el of body.querySelectorAll("[hidden]")) el.remove();
-  inlineCss(body);
+  // Resolve var()s against the sheet's :root tokens overlaid with the active category's tokens, so a
+  // page rendered under body[data-category="spoiler"] shows spoiler's separators/accent (issue #25).
+  inlineCss(body, sheet, effectiveVars(body, sheet.VARS));
   // A textarea's text is its `.value` property (and an empty one shows its placeholder) — neither
   // is a child text node, so satori would draw it empty. Project what the user sees: the live value
   // (white-space preserved — e.g. the options page's seeded denylist, one host per line, 6.1), or
@@ -239,7 +293,7 @@ export async function rasterize(vdom, width) {
 export async function renderCaseImage(testCase) {
   const session = await openForSnapshot(testCase);
   try {
-    const vdom = toVDom(prepareBody(session));
+    const vdom = toVDom(prepareBody(session, loadSheet(cssFor(testCase.surface))));
     Object.assign(vdom.props.style, {
       width: WIDTH,
       boxSizing: "border-box",
@@ -276,7 +330,7 @@ export async function renderComponentImage(testCase) {
   }
   const session = await openForSnapshot(testCase);
   try {
-    const body = prepareBody(session);
+    const body = prepareBody(session, loadSheet(cssFor(testCase.surface)));
     const target = body.querySelector(testCase.selector);
     if (!target) {
       throw new Error(`component case "${testCase.name}": selector "${testCase.selector}" matched no element`);
