@@ -27,8 +27,10 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT = path.join(HERE, "..", "..", "..", "..", "client");
 const FONT_DIR = path.join(HERE, "fonts");
 
-const FONT_FAMILY = "Liberation Sans"; // a deterministic, metric-stable stand-in for the panel's sans-serif stack
-const FONTS = [
+// Exported so the evidence renderer (evidence-renderer.mjs) rasterizes with the SAME bundled font +
+// pinned resvg settings — one deterministic rasterizer for every artifact in the gallery.
+export const FONT_FAMILY = "Liberation Sans"; // a deterministic, metric-stable stand-in for the panel's sans-serif stack
+export const FONTS = [
   { name: FONT_FAMILY, data: fs.readFileSync(path.join(FONT_DIR, "LiberationSans-Regular.ttf")), weight: 400, style: "normal" },
   { name: FONT_FAMILY, data: fs.readFileSync(path.join(FONT_DIR, "LiberationSans-Bold.ttf")), weight: 700, style: "normal" },
   { name: FONT_FAMILY, data: fs.readFileSync(path.join(FONT_DIR, "LiberationSans-Italic.ttf")), weight: 400, style: "italic" },
@@ -225,8 +227,9 @@ function prepareBody(session) {
 }
 
 // Rasterize a satori vdom at a fixed width on a white background (the panel body has no background,
-// so Chrome paints it white — match that, so there are no transparent corners).
-async function rasterize(vdom, width) {
+// so Chrome paints it white — match that, so there are no transparent corners). Exported so the
+// evidence renderer shares the exact same deterministic satori→resvg path.
+export async function rasterize(vdom, width) {
   const svg = await satori(vdom, { width, fonts: FONTS });
   return new Resvg(svg, { font: { loadSystemFonts: false }, background: "#ffffff" }).render().asPng();
 }

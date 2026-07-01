@@ -224,7 +224,7 @@ _(Cross-tier: this is the UI half; the server enforcement is `2.6`.)_
 <tr>
 <td valign="top" width="340">
 
-🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:2.6 -->
+![signed-in-required.2.6](server/cases/signed-in-required.2.6.evidence.png) <!-- req-gallery:2.6 -->
 
 </td>
 <td valign="top">
@@ -240,7 +240,7 @@ signed-in identity is rejected. _(Cross-tier: the UI half is `2.5`; this is the 
 <tr>
 <td valign="top" width="340">
 
-🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:2.7 -->
+![verified-email-required.2.7](server/cases/verified-email-required.2.7.evidence.png) <!-- req-gallery:2.7 -->
 
 </td>
 <td valign="top">
@@ -330,7 +330,7 @@ submit-type button.)_
 <tr>
 <td valign="top" width="340">
 
-🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:3.5 -->
+![note-size-limit.3.5](server/cases/note-size-limit.3.5.evidence.png) <!-- req-gallery:3.5 -->
 
 </td>
 <td valign="top">
@@ -624,7 +624,7 @@ never missing.
 <tr>
 <td valign="top" width="340">
 
-🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:9.4 -->
+![vote-toggle.9.4](behavior/cases/vote-toggle.9.4.evidence.png) <!-- req-gallery:9.4 -->
 
 </td>
 <td valign="top">
@@ -705,7 +705,7 @@ no-op success**.
 <tr>
 <td valign="top" width="340">
 
-🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:9.9 -->
+![vote-requires-identity.9.9](server/cases/vote-requires-identity.9.9.evidence.png) <!-- req-gallery:9.9 -->
 
 </td>
 <td valign="top">
@@ -721,7 +721,7 @@ the server's, like posting), while reads stay public.
 <tr>
 <td valign="top" width="340">
 
-🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:9.10 -->
+![vote-projection.9.10](server/cases/vote-projection.9.10.evidence.png) <!-- req-gallery:9.10 -->
 
 </td>
 <td valign="top">

@@ -47,3 +47,11 @@ export async function loadCases() {
 export function snapshotPath(testCase) {
   return path.join(testCase.dir, `${testCase.name}.png`);
 }
+
+// Absolute path to a coded case's committed EVIDENCE artifact — a review-only PNG rendered from the
+// real run (a filmstrip / an HTTP-transaction card). A DISTINCT namespace from snapshotPath so the
+// coverage gate's ban on a coded case's golden-slot `<name>.png` keeps holding verbatim, while this
+// `<name>.evidence.png` rides its own pixel-gated lane. Present only when the case exports `evidence`.
+export function evidencePath(testCase) {
+  return path.join(testCase.dir, `${testCase.name}.evidence.png`);
+}
