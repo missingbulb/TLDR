@@ -39,6 +39,13 @@ function managedLine(id, testCase) {
     const stem = testCase?.name || id;
     return `![${stem}](${kind}/cases/${stem}.png) ${marker(id)}`;
   }
+  // A coded leaf that opts into an evidence artifact embeds its `<name>.evidence.png` — a review card
+  // rendered from the real run (a filmstrip / an HTTP-transaction card). The card carries its own kind
+  // tag + "verify() is the gate" caption, so the visual IS the note.
+  if (typeof testCase?.evidence === "function") {
+    const stem = testCase?.name || id;
+    return `![${stem}](${kind}/cases/${stem}.evidence.png) ${marker(id)}`;
+  }
   if (kind === "behavior") {
     if (testCase?.tbd) {
       return `⚠️ _Behavior leaf — **untested here** — covered today by \`${testCase?.coveredBy || "?"}\`._ ${marker(id)}`;

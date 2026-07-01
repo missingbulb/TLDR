@@ -10,14 +10,22 @@
 "use strict";
 
 import fs from "node:fs";
-import { loadCases, snapshotPath } from "../cases.mjs";
+import { loadCases, snapshotPath, evidencePath } from "../cases.mjs";
 import { renderSnapshot, rendersSnapshot } from "./render-snapshot.mjs";
+import { produceEvidence, hasEvidence } from "./evidence-renderer.mjs";
 import { buildGallery, DOC_PATH } from "../build-gallery.mjs";
 
 const cases = (await loadCases()).filter(rendersSnapshot);
 for (const testCase of cases) {
   const out = snapshotPath(testCase);
   fs.writeFileSync(out, await renderSnapshot(testCase));
+  console.log(`Wrote ${out}`);
+}
+// The evidence lane: a coded case's review card, rendered FROM its real run (a filmstrip / an HTTP
+// transaction card), committed alongside as `<name>.evidence.png`.
+for (const testCase of (await loadCases()).filter(hasEvidence)) {
+  const out = evidencePath(testCase);
+  fs.writeFileSync(out, await produceEvidence(testCase));
   console.log(`Wrote ${out}`);
 }
 fs.writeFileSync(DOC_PATH, await buildGallery());

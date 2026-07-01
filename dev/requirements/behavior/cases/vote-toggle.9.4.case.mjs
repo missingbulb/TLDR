@@ -2,17 +2,24 @@
 // toggles it back (count restored). Non-visual timing + the exact network verbs a static snapshot
 // can't show, so it's a behavior leaf: drive the real click twice and assert the DOM state and that a
 // cast (POST) then a remove (DELETE) went out. render() rebuilds the row each time, so re-query it.
+// The gallery evidence (evidence()) renders this same walk as a filmstrip — see behavior/evidence.mjs.
 "use strict";
+
+import { REFERENCE_NOW_MS } from "../../shared/reference-time.mjs";
+
+// The one scenario both the assertion and the evidence filmstrip drive (dated >1 day back so the crop
+// meta reads a stable absolute date). Single-sourced so the picture can't depict a different run.
+const SCENARIO = {
+  tabUrl: "https://example.com/article",
+  comments: [{ commentId: "c-vote", body: "Worth a vote.", authorName: "Ada", createdAt: REFERENCE_NOW_MS - 2 * 86_400_000, voteCount: 3 }],
+};
 
 export default {
   description: "clicking optimistically increments and flips to voted; clicking again toggles back",
   verify: async () => {
     const assert = (await import("node:assert/strict")).default;
     const { open } = await import("../../shared/render/harness.mjs");
-    const session = await open("sidepanel", {
-      tabUrl: "https://example.com/article",
-      comments: [{ commentId: "c-vote", body: "Worth a vote.", authorName: "Ada", createdAt: 1, voteCount: 3 }],
-    });
+    const session = await open("sidepanel", SCENARIO);
     try {
       const btn = () => session.document.querySelector("li.comment .vote");
       const count = () => session.document.querySelector("li.comment .vote-count").textContent;
@@ -34,5 +41,9 @@ export default {
     } finally {
       session.close();
     }
+  },
+  evidence: async () => {
+    const { voteFilmstrip } = await import("../evidence.mjs");
+    return voteFilmstrip({ id: "9.4", title: "vote-toggle", baseCase: SCENARIO, clicks: 2 });
   },
 };
