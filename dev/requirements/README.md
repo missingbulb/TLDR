@@ -45,13 +45,14 @@ The kinds that ship today:
 
 | kind | validates | how the "actual" is produced | expected |
 | --- | --- | --- | --- |
-| `dom` | a rendered side-panel / options state | the **real** `sidepanel.mjs` / `options.mjs` run under jsdom + a fake `chrome.*`, then rasterized (satori → resvg) with the real `sidepanel.css` | `dom/cases/<stem>.png` (a committed, pixel-exact image, embedded inline in the gallery) |
+| `dom` | a rendered **panel-level** state (what's shown/hidden, the whole surface) | the **real** `sidepanel.mjs` / `options.mjs` run under jsdom + a fake `chrome.*`, then rasterized (satori → resvg) with the real `sidepanel.css` | `dom/cases/<stem>.png` (a committed, pixel-exact image, embedded inline in the gallery) |
+| `component` | **one element's** internal appearance, isolated from the panel chrome | the **same** real render as `dom`, then **cropped** to the case's `selector` (e.g. `li.comment`, `.comments`) before rasterizing | `component/cases/<stem>.png` (a committed, pixel-exact crop) |
 | `behavior` | a gesture a static snapshot can't show (type → Post, save the denylist) | the same harness, driven through the gesture | coded assertions in the case's `verify()` |
 | `logic` | a non-visual UI rule with no pixels of its own (the a11y/HTML contract, manifest surfaces) | a shipped predicate/markup | coded assertions in the case's `verify()` |
 | `server` | a server-enforced rule behind a UI requirement (only signed-in people can post; the size limit) | the **real** `server/src/handler.mjs` run against a faked event | coded assertions on the response (an error status) |
 
-`dom` is a **snapshot** kind (its expected is a committed image); `behavior`, `logic`, and `server`
-are **coded** kinds (their expected *is* the assertion). The `server` kind is what makes this a
+`dom` and `component` are **snapshot** kinds (their expected is a committed image); `behavior`,
+`logic`, and `server` are **coded** kinds (their expected *is* the assertion). The `server` kind is what makes this a
 **cross-tier** spec: a requirement like *only signed-in people can post* is stated once, with its UI
 half (the client sends the token — `behavior`) **and** its real boundary (the server rejects an
 unauthenticated write — `server`) as sibling leaves. [`shared/render/`](shared/render) holds the one
@@ -74,6 +75,56 @@ and projects a `textarea`'s `.value` into the image (e.g. the options page's see
 per line). It cannot show an OS cursor or a `:hover` state — those aren't static DOM; a "clickable"
 affordance is covered by its resting visual cue here plus a `behavior` click test, never a faked
 cursor. See the "Rendering HTML" section of [the portable guideline](../docs/ui-testing-guideline.md).
+
+## Component (cropped-element) snapshots — pin one element, not the whole panel
+
+`dom` rasterizes the **whole** side panel. `component` rasterizes the **same** panel, rendered by the
+**same** real code, then **cropped** to the one element a case's `selector` names (`li.comment`,
+`.comments`, …). Everything else is identical: pixel-exact comparison (`MAX_DIFF_RATIO = 0`), a
+committed owner-approved PNG, driven through the shipped `sidepanel.mjs` + real `sidepanel.css` — never
+a re-implementation. The two kinds share one runner and one renderer; a crop is only a different root
+element (`renderComponentImage` in [`shared/render/image-renderer.mjs`](shared/render/image-renderer.mjs)).
+
+**Why crop.** A requirement about *one element's internal appearance* (a comment's byline, its time
+meta, its upvote rail) shouldn't ride the panel's chrome. When every such leaf pinned a **full-panel**
+image, a cross-cutting change — the header title, the composer copy, the Post button — re-rendered and
+forced re-approval of **all** of them, though the tested requirement didn't move. That's noisy diffs
+and a diluted approval surface: a reviewer can't separate "the thing this leaf tests changed" from
+"some unrelated pixel shifted". A crop is **byte-identical** across any change *outside* the cropped
+element, so a leaf's golden moves **only** when the thing it actually pins moves. (Worked proof: the §9
+upvote change re-approved 9 full-panel goldens; after this split, a header-title tweak touches the
+`dom` panel images and leaves every `component` crop untouched.)
+
+**When to use which.**
+- **`component`** — the leaf is about a single element's *internal* appearance, wherever it sits: a
+  comment row (`1.3`, `1.5`, `1.6`), its time meta (`4.1`–`4.5`), its upvote rail (`9.1`–`9.3`). Crop
+  to that element.
+- **`dom`** — the leaf is about a *panel-level state*: what's shown vs hidden, the composer/Post
+  enabled state, an empty/error status, the whole surface's layout (`1.1`, `1.2`, `1.4`, `2.1`–`2.3`,
+  `6.1`). Render the whole panel.
+
+Rule of thumb: **if the requirement names an element, crop to it; if it names the panel's state, render
+the panel.**
+
+**Adding one.** Exactly like a `dom` case (below), under `component/cases/`, plus one field: `selector`
+— the element to crop (the first match). The crop renders at the panel's content width (so text wraps
+exactly as it does in the panel) and is **framed with the panel's body padding**, so the element shows
+as it sits *in place* — same width and margin, its own borders/separators, a little breathing room —
+not a bare edge-to-edge fragment; the framed image is the full panel width, so a crop lines up beside a
+`dom` render. Fidelity caveat: satori can't cascade from an ancestor the crop excludes, so the renderer
+folds `<body>`'s inherited font/colour onto the frame; a style set by an *excluded ancestor other than
+`<body>`* isn't modelled (none is, today).
+
+**Further crop candidates** (noted, not migrated — migrate a leaf to a crop when a real cross-cutting
+change would otherwise churn its image for nothing):
+- **the composer** (`.composer`) — the textarea prompt + Post button; today its look rides the
+  full-panel empty-state `1.2`, so it re-approves on any header/status change.
+- **the Post button states** (`.post`, enabled vs `:disabled`) — only incidental in the
+  posting/saved full-panel images today.
+- **the status line** (`.status`) — the "TLDR is off" / "No notes yet" / "Couldn't load notes." copy,
+  independent of the rest of the panel.
+- **the options editor** (`form` on the options page, `6.1`) — heading + helper + seeded textarea +
+  Save, independent of the page shell.
 
 ## Adding a requirement (an existing kind)
 
@@ -161,7 +212,8 @@ dev/requirements/
       dom-snapshots.test.mjs      the dom snapshot runner — pixel comparison (npm run test:ui)
       refresh-snapshots.mjs       regenerate images + gallery (npm run refresh:ui)
 
-  dom/       kind.mjs  cases/<slug>.<id>.case.mjs (+ <stem>.png)
+  dom/       kind.mjs  cases/<slug>.<id>.case.mjs (+ <stem>.png)          # whole-panel snapshot
+  component/ kind.mjs  cases/<slug>.<id>.case.mjs (+ <stem>.png)          # cropped-element snapshot (shares the dom runner)
   behavior/  kind.mjs  behavior.test.mjs  cases/<slug>.<id>.case.mjs
   logic/     kind.mjs  logic.test.mjs     cases/<slug>.<id>.case.mjs
   server/    kind.mjs  server.test.mjs  handler-harness.mjs  cases/<slug>.<id>.case.mjs

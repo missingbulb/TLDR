@@ -7,6 +7,7 @@ import { REFERENCE_NOW_MS } from "../../shared/reference-time.mjs";
 const DAY = 86_400_000;
 
 export default {
+  selector: "li.comment",
   description: "the left vote rail (▲ above the count) shows on a comment, un-voted (muted)",
   tabUrl: "https://example.com/article",
   comments: [

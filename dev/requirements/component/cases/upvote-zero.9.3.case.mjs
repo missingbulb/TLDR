@@ -6,6 +6,7 @@ import { REFERENCE_NOW_MS } from "../../shared/reference-time.mjs";
 const DAY = 86_400_000;
 
 export default {
+  selector: "li.comment",
   description: "a comment with zero votes still renders the affordance with 0, not a missing control",
   tabUrl: "https://example.com/article",
   comments: [

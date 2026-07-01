@@ -3,6 +3,7 @@
 "use strict";
 
 export default {
+  selector: "li.comment",
   description: "a note with no timestamp shows an empty time",
   tabUrl: "https://example.com/article",
   comments: [{ commentId: "t", body: "Solid summary.", authorName: "Ann", createdAt: undefined }],

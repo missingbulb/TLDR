@@ -9,6 +9,7 @@ import { REFERENCE_NOW_MS } from "../../shared/reference-time.mjs";
 const DAY = 86_400_000;
 
 export default {
+  selector: "li.comment",
   description: "the same rail in the voted-by-me state (filled accent button + accent count)",
   tabUrl: "https://example.com/article",
   comments: [
