@@ -6,11 +6,15 @@
 
 import { normalizePageUrl } from '../vendor/normalizeUrl.GENERATED.mjs';
 import { evaluatePage, DEFAULT_USER_DENYLIST } from './denylist.mjs';
-import { getComments, postComment } from './api.mjs';
+import { getComments, postComment, castVote, removeVote } from './api.mjs';
 import { getIdToken } from './auth.mjs';
-import { makeOptimisticComment, mergeComments, reconcileSuccess, markFailed } from './optimistic.mjs';
+import { makeOptimisticComment, mergeComments, reconcileSuccess, markFailed, applyVoteToggle } from './optimistic.mjs';
 
 const DENYLIST_STORAGE_KEY = 'userDenylist';
+// The viewer's own votes, persisted to chrome.storage.local so `youVoted` survives a panel reopen.
+// It can't ride the shared, CDN-cached public read (the cache key excludes Authorization), so the
+// client owns it (issue #22). A flat array of commentIds (a Set on the wire would not serialize).
+const MY_VOTES_STORAGE_KEY = 'myVotes';
 const REFRESH_DEBOUNCE_MS = 300;
 // The extension's own version, read once and attached to every API request as X-Client-Version so the
 // server can log which client versions are still calling (dev/docs/architecture.md §9.1). Read here
@@ -35,6 +39,7 @@ const state = {
   serverComments: [], // live mirror of the active page's bucket (what render() draws)
   localComments: [], // optimistic + just-confirmed, not yet guaranteed in the CDN-cached read
   userDenylist: DEFAULT_USER_DENYLIST,
+  myVotes: new Set(), // commentIds the viewer has upvoted (the durable source of `youVoted`)
   // Per-page comment cache, kept for the panel's lifetime (≈ "until the tab is closed"). Comments
   // arrive sparsely (not a live thread), so a plain tab switch back to a cached page renders from
   // here with no network fetch; we only refetch on a real navigation/reload. pageId -> bucket
@@ -120,7 +125,17 @@ function render() {
         ? `${who} · posting…`
         : `${who} · ${timeAgo(c.createdAt)}`;
 
-    li.append(body, meta);
+    // A saved comment gets a vote rail on its LEFT (the ▲ button above its count); a pending/failed
+    // optimistic note has no server commentId to vote on yet, so it keeps the bare body+meta layout.
+    if (c.pending || c.failed) {
+      li.append(body, meta);
+    } else {
+      li.classList.add('voteable');
+      const main = document.createElement('div');
+      main.className = 'comment-main';
+      main.append(body, meta);
+      li.append(renderVoteRail(c), main);
+    }
     els.comments.append(li);
   }
   if (comments.length === 0 && !els.composer.hidden) {
@@ -129,6 +144,35 @@ function render() {
   } else if (!els.composer.hidden) {
     els.status.hidden = true;
   }
+}
+
+// The per-comment vote rail (left of the comment): the ▲ button on top, the count below in a larger
+// font (0 included — the control is never missing). Voted-by-me is shown by ACCENT colour on both the
+// button and the count (vs muted when un-voted); the glyph stays filled because the bundled snapshot
+// font has no outline triangle, and colour isn't the only signal — the button's `aria-pressed` and
+// its accessible name (which includes the count) carry the state to assistive tech, so the visually
+// larger count is aria-hidden to avoid a double read. Clicking casts/removes the vote (onVote).
+function renderVoteRail(c) {
+  const count = c.voteCount ?? 0;
+  const rail = document.createElement('div');
+  rail.className = 'vote-rail';
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = c.youVoted ? 'vote vote-voted' : 'vote vote-idle';
+  btn.setAttribute('aria-pressed', c.youVoted ? 'true' : 'false');
+  btn.setAttribute('aria-label', `${c.youVoted ? 'Remove your upvote' : 'Upvote'} (${count})`);
+  btn.title = c.youVoted ? 'Remove your upvote' : 'Upvote';
+  btn.textContent = '▲'; // the button's accessible name is the aria-label, not this glyph
+
+  const num = document.createElement('span');
+  num.className = c.youVoted ? 'vote-count vote-count-voted' : 'vote-count vote-count-idle';
+  num.setAttribute('aria-hidden', 'true'); // the count already rides the button's accessible name
+  num.textContent = String(count);
+
+  rail.append(btn, num);
+  btn.addEventListener('click', () => onVote(c.commentId));
+  return rail;
 }
 
 // --- refresh (read path) ----------------------------------------------------
@@ -174,7 +218,9 @@ async function refresh({ useCache = false } = {}) {
     // Ignore a response that arrived after the user navigated away.
     if (state.pageId !== pageId) return;
     const bucket = bucketFor(pageId);
-    bucket.serverComments = comments ?? [];
+    // Overlay the viewer's own vote onto each server record (the public read can't carry it — see
+    // MY_VOTES_STORAGE_KEY), so a reopened panel shows previously-cast votes as voted.
+    bucket.serverComments = (comments ?? []).map((c) => ({ ...c, youVoted: state.myVotes.has(c.commentId) }));
     // Drop local entries the server now knows about.
     const serverIds = new Set(bucket.serverComments.map((c) => c.commentId));
     bucket.localComments = bucket.localComments.filter((c) => !serverIds.has(c.commentId));
@@ -230,11 +276,57 @@ async function onSubmit(event) {
   }
 }
 
+// --- vote (write path) ------------------------------------------------------
+
+// Toggle the viewer's upvote on a comment. Optimistic: flip the count/affordance and persist the vote
+// immediately (so it survives a reopen), fire the authenticated write, and roll back on failure so a
+// rejected vote leaves no phantom count (issue #22). Runs inside the click gesture, which is what
+// licenses api.mjs's one interactive token retry.
+async function onVote(commentId) {
+  const pageId = state.pageId;
+  if (!pageId) return;
+  const bucket = bucketFor(pageId);
+  const current = mergeComments(bucket.serverComments, bucket.localComments).find((c) => c.commentId === commentId);
+  if (!current) return;
+  const voted = !current.youVoted;
+
+  applyVoteLocally(bucket, commentId, voted);
+  syncView(pageId);
+  render();
+
+  try {
+    await (voted ? castVote : removeVote)(pageId, commentId, getIdToken, { clientVersion: CLIENT_VERSION });
+  } catch (err) {
+    console.warn('vote failed', err);
+    applyVoteLocally(bucket, commentId, !voted); // restore the prior state (count + affordance)
+    syncView(pageId);
+    render();
+  }
+}
+
+// Apply (or revert) one vote to a page's bucket: flip the comment in both lists (it lives in exactly
+// one; applyVoteToggle no-ops the other) and update + persist the durable own-vote set.
+function applyVoteLocally(bucket, commentId, voted) {
+  bucket.serverComments = applyVoteToggle(bucket.serverComments, commentId, voted);
+  bucket.localComments = applyVoteToggle(bucket.localComments, commentId, voted);
+  if (voted) state.myVotes.add(commentId);
+  else state.myVotes.delete(commentId);
+  persistMyVotes();
+}
+
+function persistMyVotes() {
+  chrome.storage.local.set({ [MY_VOTES_STORAGE_KEY]: [...state.myVotes] });
+}
+
 // --- wiring -----------------------------------------------------------------
 
 async function init() {
   const stored = await chrome.storage.sync.get(DENYLIST_STORAGE_KEY);
   if (Array.isArray(stored[DENYLIST_STORAGE_KEY])) state.userDenylist = stored[DENYLIST_STORAGE_KEY];
+
+  // Load the viewer's own votes before the first refresh so its youVoted overlay is seeded.
+  const storedVotes = await chrome.storage.local.get(MY_VOTES_STORAGE_KEY);
+  if (Array.isArray(storedVotes[MY_VOTES_STORAGE_KEY])) state.myVotes = new Set(storedVotes[MY_VOTES_STORAGE_KEY]);
 
   els.composer.addEventListener('submit', onSubmit);
 

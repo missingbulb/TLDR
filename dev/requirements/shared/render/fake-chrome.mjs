@@ -50,11 +50,13 @@ function mintIdToken(nonce, nowMs) {
  * @param {string[]|null} opts.denylist  the synced user denylist (null → key absent, panel uses its default).
  * @param {boolean} opts.authFails    make the interactive OAuth flow reject (to exercise the post-failure UI).
  * @param {number} opts.nowMs         the pinned "now" (so the minted token's exp is deterministic).
+ * @param {object|null} opts.localSeed  initial chrome.storage.local contents (e.g. `{ myVotes: [...] }`
+ *   to render the voted-by-me state — the viewer's own votes the public read can't carry).
  * @returns a `chrome` object plus `calls`, capturing what the UI asked the browser to do.
  */
-export function makeFakeChrome({ tabUrl, denylist = null, authFails = false, nowMs = Date.now() }) {
+export function makeFakeChrome({ tabUrl, denylist = null, authFails = false, nowMs = Date.now(), localSeed = null }) {
   const session = {}; // chrome.storage.session token cache (in-memory)
-  const local = {}; // chrome.storage.local — the remembered login_hint email (in-memory)
+  const local = { ...(localSeed ?? {}) }; // chrome.storage.local — login_hint email + the own-vote set
   const calls = { syncSet: [], launchWebAuthFlow: 0 };
 
   const chrome = {

@@ -84,6 +84,9 @@ export async function open(surface, testCase) {
     denylist: surface === "sidepanel" ? testCase.denylist ?? null : testCase.stored ?? null,
     authFails: Boolean(testCase.authFails),
     nowMs: REFERENCE_NOW_MS,
+    // Seed chrome.storage.local (e.g. `{ myVotes: [...] }`) so a case can render the viewer's own
+    // vote state, which the public read can't carry (issue #22).
+    localSeed: testCase.local ?? null,
   });
   const fetchLog = [];
   const warnings = [];

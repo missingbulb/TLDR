@@ -37,6 +37,22 @@ body {
 .comment.pending { opacity: 0.6; }
 .comment.failed .comment-meta { color: var(--error); }
 
+.comment.voteable { display: flex; align-items: flex-start; gap: 10px; }
+.comment-main { display: flex; flex-direction: column; flex-grow: 1; min-width: 0; }
+.vote-rail { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+/* Voted-by-me is a FILLED accent button (a toggled-on look — and a non-colour cue: filled vs outline),
+   so it's unmistakable you've already voted; clicking it removes the vote (see the title + aria-pressed).
+   The idle/voted looks are MUTUALLY EXCLUSIVE state classes (not a `.vote.voted` override of `.vote`),
+   so no rule overrides another on the same element+property — the snapshot renderer folds matched rules
+   in a fixed order in which a same-property override wouldn't win, so the distinct states must not rely
+   on override precedence. Base `.vote` therefore carries only the shared layout. */
+.vote { display: flex; align-items: center; justify-content: center; border-radius: 6px; padding: 3px 9px; font: inherit; font-size: 12px; line-height: 1; cursor: pointer; }
+.vote-idle { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+.vote-voted { background: var(--accent); border: 1px solid var(--accent); color: #fff; }
+.vote-count { font-size: 17px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.vote-count-idle { color: var(--fg); }
+.vote-count-voted { color: var(--accent); }
+
 .composer { margin-top: 12px; }
 .body { width: 100%; resize: vertical; font: inherit; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: inherit; }
 .composer-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 8px; }

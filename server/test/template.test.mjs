@@ -71,3 +71,24 @@ test('an ad-hoc stack name also gets its own table, never prod’s', () => {
 test('CORS allows the client version header (X-Client-Version)', () => {
   assert.match(template, /AllowHeaders:[\s\S]*?- x-client-version/);
 });
+
+// The vote routes are attributed writes, so — like POST /comments — they MUST opt into the Google
+// JWT authorizer (issue #22). A route missing the Authorizer is invisible to the unit/requirements
+// handler tests (which feed claims directly), so this template guard stands in for that missing
+// platform feedback: both vote events carry `Path: /comments/{commentId}/vote` and `Authorizer:
+// GoogleJwt`.
+test('both vote routes opt into the Google JWT authorizer (attributed writes)', () => {
+  for (const method of ['POST', 'DELETE']) {
+    const route = new RegExp(
+      `Method: ${method}\\s*\\n\\s*Path: /comments/\\{commentId\\}/vote\\s*\\n\\s*Auth:\\s*\\n\\s*Authorizer: GoogleJwt`,
+    );
+    assert.match(template, route, `${method} /comments/{commentId}/vote must attach GoogleJwt`);
+  }
+});
+
+// Toggling a vote off deletes the vote item, so the runtime role needs dynamodb:DeleteItem on top of
+// the post path's Put/Update/Query (a TransactWriteItems is authorized by its underlying per-item
+// actions). Missing it fails only at runtime in a real account, never in a mock — so guard it here.
+test('the runtime role can delete items (vote toggle-off needs DeleteItem)', () => {
+  assert.match(template, /Action:[\s\S]*?- dynamodb:DeleteItem/);
+});
