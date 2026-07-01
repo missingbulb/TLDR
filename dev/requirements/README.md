@@ -126,6 +126,43 @@ change would otherwise churn its image for nothing):
 - **the options editor** (`form` on the options page, `6.1`) — heading + helper + seeded textarea +
   Save, independent of the page shell.
 
+## Evidence artifacts — make a coded leaf reviewable without faking the assertion
+
+`dom`/`component` leaves are approved as images. A `behavior`/`logic`/`server` leaf is verified by a
+coded `verify()`, so its gallery cell used to be just a text note — the owner couldn't *see* what it
+proved. A coded case can now opt into an **evidence artifact**: a deterministic card rendered FROM its
+real run, embedded in the gallery, so the leaf is visually assessable at a glance.
+
+**The one rule that keeps it honest:** the coded `verify()` stays the *sole gate on truth*. The
+evidence image is a **view** of the run, never the pass/fail criterion —
+
+- it lives in a distinct `<name>.evidence.png` namespace, so the coverage gate keeps banning a coded
+  case's golden-slot `<name>.png` verbatim (a picture can never *be* the assertion);
+- it is pixel-gated ([`shared/render/evidence.test.mjs`](shared/render/evidence.test.mjs),
+  `MAX_DIFF_RATIO = 0`) and owner-approved *only* so the rendered view can't silently drift from what
+  the code produces — a real change surfaces as a diff to review-and-re-approve, like a `dom` golden;
+- every value it shows is read off the SAME captured run the assertion reads (the DOM crop, the
+  `fetchLog` entry, the real handler response) — "derive, never declare";
+- it wears its kind tag + a "verify() is the gate" caption, so it never reads as a passing snapshot;
+- the non-deterministic bits are excluded (the minted Bearer token isn't printed), and leaves with no
+  honest run to draw from (the `tbd` `8.1`) or nothing but a scalar stay textual.
+
+**The two shapes shipped so far** (both via one generic block renderer,
+[`shared/render/evidence-renderer.mjs`](shared/render/evidence-renderer.mjs)):
+
+- **behavior filmstrip** — a crop per state the gesture walks (reusing the `component` pipeline), with
+  the outbound verb + request body between them (`9.4`). Shows the temporal flip + network verbs a
+  single snapshot can't.
+- **server HTTP-transaction card** — the request (method, route, claims, **body**) → the response
+  (status pill + body), or a kept-vs-dropped **projection diff** (`2.6`, `2.7`, `3.5`, `9.9`, `9.10`).
+
+**Adding one.** Export `evidence()` from the case — an async that drives the real run and returns an
+evidence model (`{ tag, id, title, blocks }`); `refresh:ui` renders + commits `<name>.evidence.png` and
+embeds it in the gallery. Single-source the inputs the assertion uses (the `SCENARIO`/`REQUEST` const in
+each wired case) so the card can't depict a different run than the one `verify()` gated. Still textual
+(follow-ups): the other behavior filmstrips (`9.5`/`6.2`/`6.3`/`9.11`/`2.4`/`2.5`) and the logic
+contract notes (`3.1`/`3.2`/`3.4`/`7.1`/`7.2`/`9.6`).
+
 ## Adding a requirement (an existing kind)
 
 1. Add the leaf number + a two-column row to [`requirements.md`](requirements.md), with a left-cell
