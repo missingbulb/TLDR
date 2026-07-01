@@ -19,20 +19,10 @@ export default {
     const res = await postComment(REQUEST);
     assert.equal(res.statusCode, 413);
   },
-  evidence: async () => {
+  show: async () => {
     const { postComment } = await import("../handler-harness.mjs");
-    const { serverTxnModel } = await import("../evidence.mjs");
+    const { serverTxnLine } = await import("../show.mjs");
     const res = await postComment(REQUEST);
-    return serverTxnModel({
-      id: "3.5",
-      title: "note-size-limit",
-      method: "POST",
-      route: "/comments",
-      request: [
-        { k: "identity", v: "a verified signed-in user" },
-        { k: "body", v: `${OVERSIZE.length} bytes — over the 8192-byte cap` },
-      ],
-      res,
-    });
+    return serverTxnLine({ method: "POST", route: "/comments", identity: "a verified signed-in user", body: `${OVERSIZE.length} bytes (over the 8192-byte cap)`, res });
   },
 };

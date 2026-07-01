@@ -4,7 +4,7 @@
 "use strict";
 
 // The raw item the backing store holds — carries the count plus internal bookkeeping fields that must
-// never surface. Single-sourced so the assertion and the evidence card read the SAME stored row.
+// never surface. Single-sourced so the assertion and the shown result read the SAME stored row.
 const STORED_ITEM = {
   pageId: "https://example.com/x",
   commentId: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
@@ -35,14 +35,12 @@ export default {
     assert.ok(!("voterSub" in c), "a voter's identity never surfaces in the public read");
     assert.ok(!("authorEmailHash" in c) && !("authorSub" in c), "no internal identity field leaks");
   },
-  evidence: async () => {
-    const { serverProjectionModel } = await import("../evidence.mjs");
+  show: async () => {
+    const { serverProjectionLine } = await import("../show.mjs");
     const res = await read();
-    return serverProjectionModel({
-      id: "9.10",
-      title: "vote-projection",
+    // The security-relevant fields: the count surfaces; the voter identity + moderation hash don't.
+    return serverProjectionLine({
       route: "/comments?pageUrl=…",
-      // The security-relevant fields: the count surfaces; the voter identity + moderation hash don't.
       stored: { voteCount: STORED_ITEM.voteCount, voterSub: STORED_ITEM.voterSub, authorEmailHash: STORED_ITEM.authorEmailHash },
       res,
     });

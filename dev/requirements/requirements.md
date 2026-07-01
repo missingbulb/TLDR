@@ -224,7 +224,7 @@ _(Cross-tier: this is the UI half; the server enforcement is `2.6`.)_
 <tr>
 <td valign="top" width="340">
 
-![signed-in-required.2.6](server/cases/signed-in-required.2.6.evidence.png) <!-- req-gallery:2.6 -->
+`POST /comments` — no auth, body `{"pageUrl":"https://example.com/x","body":"hi"}` → `401` missing authenticated identity <!-- req-gallery:2.6 -->
 
 </td>
 <td valign="top">
@@ -240,7 +240,7 @@ signed-in identity is rejected. _(Cross-tier: the UI half is `2.5`; this is the 
 <tr>
 <td valign="top" width="340">
 
-![verified-email-required.2.7](server/cases/verified-email-required.2.7.evidence.png) <!-- req-gallery:2.7 -->
+`POST /comments` — sub user-123 · email_verified=false, body `{"pageUrl":"https://example.com/x","body":"hi"}` → `403` a verified Google email is required to post <!-- req-gallery:2.7 -->
 
 </td>
 <td valign="top">
@@ -330,7 +330,7 @@ submit-type button.)_
 <tr>
 <td valign="top" width="340">
 
-![note-size-limit.3.5](server/cases/note-size-limit.3.5.evidence.png) <!-- req-gallery:3.5 -->
+`POST /comments` — a verified signed-in user, body `9000 bytes (over the 8192-byte cap)` → `413` comment body exceeds 8192 bytes <!-- req-gallery:3.5 -->
 
 </td>
 <td valign="top">
@@ -624,7 +624,7 @@ never missing.
 <tr>
 <td valign="top" width="340">
 
-![vote-toggle.9.4](behavior/cases/vote-toggle.9.4.evidence.png) <!-- req-gallery:9.4 -->
+click ▲ → `POST /comments/{id}/vote` (count 3→4); click again → `DELETE /comments/{id}/vote` (count 4→3) <!-- req-gallery:9.4 -->
 
 </td>
 <td valign="top">
@@ -705,7 +705,7 @@ no-op success**.
 <tr>
 <td valign="top" width="340">
 
-![vote-requires-identity.9.9](server/cases/vote-requires-identity.9.9.evidence.png) <!-- req-gallery:9.9 -->
+`POST /comments/{commentId}/vote` — no auth, body `{"pageUrl":"https://example.com/x"}` → `401` missing authenticated identity <!-- req-gallery:9.9 -->
 
 </td>
 <td valign="top">
@@ -721,7 +721,7 @@ the server's, like posting), while reads stay public.
 <tr>
 <td valign="top" width="340">
 
-![vote-projection.9.10](server/cases/vote-projection.9.10.evidence.png) <!-- req-gallery:9.10 -->
+`GET /comments?pageUrl=…` → `200` · surfaced `voteCount=12` · dropped `voterSub, authorEmailHash` <!-- req-gallery:9.10 -->
 
 </td>
 <td valign="top">

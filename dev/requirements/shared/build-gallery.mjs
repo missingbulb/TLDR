@@ -29,22 +29,23 @@ const marker = (id) => `<!-- req-gallery:${id} -->`;
 
 // The canonical managed left-cell content for one leaf, derived from its CASE (its kind / tbd):
 //   - dom/component → the committed PNG (whole panel / a cropped element), embedded inline for approval.
+//   - a `show()` leaf → its real request→response / state-transition, as generated TEXT (`shown`).
 //   - behavior      → a note pointing at the behavior runner (a gesture a static snapshot can't show).
 //   - server        → a note pointing at the server runner (a server-enforced response, no UI).
 //   - logic         → a note pointing at the logic runner, or, for a tbd leaf, where it's covered today.
-function managedLine(id, testCase) {
+function managedLine(id, testCase, shown) {
   const kind = testCase?.kind || "logic";
   // Any snapshot kind embeds its committed PNG from its own <kind>/cases/ folder.
   if (testCase?.snapshot) {
     const stem = testCase?.name || id;
     return `![${stem}](${kind}/cases/${stem}.png) ${marker(id)}`;
   }
-  // A coded leaf that opts into an evidence artifact embeds its `<name>.evidence.png` — a review card
-  // rendered from the real run (a filmstrip / an HTTP-transaction card). The card carries its own kind
-  // tag + "verify() is the gate" caption, so the visual IS the note.
-  if (typeof testCase?.evidence === "function") {
-    const stem = testCase?.name || id;
-    return `![${stem}](${kind}/cases/${stem}.evidence.png) ${marker(id)}`;
+  // A coded leaf that opts into a SHOWN RESULT (a `show()` producer) renders its real
+  // request→response / state-transition as generated TEXT — the actual result of the run, shown in the
+  // doc rather than a "trust the runner" pointer. It is NOT rasterized: the text is byte-gated by this
+  // generator's own refresh-then-compare (gallery.test), and derives from the same run verify() gates.
+  if (shown != null) {
+    return `${shown} ${marker(id)}`;
   }
   if (kind === "behavior") {
     if (testCase?.tbd) {
@@ -74,13 +75,20 @@ export function markerLines(lines) {
 // Rewrite every managed marker line to its canonical content (preserving leading indentation);
 // leave every other line — scaffolding and prose — untouched.
 export async function buildGallery(docPath = DOC_PATH) {
-  const caseById = new Map((await loadCases()).map((c) => [leafIdOf(c.name), c]));
+  const cases = await loadCases();
+  const caseById = new Map(cases.map((c) => [leafIdOf(c.name), c]));
+  // Pre-run every `show()` producer (each drives its own real run and returns a one-line shown
+  // result), so managedLine stays a pure string map. Only leaves that opt in run — the rest are cheap.
+  const shownById = new Map();
+  for (const c of cases) {
+    if (typeof c.show === "function") shownById.set(leafIdOf(c.name), await c.show());
+  }
   const lines = fs.readFileSync(docPath, "utf8").split("\n");
   const out = lines.map((line) => {
     const m = MARKER_RE.exec(line);
     if (!m) return line;
     const lead = line.match(/^\s*/)[0];
-    return `${lead}${managedLine(m[1], caseById.get(m[1]))}`;
+    return `${lead}${managedLine(m[1], caseById.get(m[1]), shownById.get(m[1]))}`;
   });
   return out.join("\n");
 }

@@ -15,20 +15,10 @@ export default {
     const res = await postComment(REQUEST);
     assert.equal(res.statusCode, 403);
   },
-  evidence: async () => {
+  show: async () => {
     const { postComment } = await import("../handler-harness.mjs");
-    const { serverTxnModel } = await import("../evidence.mjs");
+    const { serverTxnLine } = await import("../show.mjs");
     const res = await postComment(REQUEST);
-    return serverTxnModel({
-      id: "2.7",
-      title: "verified-email-required",
-      method: "POST",
-      route: "/comments",
-      request: [
-        { k: "identity", v: "sub user-123 · email_verified = false" },
-        { k: "body", v: JSON.stringify(REQUEST.body) },
-      ],
-      res,
-    });
+    return serverTxnLine({ method: "POST", route: "/comments", identity: "sub user-123 · email_verified=false", body: REQUEST.body, res });
   },
 };

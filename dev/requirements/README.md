@@ -126,42 +126,49 @@ change would otherwise churn its image for nothing):
 - **the options editor** (`form` on the options page, `6.1`) — heading + helper + seeded textarea +
   Save, independent of the page shell.
 
-## Evidence artifacts — make a coded leaf reviewable without faking the assertion
+## Show the result — decompose into phases, show each in its native form
 
 `dom`/`component` leaves are approved as images. A `behavior`/`logic`/`server` leaf is verified by a
-coded `verify()`, so its gallery cell used to be just a text note — the owner couldn't *see* what it
-proved. A coded case can now opt into an **evidence artifact**: a deterministic card rendered FROM its
-real run, embedded in the gallery, so the leaf is visually assessable at a glance.
+coded `verify()`, so its gallery cell used to be just a "🛡️ verified by `server.test.mjs`" note — the
+owner had to *trust* that a test somewhere proved it, without *seeing* the result. The fix is to
+**show the result of the test in the document**, in the form native to what the leaf is about.
 
-**The one rule that keeps it honest:** the coded `verify()` stays the *sole gate on truth*. The
-evidence image is a **view** of the run, never the pass/fail criterion —
+**The model — decompose, then show each phase natively.** A complex requirement is broken into its
+provable **phases**, each a leaf shown in the gallery in its own native form:
 
-- it lives in a distinct `<name>.evidence.png` namespace, so the coverage gate keeps banning a coded
-  case's golden-slot `<name>.png` verbatim (a picture can never *be* the assertion);
-- it is pixel-gated ([`shared/render/evidence.test.mjs`](shared/render/evidence.test.mjs),
-  `MAX_DIFF_RATIO = 0`) and owner-approved *only* so the rendered view can't silently drift from what
-  the code produces — a real change surfaces as a diff to review-and-re-approve, like a `dom` golden;
-- every value it shows is read off the SAME captured run the assertion reads (the DOM crop, the
-  `fetchLog` entry, the real handler response) — "derive, never declare";
-- it wears its kind tag + a "verify() is the gate" caption, so it never reads as a passing snapshot;
-- the non-deterministic bits are excluded (the minted Bearer token isn't printed), and leaves with no
-  honest run to draw from (the `tbd` `8.1`) or nothing but a scalar stay textual.
+- a **UI** phase → the **minimal UI** (a `component` crop — genuinely visual, so pixels earn their keep);
+- a **server-call / data** phase → the actual call, shown as **generated text**: the request that went
+  in (with the field we cared about) and the status + message that came back. e.g. leaf `2.6` reads
+  `` `POST /comments` — no auth, body `{…}` → `401` missing authenticated identity ``; `9.10` reads
+  `` `GET …` → `200` · surfaced `voteCount=12` · dropped `voterSub, authorEmailHash` ``.
 
-**The two shapes shipped so far** (both via one generic block renderer,
-[`shared/render/evidence-renderer.mjs`](shared/render/evidence-renderer.mjs)):
+So the vote-toggle requirement is *already* decomposed: the un-voted / voted **UI** is `component`
+crops (`9.1`/`9.2`); the **calls** are behavior leaf `9.4`'s shown line
+`` click ▲ → `POST …/vote` (count 3→4); click again → `DELETE …/vote` (count 4→3) ``.
 
-- **behavior filmstrip** — a crop per state the gesture walks (reusing the `component` pipeline), with
-  the outbound verb + request body between them (`9.4`). Shows the temporal flip + network verbs a
-  single snapshot can't.
-- **server HTTP-transaction card** — the request (method, route, claims, **body**) → the response
-  (status pill + body), or a kept-vs-dropped **projection diff** (`2.6`, `2.7`, `3.5`, `9.9`, `9.10`).
+**Do NOT rasterize text.** A method/route/status/body is *text* — show it as text. Rendering that text
+into a PNG only to pixel-diff the PNG buys nothing (and dilutes the approval surface). Pixels are for
+things that are genuinely visual (the UI); everything else is shown as generated markdown in the cell.
 
-**Adding one.** Export `evidence()` from the case — an async that drives the real run and returns an
-evidence model (`{ tag, id, title, blocks }`); `refresh:ui` renders + commits `<name>.evidence.png` and
-embeds it in the gallery. Single-source the inputs the assertion uses (the `SCENARIO`/`REQUEST` const in
-each wired case) so the card can't depict a different run than the one `verify()` gated. Still textual
-(follow-ups): the other behavior filmstrips (`9.5`/`6.2`/`6.3`/`9.11`/`2.4`/`2.5`) and the logic
-contract notes (`3.1`/`3.2`/`3.4`/`7.1`/`7.2`/`9.6`).
+**How the text stays honest** — the same contract as the images, minus the rasterizer:
+
+- **Derive, never declare.** A case exports `show()` — an async that drives its **real run** and
+  returns a one-line markdown string built from the captured result (the real handler response, the
+  real `fetchLog` verbs/counts). It reads the same run the assertion reads; single-source the inputs
+  (the `REQUEST`/`SCENARIO` const) so what's shown can't depict a run the assertion didn't gate.
+- **`verify()` is the sole gate on truth.** The shown line is a *view*, never the pass/fail criterion.
+- **Gated, not trusted.** `build-gallery` runs `show()` and inlines the line; the gallery
+  refresh-then-compare ([`shared/gallery.test.mjs`](shared/gallery.test.mjs)) asserts the committed
+  doc equals a fresh generation — so a real change to the response *changes the shown text* and fails
+  until re-approved, exactly like a golden. Byte-stable, no satori, no artifact file.
+- **Don't claim what you can't show or guarantee.** If a phase can't be driven hermetically, don't
+  describe it as verified — keep it a tracked `tbd` (like `8.1`). The `2.6` line shows the *handler's*
+  response; the API-Gateway authorizer that enforces it in prod is a separate, tracked phase (see the
+  fake-gateway issue), not something the doc silently claims.
+
+**Adding one.** Export `show()` from the case (returns the one-line markdown result); `refresh:ui`
+regenerates the gallery with it. UI phases stay `component`/`dom` crops. Still plain notes for now: the
+other behavior/logic leaves (`9.5`/`6.2`/`6.3`/`9.11`/`2.4`/`2.5`, `3.1`/`3.2`/`3.4`/`7.1`/`7.2`/`9.6`).
 
 ## Adding a requirement (an existing kind)
 

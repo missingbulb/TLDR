@@ -19,7 +19,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadCases, leafIdOf, snapshotPath, evidencePath } from "./shared/cases.mjs";
+import { loadCases, leafIdOf, snapshotPath } from "./shared/cases.mjs";
 import { allRequirementIds, leafRequirementIds } from "./shared/requirements-doc.mjs";
 import { KINDS, KIND_NAMES, SNAPSHOT_KINDS } from "./shared/kinds.mjs";
 
@@ -94,18 +94,6 @@ test("a coded (non-snapshot) case carries no snapshot image — an image can't v
     .filter((c) => !SNAPSHOT.has(c.kind) && fs.existsSync(snapshotPath(c)))
     .map((c) => `${c.name}.png`);
   assert.deepEqual(bad, [], "behavior/logic leaves must not carry a snapshot image:");
-});
-
-// The evidence lane is a review-ONLY artifact for coded leaves that opt in (an evidence() producer):
-// a `<name>.evidence.png` distinct from the banned golden slot above. It never gates the requirement
-// (verify() does); it's pixel-gated only so the rendered view of the run can't silently drift. Guard
-// the namespace: an evidence image may exist ONLY for a coded case that exports evidence() — no strays,
-// and never on a snapshot kind (dom/component approve via their own golden, not a card).
-test("every evidence image belongs to a coded case that opts into it (no strays, none on a snapshot kind)", () => {
-  const strays = cases
-    .filter((c) => fs.existsSync(evidencePath(c)) && !(typeof c.evidence === "function" && !SNAPSHOT.has(c.kind)))
-    .map((c) => `${c.name}.evidence.png`);
-  assert.deepEqual(strays, [], "orphan/misplaced evidence images (each needs an evidence() on a coded case):");
 });
 
 test("a coded case must export a verify() (or be an explicit tbd with a coveredBy pointer)", () => {
