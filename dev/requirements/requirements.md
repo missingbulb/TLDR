@@ -749,3 +749,165 @@ count is shared, but who voted is not.
 </td>
 </tr>
 </table>
+
+
+## 10. Categories
+
+Every note is tagged with one **category** from a **growable curated list** — seeded **TLDR ·
+Spoiler · Chitchat** — defined once in `shared/categories.mjs` and consumed by both sides (the same
+single-source discipline as the URL normalizer). The composer offers the list (defaulting to **TLDR**),
+each note carries a **category badge**, and a **segmented filter bar** (All + one tab per category)
+narrows the already-fetched notes **client-side** — so switching tabs never refetches and never
+fragments the one CDN-cached read per page (issue #25). The set is a **server-side allowlist** (not a
+frozen enum): a note with an unknown category is rejected, and a note with **no** category defaults to
+**Chitchat** at read time, so pre-existing rows need no migration. The badge is a `component` crop; the
+filter bar and composer picker are `component` crops; the empty-filter status is a `dom` panel state;
+the filter/post gestures are `behavior` leaves; the read-time default is a `logic` leaf; and the
+server's persist/validate guarantees sit alongside as `server` leaves.
+
+> Per-category **ranking** (the top note per category by upvotes) is a follow-up tracked under #25,
+> layered on the upvoting substrate (§9); it is **out of scope here** and adds no leaf yet.
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![note-category-badge.10.1](component/cases/note-category-badge.10.1.png) <!-- req-gallery:10.1 -->
+
+</td>
+<td valign="top">
+
+`10.1` Each note renders a **category badge** for its tagged category, on its meta line beside the
+byline.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![filter-bar.10.2](component/cases/filter-bar.10.2.png) <!-- req-gallery:10.2 -->
+
+</td>
+<td valign="top">
+
+`10.2` The panel renders a **segmented filter bar** — **All** followed by one tab per known category
+(TLDR / Spoiler / Chitchat) — with **All selected by default**.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:10.3 -->
+
+</td>
+<td valign="top">
+
+`10.3` Selecting a category tab shows **only that category's notes**, and re-renders **without a
+refetch** (client-side filtering preserves the single CDN-cached read).
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![filter-empty.10.4](dom/cases/filter-empty.10.4.png) <!-- req-gallery:10.4 -->
+
+</td>
+<td valign="top">
+
+`10.4` An active filter matching **no notes** shows a **"No &lt;Category&gt; notes yet."** status —
+not a blank panel.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![composer-category.10.5](component/cases/composer-category.10.5.png) <!-- req-gallery:10.5 -->
+
+</td>
+<td valign="top">
+
+`10.5` The composer renders a **category selector**, pre-selected to the composer default (**TLDR**).
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:10.6 -->
+
+</td>
+<td valign="top">
+
+`10.6` Posting carries the **composer-selected category** — onto the optimistic note's badge
+immediately, and in the **POST body**. _(Cross-tier: the server persistence is `10.8`.)_
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🔧 _Logic leaf — verified by `logic/logic.test.mjs`._ <!-- req-gallery:10.7 -->
+
+</td>
+<td valign="top">
+
+`10.7` An **untagged** comment (no category) renders under the **default category** (Chitchat) — never
+a blank/undefined badge. _(How: `categoryLabel` in `shared/categories.mjs`, matching the server's
+read-time default.)_
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:10.8 -->
+
+</td>
+<td valign="top">
+
+`10.8` `POST /comments` **persists a valid category** and the public projection **returns it**.
+_(Cross-tier: the UI half is `10.6`.)_
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:10.9 -->
+
+</td>
+<td valign="top">
+
+`10.9` `POST /comments` with an **unknown category is rejected (400)** and writes nothing; with **no
+category** it stores the **default** (Chitchat) — the growable allowlist, not a frozen enum.
+
+</td>
+</tr>
+</table>

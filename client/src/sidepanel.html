@@ -12,6 +12,11 @@
       <p id="page" class="page" title=""></p>
     </header>
 
+    <!-- The category filter bar (issue #25). Populated once from the shared CATEGORIES list in
+         sidepanel.mjs (an "All" tab + one per category), so growing the taxonomy = one shared-constant
+         edit, no markup change. Hidden on a non-commentable page (like the composer). -->
+    <div id="filters" class="filters" role="group" aria-label="Filter notes by category" hidden></div>
+
     <p id="status" class="status" hidden></p>
 
     <ul id="comments" class="comments" aria-live="polite"></ul>
@@ -25,6 +30,12 @@
         placeholder="Add a tl;dr note for this page…"
       ></textarea>
       <div class="composer-row">
+        <!-- The composer category picker (issue #25). Options are filled from the shared CATEGORIES
+             list in sidepanel.mjs; the selected value is sent with the post. -->
+        <label class="category-field">
+          <span class="category-label">Category</span>
+          <select id="category" class="category-select"></select>
+        </label>
         <span id="composer-error" class="composer-error" role="alert"></span>
         <button id="post" type="submit" class="post">Post</button>
       </div>

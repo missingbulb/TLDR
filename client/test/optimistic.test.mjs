@@ -8,11 +8,12 @@ import {
   applyVoteToggle,
 } from '../src/optimistic.mjs';
 
-test('makeOptimisticComment marks the entry pending under its temp id', () => {
-  const c = makeOptimisticComment({ tempId: 'temp-1', body: 'hi', authorName: 'Ada', authorId: 'u1', createdAt: 5 });
+test('makeOptimisticComment marks the entry pending under its temp id and carries its category', () => {
+  const c = makeOptimisticComment({ tempId: 'temp-1', body: 'hi', authorName: 'Ada', authorId: 'u1', createdAt: 5, category: 'tldr' });
   assert.equal(c.commentId, 'temp-1');
   assert.equal(c.pending, true);
   assert.equal(c.body, 'hi');
+  assert.equal(c.category, 'tldr'); // so the badge shows immediately, before the authoritative record lands
 });
 
 test('mergeComments dedupes by commentId (server wins) and sorts by createdAt', () => {

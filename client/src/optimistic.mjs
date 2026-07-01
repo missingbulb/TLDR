@@ -5,8 +5,10 @@
 // and merge them deduped by commentId. Once a later GET includes the real commentId, the server
 // record replaces the local one (dropping the pending flag).
 
-export function makeOptimisticComment({ tempId, body, authorName, authorId, createdAt }) {
-  return { commentId: tempId, body, authorName, authorId, createdAt, pending: true };
+export function makeOptimisticComment({ tempId, body, authorName, authorId, createdAt, category }) {
+  // Carry the composer-selected category so the note's badge shows immediately, before the ~30–60s
+  // CDN TTL lets a later GET return the authoritative record (which reconcileSuccess swaps in). (issue #25)
+  return { commentId: tempId, body, authorName, authorId, createdAt, category, pending: true };
 }
 
 // Merge server + local comments, deduped by commentId (server wins), sorted by createdAt ascending.

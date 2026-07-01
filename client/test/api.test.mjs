@@ -48,6 +48,20 @@ test('postComment attaches the bearer token, the client-version header, and post
   assert.deepEqual(JSON.parse(calls[0].opts.body), { pageUrl: 'https://e.com/p', body: 'hello' });
 });
 
+test('postComment includes the selected category in the body when one is provided', async () => {
+  const calls = [];
+  const fetchImpl = async (url, opts) => { calls.push({ url, opts }); return jsonResponse(201, { comment: { commentId: 'x' } }); };
+  await postComment('https://e.com/p', 'hello', async () => 'T', { fetchImpl, category: 'spoiler' });
+  assert.deepEqual(JSON.parse(calls[0].opts.body), { pageUrl: 'https://e.com/p', body: 'hello', category: 'spoiler' });
+});
+
+test('postComment omits category from the body when none is provided (older-client shape unchanged)', async () => {
+  const calls = [];
+  const fetchImpl = async (url, opts) => { calls.push({ url, opts }); return jsonResponse(201, { comment: { commentId: 'x' } }); };
+  await postComment('https://e.com/p', 'hello', async () => 'T', { fetchImpl });
+  assert.deepEqual(JSON.parse(calls[0].opts.body), { pageUrl: 'https://e.com/p', body: 'hello' });
+});
+
 test('postComment refreshes the token once on a 401 and retries', async () => {
   let attempt = 0;
   const fetchImpl = async () => (attempt++ === 0 ? jsonResponse(401, {}) : jsonResponse(201, { comment: { commentId: 'y' } }));

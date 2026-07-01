@@ -153,6 +153,7 @@ Read page = `Query` on `pageId`. Submit = `PutItem`.
 | `authorSub` | String | Google `sub`. Durable author identity. Returned to clients as `authorId`. |
 | `authorName` | String | Display name from the token. |
 | `body` | String | Comment text, validated before write (≤ 8 KB). |
+| `category` | String | The comment's category id (issue #25), one of the shared allowlist (`shared/categories.mjs`). A plain item attribute (no GSI, key schema unchanged). Returned; **read-time default `chitchat`** for legacy rows written before categories existed. |
 | `createdAt` | Number | Epoch ms, **derived from the same ULID** (one clock read, no drift). |
 | `pageUrlRaw` | String | Original URL, for debugging. Never returned in the read projection. |
 | `authorEmailHash` | String | **Salted one-way SHA-256** of the verified email. Moderation only; **never returned**. |
@@ -326,12 +327,12 @@ commands, termination protection).
 
 | Method | Path | Auth | Request | Cached? | Success |
 |--------|------|------|---------|---------|---------|
-| `POST` | `/comments` | Bearer ID token | `{ "pageUrl", "body" }` | No | `201` + `{ "comment": { commentId, body, authorName, authorId, createdAt, voteCount } }` |
-| `GET` | `/comments` | **public** | query `pageUrl` (+ optional `nextToken`) | Yes (TTL 30–60s) | `200` + `{ "comments": [ { commentId, body, authorName, authorId, createdAt, voteCount } ], "nextToken"? }` |
+| `POST` | `/comments` | Bearer ID token | `{ "pageUrl", "body", "category"? }` | No | `201` + `{ "comment": { commentId, body, authorName, authorId, createdAt, voteCount, category } }` |
+| `GET` | `/comments` | **public** | query `pageUrl` (+ optional `nextToken`) | Yes (TTL 30–60s) | `200` + `{ "comments": [ { commentId, body, authorName, authorId, createdAt, voteCount, category } ], "nextToken"? }` |
 | `POST` | `/comments/{commentId}/vote` | Bearer ID token | `{ "pageUrl" }` | No | `200` + `{ "ok": true }` (idempotent cast) |
 | `DELETE` | `/comments/{commentId}/vote` | Bearer ID token | `{ "pageUrl" }` | No | `200` + `{ "ok": true }` (idempotent toggle-off) |
 
-Errors: `400` invalid body / missing or non-http(s) `pageUrl`; `401` missing/invalid token; `403` unverified
+Errors: `400` invalid body / missing or non-http(s) `pageUrl` / unknown `category`; `401` missing/invalid token; `403` unverified
 email; `413` body too large; `429` per-author rate limit; `404` unknown route / vote on a missing comment;
 `500` unexpected.
 
@@ -366,6 +367,34 @@ It stays within every deliberate constraint (no GSI, frozen key schema, public C
 
 Every request also carries **`X-Client-Version`** — the extension's manifest `version` — as a request header
 (see §9.1). It's telemetry only; it never changes a response, the cache key, or the body.
+
+### 9.3 Categories (issue #25)
+
+Every comment is tagged with one **category** from a **growable curated list** — seeded **TLDR ·
+Spoiler · Chitchat**. Like upvoting, it stays within every deliberate constraint (no GSI, frozen key
+schema, one CDN-cached read per page):
+
+- **Single source of truth.** The taxonomy lives once in `shared/categories.mjs` (the ordered list +
+  the read-time default + the validation/label helpers), vendored byte-identically into `server/` and
+  `client/` with the same drift guard as the URL normalizer (`test/shared-drift.test.mjs`). The server
+  validates against it; the client builds its composer picker, filter bar, and per-note badge from it —
+  so the two sides can never disagree on what categories exist.
+- **Growable curated allowlist, not a frozen enum (🔧 owner decision).** Users pick from the known
+  list; they can't invent categories. Validation is allowlist membership (`isValidCategory`), so the
+  set grows by **appending one entry** to the shared constant + a re-sync — no schema change, no
+  near-duplicate sprawl. An unknown category on write is a client bug → `400`.
+- **Additive, backward-compatible field.** `category` is an **optional** request field with a
+  **server-side default** (§9.1): an older client that omits it keeps working. It's stored as a plain
+  item attribute and added to the allowlist projection as `category: item.category ?? DEFAULT_CATEGORY`
+  — so the read is safe over **pre-existing rows** (defaulted to `chitchat` at read time) with **zero
+  migration/backfill**. It's the **second** field added under the additive-only policy (after
+  `voteCount`).
+- **Filtering is client-side — the cache is untouched.** The whole page (≤50 notes) already arrives in
+  one public, CDN-cached `Query`; the filter bar narrows the already-fetched notes in `render()`, so
+  switching tabs **never refetches** and a `?category=` server param never multiplies the cache key.
+- **Ranking (the top note per category) is a follow-up.** Per-category ranking by upvotes — the leading
+  note per category the hover preview (#26) surfaces — is layered on the upvoting substrate (§9.2) and
+  is **not built here**; it's a thin client-side computation over the already-fetched page when it lands.
 
 ### 9.1 Versioning & backward-compatibility policy (issue #29)
 
@@ -416,7 +445,8 @@ the logs carry a version baseline.
   concurrency are deferred — reserved concurrency can fail a new account's deploy when its concurrency limit is low,
   and HTTP API stage throttling is awkward via SAM's high-level resource. Add once account limits are known.
 - Multi-region writes (single region; CloudFront already gives read-edge reach).
-- Replies/threading and rich text. (**Upvoting shipped** — issue #22, §9.2 — as the substrate for ranking, #25.)
+- Replies/threading and rich text. (**Upvoting shipped** — issue #22, §9.2; **categories shipped** — issue #25, §9.3.)
+- **Per-category ranking** (the top note per category by upvotes; the leading note the hover preview #26 surfaces) — a follow-up on the upvoting + categories substrate, deliberately deferred (§9.3).
 - Full end-to-end browser tests of the extension glue (the pure logic is unit-tested; the `chrome.*` glue is `node --check`'d).
 
 ---

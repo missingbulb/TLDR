@@ -1,7 +1,7 @@
-// Copies the canonical shared/normalizeUrl.mjs VERBATIM into the two vendored locations that
-// can't import across the repo at runtime. Run after editing shared/normalizeUrl.mjs.
+// Copies each canonical shared/*.mjs module VERBATIM into the vendored locations that can't import
+// across the repo at runtime. Run after editing any shared module (normalizeUrl.mjs, categories.mjs).
 //
-// The copies are byte-identical to the source (the GENERATED marker lives in the filename), so
+// The copies are byte-identical to their source (the GENERATED marker lives in the filename), so
 // dev/build/tools/test/shared-drift.test.mjs can guard drift with a simple byte-equality check.
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -11,19 +11,36 @@ import { fileURLToPath } from 'node:url';
 // This tool lives at dev/build/tools/, so the repo root is three levels up.
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
-export const SOURCE = resolve(repoRoot, 'shared/normalizeUrl.mjs');
-export const VENDORED = [
-  resolve(repoRoot, 'server/src/vendor/normalizeUrl.GENERATED.mjs'),
-  resolve(repoRoot, 'client/vendor/normalizeUrl.GENERATED.mjs'),
+// Each canonical shared module and the vendored copies it fans out to (server + client). Add a shared
+// module by appending an entry here; the drift guard iterates this same list, so nothing else changes.
+export const SHARED = [
+  {
+    source: resolve(repoRoot, 'shared/normalizeUrl.mjs'),
+    targets: [
+      resolve(repoRoot, 'server/src/vendor/normalizeUrl.GENERATED.mjs'),
+      resolve(repoRoot, 'client/vendor/normalizeUrl.GENERATED.mjs'),
+    ],
+  },
+  {
+    source: resolve(repoRoot, 'shared/categories.mjs'),
+    targets: [
+      resolve(repoRoot, 'server/src/vendor/categories.GENERATED.mjs'),
+      resolve(repoRoot, 'client/vendor/categories.GENERATED.mjs'),
+    ],
+  },
 ];
 
 export function syncShared() {
-  const contents = readFileSync(SOURCE);
-  for (const target of VENDORED) {
-    mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, contents);
+  const written = [];
+  for (const { source, targets } of SHARED) {
+    const contents = readFileSync(source);
+    for (const target of targets) {
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, contents);
+      written.push(target);
+    }
   }
-  return VENDORED;
+  return written;
 }
 
 // Run directly (`node scripts/sync-shared.mjs`) — but stay importable for the drift test.

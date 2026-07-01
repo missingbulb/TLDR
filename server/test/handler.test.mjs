@@ -92,6 +92,8 @@ test('POST creates a comment and echoes the authoritative record', async () => {
   assert.equal(comment.authorId, 'user-123');
   assert.equal(typeof comment.commentId, 'string');
   assert.equal(typeof comment.createdAt, 'number');
+  // No category sent → the default (chitchat) is stored and echoed (additive-only: optional field).
+  assert.equal(comment.category, 'chitchat');
 
   const puts = ddbMock.commandCalls(PutCommand);
   assert.equal(puts.length, 1);
@@ -99,6 +101,7 @@ test('POST creates a comment and echoes the authoritative record', async () => {
   assert.equal(item.pageId, 'https://example.com/x');
   assert.equal(item.authorSub, 'user-123');
   assert.equal(item.body, 'hi');
+  assert.equal(item.category, 'chitchat');
   assert.equal(item.createdAt, comment.createdAt);
   assert.ok(!('authorEmail' in item), 'raw authorEmail must never be stored');
   assert.match(item.authorEmailHash, /^[0-9a-f]{64}$/, 'a salted sha256 email hash is stored');
@@ -161,6 +164,24 @@ test('POST with a malformed JSON body is rejected (400)', async () => {
   assert.equal(res.statusCode, 400);
 });
 
+test('POST stores and echoes a valid category (normalized to its canonical id)', async () => {
+  const res = await handler(postEvent({ body: { pageUrl: 'https://e.com', body: 'hi', category: ' Spoiler ' } }));
+  assert.equal(res.statusCode, 201);
+  assert.equal(JSON.parse(res.body).comment.category, 'spoiler'); // trimmed + lowercased against the allowlist
+  assert.equal(ddbMock.commandCalls(PutCommand)[0].args[0].input.Item.category, 'spoiler');
+});
+
+test('POST with an unknown category is rejected (400) and writes nothing', async () => {
+  const res = await handler(postEvent({ body: { pageUrl: 'https://e.com', body: 'hi', category: 'rating' } }));
+  assert.equal(res.statusCode, 400);
+  assert.equal(ddbMock.commandCalls(PutCommand).length, 0);
+});
+
+test('POST with no category stores the default (chitchat) — the additive-only optional field', async () => {
+  await handler(postEvent({ body: { pageUrl: 'https://e.com', body: 'hi' } }));
+  assert.equal(ddbMock.commandCalls(PutCommand)[0].args[0].input.Item.category, 'chitchat');
+});
+
 test('GET returns comments via the allowlist projection (no internal fields leak)', async () => {
   ddbMock.on(QueryCommand).resolves({
     Items: [
@@ -170,6 +191,7 @@ test('GET returns comments via the allowlist projection (no internal fields leak
         authorSub: 'user-123',
         authorName: 'Ada',
         body: 'first!',
+        category: 'tldr',
         createdAt: 1700000000000,
         pageUrlRaw: 'https://example.com/x?utm=1',
         voteCount: 4,
@@ -184,8 +206,11 @@ test('GET returns comments via the allowlist projection (no internal fields leak
   const out = JSON.parse(res.body);
   assert.equal(out.comments.length, 1);
   const c = out.comments[0];
-  assert.deepEqual(Object.keys(c).sort(), ['authorId', 'authorName', 'body', 'commentId', 'createdAt', 'voteCount']);
+  // The projected key-set is pinned (§9.1 additive-only): a field can only be ADDED here, never
+  // removed/renamed. `category` is the second field added under that policy (after `voteCount`).
+  assert.deepEqual(Object.keys(c).sort(), ['authorId', 'authorName', 'body', 'category', 'commentId', 'createdAt', 'voteCount']);
   assert.equal(c.authorId, 'user-123');
+  assert.equal(c.category, 'tldr');
   assert.equal(c.voteCount, 4);
   assert.ok(!('authorSub' in c) && !('pageUrlRaw' in c) && !('pageId' in c) && !('voterSub' in c));
   assert.equal(typeof out.nextToken, 'string');
@@ -204,6 +229,16 @@ test('GET defaults voteCount to 0 for a comment that has never been voted on', a
   });
   const out = JSON.parse((await handler(getEvent({ pageUrl: 'https://e.com' }))).body);
   assert.equal(out.comments[0].voteCount, 0);
+});
+
+test('GET defaults category to chitchat for a legacy row written before categories existed', async () => {
+  // No `category` attribute on the stored item (a pre-#25 row) → the projection defaults it at read
+  // time, so the client never sees a blank/undefined category. Zero migration/backfill.
+  ddbMock.on(QueryCommand).resolves({
+    Items: [{ pageId: 'https://e.com', commentId: '01ARZ3NDEKTSV4RRFFQ69G5FAV', authorName: 'Ada', body: 'hi', createdAt: 1 }],
+  });
+  const out = JSON.parse((await handler(getEvent({ pageUrl: 'https://e.com' }))).body);
+  assert.equal(out.comments[0].category, 'chitchat');
 });
 
 test('GET round-trips an opaque nextToken into ExclusiveStartKey', async () => {

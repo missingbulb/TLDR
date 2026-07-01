@@ -221,6 +221,16 @@ function prepareBody(session) {
       ta.style.color = "#9ca3af"; // a muted placeholder tone (Chrome paints the prompt greyed)
     }
   }
+  // A <select> shows only its SELECTED option (Chrome paints the chosen value plus a dropdown caret);
+  // its <option> children are not visible text nodes, so satori — which has no form controls — would
+  // otherwise stack every option. Project the selected option's label + a caret and drop the option
+  // children, mirroring the textarea projection above (the composer's category picker, issue #25).
+  for (const sel of body.querySelectorAll("select")) {
+    const opt = sel.options[sel.selectedIndex] || sel.options[0];
+    // The caret is U+25BC (▼) — the down counterpart of the vote glyph U+25B2 (▲), which the bundled
+    // Liberation Sans renders; the small-triangle U+25BE (▾) is NOT in the font (renders as tofu).
+    sel.textContent = `${opt ? opt.textContent : ""} ▼`;
+  }
   return body;
 }
 

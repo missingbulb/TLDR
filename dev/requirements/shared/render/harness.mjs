@@ -58,7 +58,9 @@ function makeFakeFetch(testCase, fetchLog) {
       ok: true,
       status: 200,
       json: async () => ({
-        comment: { commentId: "server-1", body: sent.body, authorName: "You", authorId: "user-123", createdAt: REFERENCE_NOW_MS },
+        // Echo the authoritative record the real handler returns — INCLUDING the category (issue #25),
+        // so a reconciled note keeps its badge instead of reverting to the default after a post settles.
+        comment: { commentId: "server-1", body: sent.body, authorName: "You", authorId: "user-123", createdAt: REFERENCE_NOW_MS, category: sent.category },
       }),
     };
   };

@@ -44,7 +44,11 @@ async function authedWrite(send, getIdToken) {
   return res;
 }
 
-export async function postComment(pageUrl, body, getIdToken, { fetchImpl = fetch, clientVersion } = {}) {
+// `category` (issue #25) rides in the POST BODY (an additive optional field — §9.1), not a header:
+// unlike X-Client-Version it's real request data the server persists, and the server defaults it when
+// absent, so an older client that omits it keeps working. Only the write carries it; reads are public
+// and filter client-side, so the category never touches the GET cache key.
+export async function postComment(pageUrl, body, getIdToken, { fetchImpl = fetch, clientVersion, category } = {}) {
   const send = (token) =>
     fetchImpl(`${API_BASE_URL}/comments`, {
       method: 'POST',
@@ -53,7 +57,7 @@ export async function postComment(pageUrl, body, getIdToken, { fetchImpl = fetch
         authorization: `Bearer ${token}`,
         ...clientVersionHeader(clientVersion),
       },
-      body: JSON.stringify({ pageUrl, body }),
+      body: JSON.stringify(category ? { pageUrl, body, category } : { pageUrl, body }),
     });
 
   const res = await authedWrite(send, getIdToken);
