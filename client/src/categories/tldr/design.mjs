@@ -2,6 +2,7 @@
 // scoped stylesheet tldr.css (body[data-category="tldr"]).
 export default {
   id: 'tldr',
+  title: 'TLDR',
   postLabel: 'Post tl;dr',
   placeholder: 'Add a tl;dr for this page…',
 };

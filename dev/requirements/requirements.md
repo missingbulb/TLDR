@@ -754,9 +754,9 @@ count is shared, but who voted is not.
 
 A note's **category** is a **top-level mode**, not a per-note tag in the UI. The reader chooses the
 current category from the **toolbar icon** (a small menu; it also toggles the pane), and the panel then
-shows **only that category's notes**, wearing that category's **look & feel** (separator colour, accent)
-and **composer copy** ("Post tl;dr"). The panel makes no other mention of the selection — no badge, no
-filter bar. Categories come from the growable curated allowlist in `shared/categories.mjs` (seed **TLDR
+shows **only that category's notes**, wearing that category's **look & feel** (separator colour, accent),
+its **pane title**, and its **composer copy** ("Post tl;dr"). The panel makes no other mention of the
+selection — no badge, no filter bar. Categories come from the growable curated allowlist in `shared/categories.mjs` (seed **TLDR
 · Spoiler · Chitchat**); each category's *design* lives in its own encapsulated folder
 (`client/src/categories/<id>/`, strictly presentation) so a restyle of one can't touch another, and the
 shared panel code behaves identically for every category. Filtering to the current category is
@@ -958,6 +958,23 @@ real browser is the e2e follow-up `8.1`.)_
 `10.12` The comments pane makes **no mention of the current selection** — **no badge**, **no filter
 bar**, and the notes never name the category; it just shows the relevant comments (the category is
 conveyed only by look & copy).
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![category-menu-popup.10.13](dom/cases/category-menu-popup.10.13.png) <!-- req-gallery:10.13 -->
+
+</td>
+<td valign="top">
+
+`10.13` The **toolbar-icon menu popup** renders a **"Show"** heading and **one button per category**
+(TLDR / Spoiler / Chitchat), built from the shared list — the visual for the popup the icon opens.
+_(Its click behaviour is `10.7`.)_
 
 </td>
 </tr>

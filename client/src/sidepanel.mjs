@@ -37,6 +37,7 @@ const CURRENT_CATEGORY_STORAGE_KEY = 'currentCategory';
 const DEFAULT_VIEW_CATEGORY = DEFAULT_CATEGORY;
 
 const els = {
+  title: document.getElementById('title'),
   page: document.getElementById('page'),
   status: document.getElementById('status'),
   comments: document.getElementById('comments'),
@@ -171,6 +172,7 @@ function render() {
 function applyCategoryDesign() {
   const design = designFor(state.currentCategory);
   document.body.dataset.category = state.currentCategory;
+  els.title.textContent = design.title; // the pane title reflects the current category
   els.post.textContent = design.postLabel;
   els.body.placeholder = design.placeholder;
 }

@@ -49,7 +49,7 @@ export default {
       assert.ok(scopedRules > 0, `${id}.css has at least one scoped rule`);
 
       const design = designFor(id);
-      assert.ok(design.postLabel && design.placeholder, `category "${id}" carries composer copy`);
+      assert.ok(design.title && design.postLabel && design.placeholder, `category "${id}" carries its title + composer copy`);
     }
     // Separators + accents both differ across categories — the "separators + accent + copy" design scope.
     assert.equal(separators.size, CATEGORIES.length, "each category defines a DISTINCT separator colour");
