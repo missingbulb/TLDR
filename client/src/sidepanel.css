@@ -37,11 +37,13 @@ body {
 .comment.pending { opacity: 0.6; }
 .comment.failed .comment-meta { color: var(--error); }
 
-.comment-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.vote { display: flex; align-items: center; gap: 4px; background: transparent; border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; font: inherit; font-size: 12px; color: var(--muted); cursor: pointer; }
-.vote-arrow { font-size: 11px; line-height: 1; }
-.vote-count { font-variant-numeric: tabular-nums; }
+.comment.voteable { display: flex; align-items: flex-start; gap: 10px; }
+.comment-main { display: flex; flex-direction: column; flex-grow: 1; min-width: 0; }
+.vote-rail { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.vote { display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--border); border-radius: 6px; padding: 3px 9px; font: inherit; font-size: 12px; line-height: 1; color: var(--muted); cursor: pointer; }
 .vote.voted { border-color: var(--accent); color: var(--accent); }
+.vote-count { font-size: 17px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--fg); }
+.vote-count.voted { color: var(--accent); }
 
 .composer { margin-top: 12px; }
 .body { width: 100%; resize: vertical; font: inherit; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: inherit; }

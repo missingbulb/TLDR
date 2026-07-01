@@ -15,11 +15,12 @@ export default {
     });
     try {
       const btn = () => session.document.querySelector("li.comment .vote");
+      const count = () => session.document.querySelector("li.comment .vote-count").textContent;
       btn().click();
       await session.settle();
 
       assert.equal(btn().getAttribute("aria-pressed"), "false", "rolled back to un-voted");
-      assert.match(btn().textContent, /3/, "count restored — no phantom vote");
+      assert.equal(count(), "3", "count restored — no phantom vote");
       assert.ok(session.warnings.some((w) => /vote failed/.test(w)), "the failure is logged");
     } finally {
       session.close();

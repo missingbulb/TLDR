@@ -8,7 +8,7 @@ import { REFERENCE_NOW_MS } from "../../shared/reference-time.mjs";
 const DAY = 86_400_000;
 
 export default {
-  description: "the same row in the voted-by-me state (accent pill, count includes your vote)",
+  description: "the same rail in the voted-by-me state (accent button + count, count includes your vote)",
   tabUrl: "https://example.com/article",
   comments: [
     {

@@ -556,17 +556,20 @@ in CI catches a typo in the `chrome.*` glue); a real-Chrome e2e is a tracked fol
 
 ## 9. Upvoting
 
-Endorsing a note. Each saved comment carries an upvote control + count in the list; a signed-in user
-can cast one vote per comment and toggle it off. The **count rides the shared, CDN-cached public read**
-(so it's stale up to the ~60s TTL and identical for every viewer — an accepted trade-off, issue #22);
-the **viewer's own vote can't** ride that read (the cache key excludes `Authorization`), so it's shown
-optimistically and persisted client-side (`chrome.storage.local`). The voted/un-voted look is a `dom`
-image; the optimistic toggle + rollback are `behavior` gestures; the merge rule is a `logic` leaf; and
-the server enforcement (attributed, idempotent, no identity leak) sits alongside as `server` leaves.
+Endorsing a note. Each saved comment carries a **vote rail on its left** — the upvote button above the
+count (a larger font) — and a signed-in user can cast one vote per comment and toggle it off. The
+**count rides the shared, CDN-cached public read** (so it's stale up to the ~60s TTL and identical for
+every viewer — an accepted trade-off, issue #22); the **viewer's own vote can't** ride that read (the
+cache key excludes `Authorization`), so it's shown optimistically and persisted client-side
+(`chrome.storage.local`). One user can't upvote twice: the vote is a single keyed item cast under an
+`attribute_not_exists` condition, so a repeat is an idempotent no-op (leaf `9.7`). The voted/un-voted
+look is a `dom` image; the optimistic toggle + rollback are `behavior` gestures; the merge rule is a
+`logic` leaf; and the server enforcement (attributed, idempotent, no identity leak) sits alongside as
+`server` leaves.
 
-> The affordance distinguishes voted from un-voted by **accent colour + border** (a filled ▲ either
-> way — the bundled snapshot font has no outline triangle, and colour is not the only signal:
-> `aria-pressed` and the button title carry the state to assistive tech).
+> The affordance distinguishes voted from un-voted by **accent colour** on the button and the count (a
+> filled ▲ either way — the bundled snapshot font has no outline triangle, and colour is not the only
+> signal: the button's `aria-pressed` and its accessible name carry the state to assistive tech).
 
 <table>
 <tr>
@@ -577,8 +580,8 @@ the server enforcement (attributed, idempotent, no identity leak) sits alongside
 </td>
 <td valign="top">
 
-`9.1` A saved comment row renders an **upvote control with its count**, in the **un-voted** state (a
-muted outline pill: ▲ and a plain count, e.g. `3`).
+`9.1` A saved comment renders a **vote rail on its left** — the ▲ button above the count — in the
+**un-voted** state (muted), e.g. `3`.
 
 </td>
 </tr>
@@ -593,8 +596,8 @@ muted outline pill: ▲ and a plain count, e.g. `3`).
 </td>
 <td valign="top">
 
-`9.2` The same row in the **voted-by-me** state — an **accent-coloured** pill (accent border), the
-count including your vote.
+`9.2` The same rail in the **voted-by-me** state — an **accent-coloured** button and count, the count
+including your vote.
 
 </td>
 </tr>

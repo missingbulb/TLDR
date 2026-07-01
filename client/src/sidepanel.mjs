@@ -125,15 +125,16 @@ function render() {
         ? `${who} · posting…`
         : `${who} · ${timeAgo(c.createdAt)}`;
 
-    // A saved comment carries an upvote control beside its meta; a pending/failed optimistic note has
-    // no server commentId to vote on yet, so it keeps the bare meta line (its snapshot is unchanged).
+    // A saved comment gets a vote rail on its LEFT (the ▲ button above its count); a pending/failed
+    // optimistic note has no server commentId to vote on yet, so it keeps the bare body+meta layout.
     if (c.pending || c.failed) {
       li.append(body, meta);
     } else {
-      const footer = document.createElement('div');
-      footer.className = 'comment-footer';
-      footer.append(meta, renderVote(c));
-      li.append(body, footer);
+      li.classList.add('voteable');
+      const main = document.createElement('div');
+      main.className = 'comment-main';
+      main.append(body, meta);
+      li.append(renderVoteRail(c), main);
     }
     els.comments.append(li);
   }
@@ -145,32 +146,33 @@ function render() {
   }
 }
 
-// The per-comment upvote affordance: a ▲ + its count (0 included — the control is never missing).
-// Voted-by-me is shown by ACCENT colour + accent border (vs a muted outline when un-voted); the glyph
-// stays filled because the bundled snapshot font has no outline triangle, and colour alone isn't the
-// only signal — `aria-pressed` and the title carry the toggle state to assistive tech. Clicking
-// casts/removes the vote optimistically (onVote).
-function renderVote(c) {
+// The per-comment vote rail (left of the comment): the ▲ button on top, the count below in a larger
+// font (0 included — the control is never missing). Voted-by-me is shown by ACCENT colour on both the
+// button and the count (vs muted when un-voted); the glyph stays filled because the bundled snapshot
+// font has no outline triangle, and colour isn't the only signal — the button's `aria-pressed` and
+// its accessible name (which includes the count) carry the state to assistive tech, so the visually
+// larger count is aria-hidden to avoid a double read. Clicking casts/removes the vote (onVote).
+function renderVoteRail(c) {
   const count = c.voteCount ?? 0;
+  const rail = document.createElement('div');
+  rail.className = 'vote-rail';
+
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'vote' + (c.youVoted ? ' voted' : '');
   btn.setAttribute('aria-pressed', c.youVoted ? 'true' : 'false');
-  btn.setAttribute('aria-label', `Upvote (${count})`);
+  btn.setAttribute('aria-label', `${c.youVoted ? 'Remove your upvote' : 'Upvote'} (${count})`);
   btn.title = c.youVoted ? 'Remove your upvote' : 'Upvote';
-
-  const arrow = document.createElement('span');
-  arrow.className = 'vote-arrow';
-  arrow.setAttribute('aria-hidden', 'true');
-  arrow.textContent = '▲';
+  btn.textContent = '▲'; // the button's accessible name is the aria-label, not this glyph
 
   const num = document.createElement('span');
-  num.className = 'vote-count';
+  num.className = 'vote-count' + (c.youVoted ? ' voted' : '');
+  num.setAttribute('aria-hidden', 'true'); // the count already rides the button's accessible name
   num.textContent = String(count);
 
-  btn.append(arrow, num);
+  rail.append(btn, num);
   btn.addEventListener('click', () => onVote(c.commentId));
-  return btn;
+  return rail;
 }
 
 // --- refresh (read path) ----------------------------------------------------
