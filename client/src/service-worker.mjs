@@ -40,9 +40,16 @@ chrome.runtime.onConnect.addListener((port) => {
   });
 });
 
-// Fires only while the popup is cleared — i.e. a pane is open — so a click means "close the pane".
-// There's no close API, so ask the pane(s) to close themselves (the panel calls window.close()).
-chrome.action.onClicked.addListener(() => {
+// Fires only while the popup is cleared — i.e. we believe a pane is open — so a click means "close the
+// pane". There's no close API, so ask the pane(s) to close themselves (the panel calls window.close()).
+chrome.action.onClicked.addListener(async () => {
+  // Desync self-heal: the popup is persisted browser state but `panelPorts` is volatile, so an SW
+  // recycle can leave the popup cleared with no port to message. Rather than silently no-op (a stuck
+  // icon), restore the menu popup so the icon is usable again on the next click.
+  if (panelPorts.size === 0) {
+    await reflectPopup();
+    return;
+  }
   for (const port of panelPorts) {
     try {
       port.postMessage({ type: 'close' });

@@ -912,3 +912,53 @@ category** it stores the **default** (Chitchat) — the growable allowlist, not 
 </td>
 </tr>
 </table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![category-look-chitchat.10.10](dom/cases/category-look-chitchat.10.10.png) <!-- req-gallery:10.10 -->
+
+</td>
+<td valign="top">
+
+`10.10` The panel in **Chitchat** mode wears a third distinct look — **green** separators and a
+**"Post chit-chat"** composer — completing the per-category look set (Chitchat is also the default view).
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:10.11 -->
+
+</td>
+<td valign="top">
+
+`10.11` The **toolbar icon toggles** the pane: with the pane **closed** the icon opens the **category
+menu** (pick → open); with the pane **open** the icon **closes** it. _(The open/close round-trip in a
+real browser is the e2e follow-up `8.1`.)_
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🔧 _Logic leaf — verified by `logic/logic.test.mjs`._ <!-- req-gallery:10.12 -->
+
+</td>
+<td valign="top">
+
+`10.12` The comments pane makes **no mention of the current selection** — **no badge**, **no filter
+bar**, and the notes never name the category; it just shows the relevant comments (the category is
+conveyed only by look & copy).
+
+</td>
+</tr>
+</table>

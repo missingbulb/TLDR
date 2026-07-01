@@ -354,13 +354,23 @@ function persistMyVotes() {
 // SW clears the toolbar popup so a click toggles the pane closed (the SW messages us to window.close());
 // on disconnect the SW restores the category-menu popup. Reconnect if the SW recycles, so the toggle
 // keeps working for the pane's lifetime.
+
+// Set once this pane is actually going away (its own X, or our window.close). A port disconnect during
+// teardown must NOT be mistaken for an SW recycle — otherwise we'd spawn a phantom reconnect that
+// leaves the SW holding a port for a dead pane (and the popup wrongly cleared).
+let paneClosing = false;
+window.addEventListener('pagehide', () => {
+  paneClosing = true;
+});
+
 function connectToWorker() {
   const port = chrome.runtime.connect({ name: 'panel' });
   port.onMessage.addListener((msg) => {
     if (msg?.type === 'close') window.close();
   });
   port.onDisconnect.addListener(() => {
-    if (chrome.runtime?.id) connectToWorker(); // SW recycled, not the pane closing — re-announce
+    // Reconnect ONLY when the SW recycled (the pane is still up) — never while the pane itself closes.
+    if (!paneClosing && chrome.runtime?.id) connectToWorker();
   });
 }
 

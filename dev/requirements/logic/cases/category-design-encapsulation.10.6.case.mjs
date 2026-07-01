@@ -20,6 +20,7 @@ export default {
     const { designFor } = await import(pathToFileURL(path.join(CLIENT, "src", "categories", "registry.mjs")).href);
 
     const separators = new Set();
+    const accents = new Set();
     for (const { id } of CATEGORIES) {
       const cssPath = path.join(CLIENT, "src", "categories", id, `${id}.css`);
       assert.ok(fs.existsSync(cssPath), `category "${id}" has a scoped stylesheet ${id}.css`);
@@ -42,12 +43,16 @@ export default {
         }
         const sep = /--separator\s*:\s*([^;]+)/.exec(m[2]);
         if (sep) separators.add(sep[1].trim());
+        const accent = /--accent\s*:\s*([^;]+)/.exec(m[2]);
+        if (accent) accents.add(accent[1].trim());
       }
       assert.ok(scopedRules > 0, `${id}.css has at least one scoped rule`);
 
       const design = designFor(id);
       assert.ok(design.postLabel && design.placeholder, `category "${id}" carries composer copy`);
     }
+    // Separators + accents both differ across categories — the "separators + accent + copy" design scope.
     assert.equal(separators.size, CATEGORIES.length, "each category defines a DISTINCT separator colour");
+    assert.equal(accents.size, CATEGORIES.length, "each category defines a DISTINCT accent colour");
   },
 };
