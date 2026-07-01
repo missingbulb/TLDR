@@ -567,9 +567,10 @@ look is a `dom` image; the optimistic toggle + rollback are `behavior` gestures;
 `logic` leaf; and the server enforcement (attributed, idempotent, no identity leak) sits alongside as
 `server` leaves.
 
-> The affordance distinguishes voted from un-voted by **accent colour** on the button and the count (a
-> filled ▲ either way — the bundled snapshot font has no outline triangle, and colour is not the only
-> signal: the button's `aria-pressed` and its accessible name carry the state to assistive tech).
+> Voted-by-me is a **filled accent button** (vs a muted outline when un-voted) with an accent count —
+> unmistakably "you've already voted", and a non-colour cue (filled vs outline), not colour alone. You
+> can't stack a second vote: clicking a voted control **removes** your vote (its title says so and its
+> `aria-pressed`/accessible name carry the state to assistive tech).
 
 <table>
 <tr>
@@ -596,8 +597,8 @@ look is a `dom` image; the optimistic toggle + rollback are `behavior` gestures;
 </td>
 <td valign="top">
 
-`9.2` The same rail in the **voted-by-me** state — an **accent-coloured** button and count, the count
-including your vote.
+`9.2` The same rail in the **voted-by-me** state — a **filled accent** button and an accent count (the
+count including your vote), so it's clear you've already voted.
 
 </td>
 </tr>
@@ -727,6 +728,23 @@ the server's, like posting), while reads stay public.
 
 `9.10` The public read projection **returns `voteCount`** and **never leaks per-voter identity** — the
 count is shared, but who voted is not.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:9.11 -->
+
+</td>
+<td valign="top">
+
+`9.11` A comment you **already upvoted in a previous session** (from `chrome.storage.local`) shows as
+**voted on load**, and clicking it **removes your vote** (a `DELETE`, never a second cast) — you can
+**unvote**, but you can't stack a second vote.
 
 </td>
 </tr>

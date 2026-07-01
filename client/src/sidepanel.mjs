@@ -159,14 +159,14 @@ function renderVoteRail(c) {
 
   const btn = document.createElement('button');
   btn.type = 'button';
-  btn.className = 'vote' + (c.youVoted ? ' voted' : '');
+  btn.className = c.youVoted ? 'vote vote-voted' : 'vote vote-idle';
   btn.setAttribute('aria-pressed', c.youVoted ? 'true' : 'false');
   btn.setAttribute('aria-label', `${c.youVoted ? 'Remove your upvote' : 'Upvote'} (${count})`);
   btn.title = c.youVoted ? 'Remove your upvote' : 'Upvote';
   btn.textContent = '▲'; // the button's accessible name is the aria-label, not this glyph
 
   const num = document.createElement('span');
-  num.className = 'vote-count' + (c.youVoted ? ' voted' : '');
+  num.className = c.youVoted ? 'vote-count vote-count-voted' : 'vote-count vote-count-idle';
   num.setAttribute('aria-hidden', 'true'); // the count already rides the button's accessible name
   num.textContent = String(count);
 
