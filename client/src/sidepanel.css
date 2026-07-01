@@ -3,6 +3,10 @@
   --fg: #1a1a1a;
   --muted: #6b7280;
   --border: #e5e7eb;
+  /* The comment SEPARATOR colour — a design token each category overrides in its own scoped
+     stylesheet (categories/<id>/<id>.css). Defaults to the neutral border for a category with no
+     override (issue #25). */
+  --separator: #e5e7eb;
   --accent: #2563eb;
   --pending: #9ca3af;
   --error: #dc2626;
@@ -12,6 +16,7 @@
     --fg: #e5e7eb;
     --muted: #9ca3af;
     --border: #374151;
+    --separator: #374151;
   }
 }
 
@@ -30,25 +35,12 @@ body {
 
 .status { color: var(--muted); font-size: 13px; padding: 16px 4px; text-align: center; }
 
-/* The category filter bar (issue #25): a segmented control of tabs (All + one per category). Like the
-   vote button, the selected/idle looks are MUTUALLY EXCLUSIVE state classes (`.filter-tab-active` /
-   `.filter-tab-idle`), NOT a `.active` override of a base rule — the snapshot renderer folds matched
-   rules in a fixed order in which a same-property override wouldn't win, so base `.filter-tab` carries
-   only the shared layout and each state class carries its own background/border/colour in full. */
-.filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-.filter-tab { display: flex; align-items: center; justify-content: center; border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 12px; line-height: 1; cursor: pointer; }
-.filter-tab-idle { background: transparent; border: 1px solid var(--border); color: var(--muted); }
-.filter-tab-active { background: var(--accent); border: 1px solid var(--accent); color: #fff; }
-
 .comments { list-style: none; margin: 0; padding: 0; }
-.comment { padding: 10px 4px; border-bottom: 1px solid var(--border); }
+/* The comment separator uses the per-category --separator token (issue #25), so the line between
+   notes takes on the active category's colour. */
+.comment { padding: 10px 4px; border-bottom: 1px solid var(--separator); }
 .comment-body { margin: 0 0 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
-/* The meta line carries the category badge then the "<author> · <time>" text, on one row. */
-.comment-meta { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-/* The per-note category badge (issue #25): a small muted pill leading the meta line. The label is
-   shown verbatim (TLDR / Spoiler / Chitchat) — no text-transform, so the rendered snapshot matches the
-   real browser rather than depending on a CSS feature satori may not apply. */
-.cat-badge { font-size: 11px; padding: 1px 7px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); white-space: nowrap; }
+.comment-meta { font-size: 12px; color: var(--muted); }
 .comment.pending { opacity: 0.6; }
 .comment.failed .comment-meta { color: var(--error); }
 
@@ -71,11 +63,6 @@ body {
 .composer { margin-top: 12px; }
 .body { width: 100%; resize: vertical; font: inherit; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: inherit; }
 .composer-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 8px; }
-/* The composer category picker (issue #25): a "Category" label + a select, sitting at the left of the
-   composer row (the error sits between it and Post; Post stays flush right via space-between). */
-.category-field { display: flex; align-items: center; gap: 6px; }
-.category-label { font-size: 12px; color: var(--muted); }
-.category-select { font: inherit; font-size: 12px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: inherit; }
 .composer-error { color: var(--error); font-size: 12px; }
 .post { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 7px 16px; font: inherit; cursor: pointer; }
 .post:disabled { opacity: 0.5; cursor: default; }

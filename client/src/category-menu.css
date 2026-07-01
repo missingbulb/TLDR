@@ -1,0 +1,38 @@
+:root {
+  color-scheme: light dark;
+  --fg: #1a1a1a;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #e5e7eb;
+    --muted: #9ca3af;
+    --border: #374151;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font: 14px/1.5 system-ui, -apple-system, sans-serif;
+  color: var(--fg);
+  margin: 0;
+  padding: 8px;
+  min-width: 180px;
+}
+
+.menu-title { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 4px 6px 6px; }
+.menu { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}

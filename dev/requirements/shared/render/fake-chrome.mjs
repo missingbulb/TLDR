@@ -55,33 +55,51 @@ function mintIdToken(nonce, nowMs) {
  * @returns a `chrome` object plus `calls`, capturing what the UI asked the browser to do.
  */
 export function makeFakeChrome({ tabUrl, denylist = null, authFails = false, nowMs = Date.now(), localSeed = null }) {
-  const session = {}; // chrome.storage.session token cache (in-memory)
-  const local = { ...(localSeed ?? {}) }; // chrome.storage.local — login_hint email + the own-vote set
-  const calls = { syncSet: [], launchWebAuthFlow: 0 };
+  // In-memory stores per area, seeded from the case (the synced denylist; the local login_hint email /
+  // own-vote set / current category). set() emits chrome.storage.onChanged like the real API, so a case
+  // can drive a live reaction (e.g. the toolbar menu switching the current category, issue #25).
+  const stores = {
+    sync: denylist != null ? { userDenylist: denylist } : {},
+    session: {}, // token cache
+    local: { ...(localSeed ?? {}) },
+  };
+  const changeListeners = [];
+  const calls = { syncSet: [], launchWebAuthFlow: 0, sidePanelOpen: 0 };
+
+  function areaApi(name) {
+    const store = stores[name];
+    return {
+      get: async (key) => {
+        if (key == null) return { ...store };
+        const keys = Array.isArray(key) ? key : typeof key === "object" ? Object.keys(key) : [key];
+        const out = {};
+        for (const k of keys) if (k in store) out[k] = store[k];
+        return out;
+      },
+      set: async (obj) => {
+        if (name === "sync") calls.syncSet.push(obj);
+        const changes = {};
+        for (const [k, v] of Object.entries(obj)) {
+          changes[k] = { oldValue: store[k], newValue: v };
+          store[k] = v;
+        }
+        for (const fn of changeListeners) fn(changes, name);
+      },
+    };
+  }
 
   const chrome = {
     tabs: {
-      query: async () => [{ url: tabUrl, index: 0, active: true, id: 1 }],
+      query: async () => [{ url: tabUrl, index: 0, active: true, id: 1, windowId: 1 }],
       onActivated: NOOP_EVENT,
       onUpdated: NOOP_EVENT,
     },
     webNavigation: { onHistoryStateUpdated: NOOP_EVENT },
     storage: {
-      sync: {
-        get: async (key) => (denylist != null ? { [key]: denylist } : {}),
-        set: async (obj) => {
-          calls.syncSet.push(obj);
-        },
-      },
-      session: {
-        get: async (key) => (key in session ? { [key]: session[key] } : {}),
-        set: async (obj) => Object.assign(session, obj),
-      },
-      local: {
-        get: async (key) => (key in local ? { [key]: local[key] } : {}),
-        set: async (obj) => Object.assign(local, obj),
-      },
-      onChanged: NOOP_EVENT,
+      sync: areaApi("sync"),
+      session: areaApi("session"),
+      local: areaApi("local"),
+      onChanged: { addListener: (fn) => changeListeners.push(fn) },
     },
     identity: {
       getRedirectURL: () => "https://extension-id.chromiumapp.org/",
@@ -94,8 +112,17 @@ export function makeFakeChrome({ tabUrl, denylist = null, authFails = false, now
         return `https://extension-id.chromiumapp.org/#id_token=${mintIdToken(nonce, nowMs)}&state=${state}`;
       },
     },
-    sidePanel: { setPanelBehavior: async () => {} },
-    runtime: { onInstalled: NOOP_EVENT, onStartup: NOOP_EVENT, getManifest: () => MANIFEST },
+    // The category menu opens the side panel (issue #25); capture the call. setPanelBehavior remains a
+    // no-op the SW may still call.
+    sidePanel: { setPanelBehavior: async () => {}, open: async () => { calls.sidePanelOpen += 1; } },
+    runtime: {
+      onInstalled: NOOP_EVENT,
+      onStartup: NOOP_EVENT,
+      getManifest: () => MANIFEST,
+      // The side panel opens a Port to the SW so the toolbar toggle can close it (issue #25). A no-op
+      // port here — the pane/SW handshake itself is chrome glue covered by the real-browser e2e (§8.1).
+      connect: () => ({ onMessage: NOOP_EVENT, onDisconnect: NOOP_EVENT, postMessage() {}, disconnect() {} }),
+    },
   };
 
   return { chrome, calls };

@@ -370,28 +370,44 @@ Every request also carries **`X-Client-Version`** — the extension's manifest `
 
 ### 9.3 Categories (issue #25)
 
-Every comment is tagged with one **category** from a **growable curated list** — seeded **TLDR ·
-Spoiler · Chitchat**. Like upvoting, it stays within every deliberate constraint (no GSI, frozen key
-schema, one CDN-cached read per page):
+A comment's **category** is a **top-level MODE**, not a per-note tag in the UI (🔧 owner decision). The
+reader picks the **current category** from the **toolbar icon**, and the panel shows **only that
+category's notes**, wearing that category's look & feel and composer copy — no badge, no filter bar. The
+seed set is a **growable curated list** — **TLDR · Spoiler · Chitchat**. It stays within every
+deliberate constraint (no GSI, frozen key schema, one CDN-cached read per page):
 
-- **Single source of truth.** The taxonomy lives once in `shared/categories.mjs` (the ordered list +
-  the read-time default + the validation/label helpers), vendored byte-identically into `server/` and
-  `client/` with the same drift guard as the URL normalizer (`test/shared-drift.test.mjs`). The server
-  validates against it; the client builds its composer picker, filter bar, and per-note badge from it —
-  so the two sides can never disagree on what categories exist.
-- **Growable curated allowlist, not a frozen enum (🔧 owner decision).** Users pick from the known
-  list; they can't invent categories. Validation is allowlist membership (`isValidCategory`), so the
-  set grows by **appending one entry** to the shared constant + a re-sync — no schema change, no
-  near-duplicate sprawl. An unknown category on write is a client bug → `400`.
+- **Single source of truth (taxonomy) + per-category design (presentation).** The *taxonomy* lives once
+  in `shared/categories.mjs` (the ordered ids + the read-time default + validation/label helpers),
+  vendored byte-identically into `server/` and `client/` with the same drift guard as the URL normalizer
+  (`test/shared-drift.test.mjs`); the server validates against it and the client's menu/view read it.
+  Each category's *design* is a self-contained folder `client/src/categories/<id>/`: a **scoped
+  stylesheet** (`<id>.css`, its colour tokens under `body[data-category="<id>"]`, so it bites only when
+  active and a restyle can't touch another) + a **copy descriptor** (`design.mjs` — the "Post tl;dr"
+  label, the placeholder). Strictly presentation — no behavior; the panel drives every category
+  identically.
+- **Growable curated allowlist, not a frozen enum (🔧 owner decision).** Users pick from the known list;
+  they can't invent categories. Validation is allowlist membership (`isValidCategory`), so the set grows
+  by **appending one entry** to the shared constant (+ a re-sync, + a matching design folder) — no schema
+  change. An unknown category on write is a client bug → `400`.
 - **Additive, backward-compatible field.** `category` is an **optional** request field with a
   **server-side default** (§9.1): an older client that omits it keeps working. It's stored as a plain
   item attribute and added to the allowlist projection as `category: item.category ?? DEFAULT_CATEGORY`
   — so the read is safe over **pre-existing rows** (defaulted to `chitchat` at read time) with **zero
   migration/backfill**. It's the **second** field added under the additive-only policy (after
-  `voteCount`).
-- **Filtering is client-side — the cache is untouched.** The whole page (≤50 notes) already arrives in
-  one public, CDN-cached `Query`; the filter bar narrows the already-fetched notes in `render()`, so
-  switching tabs **never refetches** and a `?category=` server param never multiplies the cache key.
+  `voteCount`). A note is posted under the **current** category; the default view (before one is chosen)
+  equals `DEFAULT_CATEGORY` (`chitchat`), so untagged/legacy notes stay visible by default.
+- **The current-category view is client-side — the cache is untouched.** The whole page (≤50 notes)
+  already arrives in one public, CDN-cached `Query`; `render()` shows only the current category's notes,
+  and switching category (a `chrome.storage.local` write the panel watches) **re-renders without a
+  refetch** — a `?category=` server param never multiplies the cache key.
+- **Toolbar-icon toggle (🔧 owner behaviour).** Pane closed → the icon opens a category **menu** popup
+  (`src/category-menu.html`) that sets the current category and opens the pane; pane open → the icon
+  **closes** the pane. MV3 has no is-open/close API and a popup suppresses `onClicked`, so the service
+  worker tracks pane-open via a Port the panel opens and **swaps the action popup** (menu when closed /
+  cleared when open, closing via a Port message). Opening the pane from the popup needs
+  `sidePanel.open()` (Chrome **116+**, so `minimum_chrome_version` is bumped 114 → 116). Best-effort and
+  window-agnostic (the common case is one window); the pane↔SW handshake is chrome glue covered by the
+  real-browser e2e (§8.1 / §10).
 - **Ranking (the top note per category) is a follow-up.** Per-category ranking by upvotes — the leading
   note per category the hover preview (#26) surfaces — is layered on the upvoting substrate (§9.2) and
   is **not built here**; it's a thin client-side computation over the already-fetched page when it lands.

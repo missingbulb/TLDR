@@ -98,18 +98,61 @@ const VARS = (() => {
   return map;
 })();
 
-// Replace var(--name) / var(--name, fallback) with the resolved value (or the fallback).
-function resolveVars(value) {
+// Replace var(--name) / var(--name, fallback) with the resolved value (or the fallback), against the
+// given variable map (the base :root vars, optionally overlaid with the active category's tokens).
+function resolveVars(value, vars = VARS) {
   return value.replace(/var\(\s*(--[\w-]+)\s*(?:,\s*([^)]+))?\)/g, (_, name, fallback) =>
-    (VARS[name] ?? (fallback ? fallback.trim() : "")).trim()
+    (vars[name] ?? (fallback ? fallback.trim() : "")).trim()
   );
+}
+
+// Per-category design tokens (issue #25): each client/src/categories/<id>/<id>.css scopes its colour
+// tokens to `body[data-category="<id>"] { --separator: …; --accent: … }`. satori has no CSS engine and
+// resolves vars only from :root, so read those per-category token blocks here and, at render time,
+// overlay the ACTIVE category's tokens (from body[data-category]) onto the base vars — so a snapshot
+// shows the category's separators/accent exactly as the real browser cascades them. (Category CSS is
+// tokens-only by contract — enforced by the design-encapsulation requirement leaf — so nothing else
+// needs modelling.)
+const CATEGORIES_DIR = path.join(CLIENT, "src", "categories");
+const CATEGORY_VARS = (() => {
+  const out = {};
+  let entries;
+  try {
+    entries = fs.readdirSync(CATEGORIES_DIR, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const ent of entries) {
+    if (!ent.isDirectory()) continue;
+    const cssPath = path.join(CATEGORIES_DIR, ent.name, `${ent.name}.css`);
+    if (!fs.existsSync(cssPath)) continue;
+    for (const { selector, body } of parseCssRules(stripAtRulesAndComments(fs.readFileSync(cssPath, "utf8")))) {
+      const m = /data-category="([^"]+)"/.exec(selector);
+      if (!m) continue;
+      const vars = (out[m[1]] ||= {});
+      for (const decl of body.split(";")) {
+        const i = decl.indexOf(":");
+        if (i < 0) continue;
+        const prop = decl.slice(0, i).trim();
+        if (prop.startsWith("--")) vars[prop] = decl.slice(i + 1).trim();
+      }
+    }
+  }
+  return out;
+})();
+
+// The base vars overlaid with the active category's tokens (body[data-category] on the rendered DOM).
+function effectiveVars(bodyEl) {
+  const cat = bodyEl?.dataset?.category;
+  return cat && CATEGORY_VARS[cat] ? { ...VARS, ...CATEGORY_VARS[cat] } : VARS;
 }
 
 const BODY_RULE = RULES.find((r) => r.selector === "body");
 
-// Fold sidepanel.css onto the panel's <body> subtree as inline styles (var()s resolved). The
-// element's own inline style is appended last so a case's action (e.g. an inline override) wins.
-function inlineCss(bodyEl) {
+// Fold sidepanel.css onto the panel's <body> subtree as inline styles (var()s resolved against the
+// effective vars — base :root overlaid with the active category's tokens). The element's own inline
+// style is appended last so a case's action (e.g. an inline override) wins.
+function inlineCss(bodyEl, vars) {
   for (const { selector, body } of RULES) {
     if (selector === "body" || selector === ":root") continue;
     let matched;
@@ -118,9 +161,9 @@ function inlineCss(bodyEl) {
     } catch {
       continue; // a selector jsdom can't evaluate — skip
     }
-    for (const el of matched) el.setAttribute("style", `${resolveVars(body)};${el.getAttribute("style") || ""}`);
+    for (const el of matched) el.setAttribute("style", `${resolveVars(body, vars)};${el.getAttribute("style") || ""}`);
   }
-  if (BODY_RULE) bodyEl.setAttribute("style", `${resolveVars(BODY_RULE.body)};${bodyEl.getAttribute("style") || ""}`);
+  if (BODY_RULE) bodyEl.setAttribute("style", `${resolveVars(BODY_RULE.body, vars)};${bodyEl.getAttribute("style") || ""}`);
 }
 
 // --- inline-style string -> satori style object -------------------------------------------------
@@ -207,7 +250,9 @@ function prepareBody(session) {
   // via the `hidden` attribute). `disabled` elements, by contrast, are still painted (greyed), so
   // they stay.
   for (const el of body.querySelectorAll("[hidden]")) el.remove();
-  inlineCss(body);
+  // Resolve var()s against the base :root tokens overlaid with the active category's tokens, so a
+  // page rendered under body[data-category="spoiler"] shows spoiler's separators/accent (issue #25).
+  inlineCss(body, effectiveVars(body));
   // A textarea's text is its `.value` property (and an empty one shows its placeholder) — neither
   // is a child text node, so satori would draw it empty. Project what the user sees: the live value
   // (white-space preserved — e.g. the options page's seeded denylist, one host per line, 6.1), or
@@ -220,16 +265,6 @@ function prepareBody(session) {
       ta.textContent = ta.getAttribute("placeholder");
       ta.style.color = "#9ca3af"; // a muted placeholder tone (Chrome paints the prompt greyed)
     }
-  }
-  // A <select> shows only its SELECTED option (Chrome paints the chosen value plus a dropdown caret);
-  // its <option> children are not visible text nodes, so satori — which has no form controls — would
-  // otherwise stack every option. Project the selected option's label + a caret and drop the option
-  // children, mirroring the textarea projection above (the composer's category picker, issue #25).
-  for (const sel of body.querySelectorAll("select")) {
-    const opt = sel.options[sel.selectedIndex] || sel.options[0];
-    // The caret is U+25BC (▼) — the down counterpart of the vote glyph U+25B2 (▲), which the bundled
-    // Liberation Sans renders; the small-triangle U+25BE (▾) is NOT in the font (renders as tofu).
-    sel.textContent = `${opt ? opt.textContent : ""} ▼`;
   }
   return body;
 }

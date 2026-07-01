@@ -5,7 +5,8 @@
 // only a real reload/navigation refetches.
 
 import { normalizePageUrl } from '../vendor/normalizeUrl.GENERATED.mjs';
-import { CATEGORIES, DEFAULT_CATEGORY, categoryLabel } from '../vendor/categories.GENERATED.mjs';
+import { DEFAULT_CATEGORY, isValidCategory } from '../vendor/categories.GENERATED.mjs';
+import { designFor } from './categories/registry.mjs';
 import { evaluatePage, DEFAULT_USER_DENYLIST } from './denylist.mjs';
 import { getComments, postComment, castVote, removeVote } from './api.mjs';
 import { getIdToken } from './auth.mjs';
@@ -25,35 +26,31 @@ const CLIENT_VERSION = chrome.runtime.getManifest().version;
 // (this isn't a live thread) so this is generous; eviction is oldest-first (Map insertion order).
 const MAX_CACHE_PAGES = 100;
 
-// The category filter bar: an "All" tab (no filter) followed by one tab per known category, in the
-// shared list's order (issue #25). Filtering is purely client-side over the already-fetched ≤50 notes,
-// so switching tabs never refetches and never fragments the single CDN-cached read per page.
-const FILTERS = [{ id: 'all', label: 'All' }, ...CATEGORIES];
-// The composer's pre-selected category — the FIRST category (TLDR, the product's namesake and primary
-// use), so a user who doesn't touch the picker posts a TLDR. This is distinct from DEFAULT_CATEGORY,
-// which is the READ-TIME default a legacy/untagged note is shown under (chitchat).
-const COMPOSER_DEFAULT_CATEGORY = CATEGORIES[0].id;
+// The CURRENT category is a top-level mode (issue #25), chosen from the toolbar icon and stored here.
+// The panel shows ONLY this category's notes and wears its look & feel; it makes no other mention of
+// the selection (no badge, no filter bar). Stored in chrome.storage.local (a per-device mode).
+const CURRENT_CATEGORY_STORAGE_KEY = 'currentCategory';
+// The category the panel shows before one has ever been chosen. It equals DEFAULT_CATEGORY (the
+// read-time default an untagged/legacy note counts under) ON PURPOSE: the default view shows the
+// catch-all category, so notes written before categories existed stay visible by default rather than
+// hiding behind a category switch. (A user picks a specific category from the toolbar icon.)
+const DEFAULT_VIEW_CATEGORY = DEFAULT_CATEGORY;
 
 const els = {
   page: document.getElementById('page'),
-  filters: document.getElementById('filters'),
   status: document.getElementById('status'),
   comments: document.getElementById('comments'),
   composer: document.getElementById('composer'),
   body: document.getElementById('body'),
-  category: document.getElementById('category'),
   post: document.getElementById('post'),
   error: document.getElementById('composer-error'),
 };
-
-// The filter tab buttons, built once from FILTERS in init(); render() re-styles them per activeFilter.
-let filterTabs = [];
 
 const state = {
   pageId: null, // normalized URL currently shown; also the dedupe key for refreshes
   serverComments: [], // live mirror of the active page's bucket (what render() draws)
   localComments: [], // optimistic + just-confirmed, not yet guaranteed in the CDN-cached read
-  activeFilter: 'all', // the selected category filter ('all' or a category id) — a pure render concern
+  currentCategory: DEFAULT_VIEW_CATEGORY, // the active top-level category (the only notes shown)
   userDenylist: DEFAULT_USER_DENYLIST,
   myVotes: new Set(), // commentIds the viewer has upvoted (the durable source of `youVoted`)
   // Per-page comment cache, kept for the panel's lifetime (≈ "until the tab is closed"). Comments
@@ -103,7 +100,6 @@ function setStatus(message) {
   els.status.textContent = message;
   els.status.hidden = !message;
   els.composer.hidden = true;
-  els.filters.hidden = true; // no notes surface on a non-commentable page, so no filter bar either
 }
 
 async function getActiveTabUrl() {
@@ -123,14 +119,12 @@ function timeAgo(createdAt) {
 }
 
 function render() {
-  syncFilterTabs();
-  // Filter is a pure render concern over the already-fetched notes — no refetch, so the single
-  // CDN-cached read per page is preserved. An untagged note is treated as DEFAULT_CATEGORY, matching
-  // its badge. (issue #25)
-  let comments = mergeComments(state.serverComments, state.localComments);
-  if (state.activeFilter !== 'all') {
-    comments = comments.filter((c) => (c.category ?? DEFAULT_CATEGORY) === state.activeFilter);
-  }
+  // Show ONLY the current category's notes — a pure client-side filter over the already-fetched notes
+  // (no refetch, so the single CDN-cached read per page is preserved). An untagged/legacy note counts
+  // under DEFAULT_CATEGORY. The panel makes no other mention of the selection (issue #25). (§4.4)
+  const comments = mergeComments(state.serverComments, state.localComments).filter(
+    (c) => (c.category ?? DEFAULT_CATEGORY) === state.currentCategory,
+  );
   els.comments.replaceChildren();
   for (const c of comments) {
     const li = document.createElement('li');
@@ -143,19 +137,11 @@ function render() {
     const meta = document.createElement('div');
     meta.className = 'comment-meta';
     const who = c.authorName || 'Someone';
-    // The category badge leads the meta line (issue #25). An absent category renders under the
-    // default label (categoryLabel handles it), so a note never shows a blank badge.
-    const badge = document.createElement('span');
-    badge.className = 'cat-badge';
-    badge.textContent = categoryLabel(c.category);
-    const metaText = document.createElement('span');
-    metaText.className = 'meta-text';
-    metaText.textContent = c.failed
+    meta.textContent = c.failed
       ? `${who} · failed to post`
       : c.pending
         ? `${who} · posting…`
         : `${who} · ${timeAgo(c.createdAt)}`;
-    meta.append(badge, metaText);
 
     // A saved comment gets a vote rail on its LEFT (the ▲ button above its count); a pending/failed
     // optimistic note has no server commentId to vote on yet, so it keeps the bare body+meta layout.
@@ -171,59 +157,22 @@ function render() {
     els.comments.append(li);
   }
   if (comments.length === 0 && !els.composer.hidden) {
-    // Distinguish "no notes at all" from "no notes in this category" so an active filter that matches
-    // nothing explains itself instead of looking like a blank/broken panel. (issue #25)
-    els.status.textContent =
-      state.activeFilter === 'all'
-        ? 'No notes yet — be the first.'
-        : `No ${categoryLabel(state.activeFilter)} notes yet.`;
+    els.status.textContent = 'No notes yet — be the first.';
     els.status.hidden = false;
   } else if (!els.composer.hidden) {
     els.status.hidden = true;
   }
 }
 
-// Build the filter bar once (an "All" tab + one per category). Clicking a tab sets the active filter
-// and re-renders from the already-fetched notes — never a refetch. render() owns the active/idle
-// styling via syncFilterTabs (below), so the click handler only flips state.
-function buildFilterBar() {
-  els.filters.replaceChildren();
-  filterTabs = FILTERS.map(({ id, label }) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.dataset.filter = id;
-    btn.textContent = label;
-    btn.addEventListener('click', () => {
-      if (state.activeFilter === id) return;
-      state.activeFilter = id;
-      render();
-    });
-    els.filters.append(btn);
-    return btn;
-  });
-}
-
-// Re-style the filter tabs for the current activeFilter. The selected tab is a filled accent (a
-// non-colour cue too: filled vs outline) and carries aria-pressed for assistive tech — the same
-// mutually-exclusive state-class pattern as the vote button (idle XOR active, no override precedence).
-function syncFilterTabs() {
-  for (const btn of filterTabs) {
-    const active = btn.dataset.filter === state.activeFilter;
-    btn.className = active ? 'filter-tab filter-tab-active' : 'filter-tab filter-tab-idle';
-    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-  }
-}
-
-// Fill the composer's category picker from the shared list, pre-selecting the composer default (TLDR).
-function buildComposerCategories() {
-  els.category.replaceChildren();
-  for (const { id, label } of CATEGORIES) {
-    const opt = document.createElement('option');
-    opt.value = id;
-    opt.textContent = label;
-    els.category.append(opt);
-  }
-  els.category.value = COMPOSER_DEFAULT_CATEGORY;
+// Wear the current category's look & feel (issue #25): tag <body> with its id (so its scoped
+// stylesheet's colour tokens bite) and apply its composer copy (post button + placeholder). Strictly
+// presentation, read from the category's design descriptor — the panel BEHAVES identically for every
+// category; only the look/copy differ.
+function applyCategoryDesign() {
+  const design = designFor(state.currentCategory);
+  document.body.dataset.category = state.currentCategory;
+  els.post.textContent = design.postLabel;
+  els.body.placeholder = design.placeholder;
 }
 
 // The per-comment vote rail (left of the comment): the ▲ button on top, the count below in a larger
@@ -284,7 +233,6 @@ async function refresh({ useCache = false } = {}) {
   els.page.textContent = pageId;
   els.page.title = pageId;
   els.composer.hidden = false;
-  els.filters.hidden = false;
   els.status.hidden = true;
 
   // Show whatever we already have for this page (cached comments, or an empty bucket).
@@ -330,7 +278,7 @@ async function onSubmit(event) {
   if (!state.pageId) return;
 
   const pageId = state.pageId;
-  const category = els.category.value; // the composer-selected category (issue #25)
+  const category = state.currentCategory; // a note is posted under the active top-level category (issue #25)
   // Mutate the page's bucket (not just the live view) so the optimistic comment survives a tab
   // switch away and back, and so it never leaks onto another tab's view.
   const bucket = bucketFor(pageId);
@@ -402,6 +350,20 @@ function persistMyVotes() {
 
 // --- wiring -----------------------------------------------------------------
 
+// Announce "the pane is open" to the service worker via a Port (issue #25): while it's connected the
+// SW clears the toolbar popup so a click toggles the pane closed (the SW messages us to window.close());
+// on disconnect the SW restores the category-menu popup. Reconnect if the SW recycles, so the toggle
+// keeps working for the pane's lifetime.
+function connectToWorker() {
+  const port = chrome.runtime.connect({ name: 'panel' });
+  port.onMessage.addListener((msg) => {
+    if (msg?.type === 'close') window.close();
+  });
+  port.onDisconnect.addListener(() => {
+    if (chrome.runtime?.id) connectToWorker(); // SW recycled, not the pane closing — re-announce
+  });
+}
+
 async function init() {
   const stored = await chrome.storage.sync.get(DENYLIST_STORAGE_KEY);
   if (Array.isArray(stored[DENYLIST_STORAGE_KEY])) state.userDenylist = stored[DENYLIST_STORAGE_KEY];
@@ -410,9 +372,15 @@ async function init() {
   const storedVotes = await chrome.storage.local.get(MY_VOTES_STORAGE_KEY);
   if (Array.isArray(storedVotes[MY_VOTES_STORAGE_KEY])) state.myVotes = new Set(storedVotes[MY_VOTES_STORAGE_KEY]);
 
-  // Build the category controls from the shared list before the first render (issue #25).
-  buildFilterBar();
-  buildComposerCategories();
+  // Load the current top-level category (chosen from the toolbar icon) and wear its design before the
+  // first render (issue #25). An unknown/absent value falls back to the default view category.
+  const storedCat = await chrome.storage.local.get(CURRENT_CATEGORY_STORAGE_KEY);
+  if (isValidCategory(storedCat[CURRENT_CATEGORY_STORAGE_KEY])) {
+    state.currentCategory = storedCat[CURRENT_CATEGORY_STORAGE_KEY];
+  }
+  applyCategoryDesign();
+
+  connectToWorker(); // let the toolbar icon toggle this pane closed (issue #25)
 
   els.composer.addEventListener('submit', onSubmit);
 
@@ -429,6 +397,16 @@ async function init() {
     if (area === 'sync' && changes[DENYLIST_STORAGE_KEY]) {
       state.userDenylist = changes[DENYLIST_STORAGE_KEY].newValue ?? DEFAULT_USER_DENYLIST;
       debouncedRefreshForce();
+    }
+    // The toolbar icon menu changed the current category while the panel is open: switch the view to
+    // it — re-style + re-filter the already-fetched notes, no refetch (issue #25).
+    if (area === 'local' && changes[CURRENT_CATEGORY_STORAGE_KEY]) {
+      const next = changes[CURRENT_CATEGORY_STORAGE_KEY].newValue;
+      if (isValidCategory(next) && next !== state.currentCategory) {
+        state.currentCategory = next;
+        applyCategoryDesign();
+        render();
+      }
     }
   });
 

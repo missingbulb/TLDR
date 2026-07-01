@@ -1,0 +1,7 @@
+/* TLDR category look & feel (issue #25) — DESIGN ONLY, scoped to body[data-category="tldr"] so it
+   bites only while TLDR is the active category and can NEVER affect another category. Overrides the
+   panel's design tokens; the base sidepanel.css consumes them (var(--separator), var(--accent)). */
+body[data-category="tldr"] {
+  --separator: #3b82f6; /* blue comment separators */
+  --accent: #2563eb; /* blue Post button / accents */
+}

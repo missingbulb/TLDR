@@ -3,7 +3,7 @@
   "name": "TLDR — community notes",
   "version": "0.2.0",
   "description": "Read and post community tl;dr notes attached to any web page.",
-  "minimum_chrome_version": "114",
+  "minimum_chrome_version": "116",
   "permissions": [
     "identity",
     "sidePanel",
@@ -19,7 +19,8 @@
     "default_path": "src/sidepanel.html"
   },
   "action": {
-    "default_title": "Open TLDR notes"
+    "default_title": "Open TLDR notes",
+    "default_popup": "src/category-menu.html"
   },
   "options_ui": {
     "page": "src/options.html",
