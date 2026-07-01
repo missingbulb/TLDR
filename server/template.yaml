@@ -152,13 +152,34 @@ Resources:
             Method: GET
             Path: /comments
             # No Auth => public read.
+        CastVote:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CommentsApi
+            Method: POST
+            Path: /comments/{commentId}/vote
+            Auth:
+              Authorizer: GoogleJwt
+        RemoveVote:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CommentsApi
+            Method: DELETE
+            Path: /comments/{commentId}/vote
+            Auth:
+              Authorizer: GoogleJwt
       Policies:
         - Statement:
             - Effect: Allow
+              # Voting writes two items in one TransactWriteItems (the vote item + the comment's
+              # voteCount); a toggle-off deletes the vote item. DynamoDB authorizes a transaction by
+              # its UNDERLYING per-item actions (there is no dynamodb:TransactWriteItems action), so
+              # PutItem/UpdateItem/DeleteItem together cover both votes and posts. (issue #22)
               Action:
                 - dynamodb:PutItem
                 - dynamodb:Query
                 - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
               Resource: !GetAtt CommentsTable.Arn
     Metadata:
       BuildMethod: esbuild

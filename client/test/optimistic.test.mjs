@@ -5,6 +5,7 @@ import {
   mergeComments,
   reconcileSuccess,
   markFailed,
+  applyVoteToggle,
 } from '../src/optimistic.mjs';
 
 test('makeOptimisticComment marks the entry pending under its temp id', () => {
@@ -43,4 +44,30 @@ test('markFailed flags the temp entry for a retry affordance', () => {
   const next = markFailed(local, 'temp-1');
   assert.equal(next[0].failed, true);
   assert.equal(next[0].pending, false);
+});
+
+test('mergeComments keeps server voteCount authoritative but preserves the local youVoted (server cannot know yours)', () => {
+  // A refresh: the server returns the authoritative count (it now includes my vote) but no youVoted —
+  // the public read is shared and cache-keyed without Authorization. The local copy carried youVoted.
+  const server = [{ commentId: 'a', body: 'A', createdAt: 1, voteCount: 7 }];
+  const local = [{ commentId: 'a', body: 'A', createdAt: 1, voteCount: 6, youVoted: true }];
+  const [merged] = mergeComments(server, local);
+  assert.equal(merged.voteCount, 7, 'server count wins');
+  assert.equal(merged.youVoted, true, 'the local youVoted survives the refresh');
+});
+
+test('applyVoteToggle flips youVoted and moves the count ±1; it is self-inverse for rollback', () => {
+  const before = [{ commentId: 'a', voteCount: 3, youVoted: false }, { commentId: 'b', voteCount: 1 }];
+  const voted = applyVoteToggle(before, 'a', true);
+  assert.deepEqual(voted[0], { commentId: 'a', voteCount: 4, youVoted: true });
+  assert.deepEqual(voted[1], { commentId: 'b', voteCount: 1 }, 'other rows untouched');
+  // Rolling back (the prior state) restores the exact count + flag.
+  const rolledBack = applyVoteToggle(voted, 'a', false);
+  assert.deepEqual(rolledBack[0], { commentId: 'a', voteCount: 3, youVoted: false });
+});
+
+test('applyVoteToggle never drives a count below zero, and no-ops a list without the comment', () => {
+  assert.deepEqual(applyVoteToggle([{ commentId: 'a' }], 'a', false), [{ commentId: 'a', voteCount: 0, youVoted: false }]);
+  const list = [{ commentId: 'x', voteCount: 2 }];
+  assert.deepEqual(applyVoteToggle(list, 'absent', true), list, 'a list missing the comment is unchanged');
 });

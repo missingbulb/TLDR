@@ -37,6 +37,12 @@ body {
 .comment.pending { opacity: 0.6; }
 .comment.failed .comment-meta { color: var(--error); }
 
+.comment-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.vote { display: flex; align-items: center; gap: 4px; background: transparent; border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; font: inherit; font-size: 12px; color: var(--muted); cursor: pointer; }
+.vote-arrow { font-size: 11px; line-height: 1; }
+.vote-count { font-variant-numeric: tabular-nums; }
+.vote.voted { border-color: var(--accent); color: var(--accent); }
+
 .composer { margin-top: 12px; }
 .body { width: 100%; resize: vertical; font: inherit; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: inherit; }
 .composer-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 8px; }

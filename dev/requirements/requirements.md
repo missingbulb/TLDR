@@ -552,3 +552,179 @@ in CI catches a typo in the `chrome.*` glue); a real-Chrome e2e is a tracked fol
 </td>
 </tr>
 </table>
+
+
+## 9. Upvoting
+
+Endorsing a note. Each saved comment carries an upvote control + count in the list; a signed-in user
+can cast one vote per comment and toggle it off. The **count rides the shared, CDN-cached public read**
+(so it's stale up to the ~60s TTL and identical for every viewer — an accepted trade-off, issue #22);
+the **viewer's own vote can't** ride that read (the cache key excludes `Authorization`), so it's shown
+optimistically and persisted client-side (`chrome.storage.local`). The voted/un-voted look is a `dom`
+image; the optimistic toggle + rollback are `behavior` gestures; the merge rule is a `logic` leaf; and
+the server enforcement (attributed, idempotent, no identity leak) sits alongside as `server` leaves.
+
+> The affordance distinguishes voted from un-voted by **accent colour + border** (a filled ▲ either
+> way — the bundled snapshot font has no outline triangle, and colour is not the only signal:
+> `aria-pressed` and the button title carry the state to assistive tech).
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![upvote-control.9.1](dom/cases/upvote-control.9.1.png) <!-- req-gallery:9.1 -->
+
+</td>
+<td valign="top">
+
+`9.1` A saved comment row renders an **upvote control with its count**, in the **un-voted** state (a
+muted outline pill: ▲ and a plain count, e.g. `3`).
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![upvote-voted.9.2](dom/cases/upvote-voted.9.2.png) <!-- req-gallery:9.2 -->
+
+</td>
+<td valign="top">
+
+`9.2` The same row in the **voted-by-me** state — an **accent-coloured** pill (accent border), the
+count including your vote.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![upvote-zero.9.3](dom/cases/upvote-zero.9.3.png) <!-- req-gallery:9.3 -->
+
+</td>
+<td valign="top">
+
+`9.3` A comment with **zero** votes still renders the affordance showing **`0`** — the control is
+never missing.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:9.4 -->
+
+</td>
+<td valign="top">
+
+`9.4` Clicking the control **optimistically increments** the count and **flips to voted**; clicking
+again **toggles back** (count restored). _(Cross-tier: the server enforcement is `9.7`/`9.8`.)_
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:9.5 -->
+
+</td>
+<td valign="top">
+
+`9.5` A **failed** vote write **rolls the count and affordance back** — a rejected vote leaves no
+phantom count.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🔧 _Logic leaf — verified by `logic/logic.test.mjs`._ <!-- req-gallery:9.6 -->
+
+</td>
+<td valign="top">
+
+`9.6` On a refresh, the merge keeps the **server's `voteCount` authoritative** while **preserving the
+viewer's own `youVoted`** — the server can't know your vote (the public read is shared and cache-keyed
+without `Authorization`), so the client carries it. _(How: `mergeComments` in `client/src/optimistic.mjs`.)_
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:9.7 -->
+
+</td>
+<td valign="top">
+
+`9.7` A first `POST …/vote` **records one vote and sets the count to 1**; a **repeat by the same user
+is idempotent** (still 1). _(Cross-tier: the UI half is `9.4`.)_
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:9.8 -->
+
+</td>
+<td valign="top">
+
+`9.8` `DELETE …/vote` **removes the vote and decrements**; deleting a vote that was **never cast is a
+no-op success**.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:9.9 -->
+
+</td>
+<td valign="top">
+
+`9.9` A vote with **no signed-in identity is rejected** — voting is **attributed** (the guarantee is
+the server's, like posting), while reads stay public.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🛡️ _Server leaf — verified by `server/server.test.mjs` (the real handler's response, asserted server-side)._ <!-- req-gallery:9.10 -->
+
+</td>
+<td valign="top">
+
+`9.10` The public read projection **returns `voteCount`** and **never leaks per-voter identity** — the
+count is shared, but who voted is not.
+
+</td>
+</tr>
+</table>

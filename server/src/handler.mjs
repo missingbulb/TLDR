@@ -14,6 +14,7 @@ import {
   PutCommand,
   QueryCommand,
   UpdateCommand,
+  TransactWriteCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { ulid, decodeTime } from 'ulid';
 import { normalizePageUrl, InvalidPageUrlError } from './vendor/normalizeUrl.GENERATED.mjs';
@@ -24,6 +25,14 @@ const QUERY_LIMIT = Number(process.env.QUERY_LIMIT ?? 50);
 const RATE_LIMIT_PER_MINUTE = Number(process.env.RATE_LIMIT_PER_MINUTE ?? 10);
 const RATE_LIMIT_TTL_SECONDS = 120; // rate-limit counter items self-delete via DynamoDB TTL
 const EMAIL_HASH_SALT = process.env.EMAIL_HASH_SALT ?? '';
+
+// Vote items share a comment's page partition (so a cast is one atomic transaction with the
+// comment's counter — no GSI, no second table) but must NOT surface in the comment list. Their sort
+// key is `VOTE#<commentId>#<voterSub>`; the `VOTE#` prefix sorts strictly ABOVE every comment SK,
+// because a comment SK is a canonical ULID whose first char is always a digit '0'–'7' (the 48-bit
+// timestamp high bits) and 'V' > '7'. So the read Query bounds the sort key `< VOTE#` to read only
+// comments, never votes (issue #22). This is the frozen-format-preserving sentinel the plan flagged.
+const VOTE_SK_PREFIX = 'VOTE#';
 
 // One-way, salted hash of the verified email — stored for moderation/abuse correlation only, NEVER
 // returned in the public read projection. Emails are low-entropy, so the salt (a server secret) is
@@ -148,6 +157,110 @@ async function handlePost(event) {
   return json(201, { comment: toPublicComment(item) });
 }
 
+// --- vote path --------------------------------------------------------------
+
+// Cast (POST) or toggle off (DELETE) the caller's single vote on a comment. Authenticated and
+// attributed exactly like a post (same JWT claims guard), since a vote carries the voter's identity.
+// The vote lives as its own item in the comment's page partition, and the comment's `voteCount` is
+// kept EXACTLY equal to the number of vote items by mutating both in ONE TransactWriteItems:
+//   cast    = Put vote (only if absent) + ADD voteCount 1   — idempotent: re-casting is a no-op success.
+//   toggle  = Delete vote (only if present) + ADD voteCount -1 — idempotent: removing a missing vote succeeds.
+// The page partition isn't derivable from commentId alone, so the body carries `pageUrl`, re-normalized
+// server-side (never trusting the client) just like a post. (issue #22)
+async function handleVote(event, method) {
+  const claims = event.requestContext?.authorizer?.jwt?.claims ?? {};
+  const voterSub = claims.sub;
+  if (!voterSub) throw new HttpError(401, 'missing authenticated identity');
+  // Same bar as posting: a verified Google email. (API Gateway surfaces the boolean claim as a string.)
+  if (claims.email_verified !== 'true' && claims.email_verified !== true) {
+    throw new HttpError(403, 'a verified Google email is required to vote');
+  }
+
+  const commentId = event.pathParameters?.commentId;
+  if (!commentId) throw new HttpError(400, 'commentId is required');
+
+  const input = parseBody(event);
+  let pageId;
+  try {
+    pageId = normalizePageUrl(input.pageUrl);
+  } catch (err) {
+    if (err instanceof InvalidPageUrlError) throw new HttpError(400, err.message);
+    throw err;
+  }
+
+  const voteSk = `${VOTE_SK_PREFIX}${commentId}#${voterSub}`;
+
+  if (method === 'POST') {
+    try {
+      await ddb.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            {
+              // Create the vote only if this voter hasn't already voted (idempotent cast).
+              Put: {
+                TableName: TABLE_NAME,
+                Item: { pageId, commentId: voteSk, voterSub, votedAt: Date.now() },
+                ConditionExpression: 'attribute_not_exists(commentId)',
+              },
+            },
+            {
+              // Bump the count on the EXISTING comment; the guard stops a vote on a missing comment
+              // from conjuring a body-less stub item (which the read would then surface).
+              Update: {
+                TableName: TABLE_NAME,
+                Key: { pageId, commentId },
+                UpdateExpression: 'ADD voteCount :one',
+                ConditionExpression: 'attribute_exists(commentId)',
+                ExpressionAttributeValues: { ':one': 1 },
+              },
+            },
+          ],
+        }),
+      );
+    } catch (err) {
+      if (err.name !== 'TransactionCanceledException') throw err;
+      const reasons = err.CancellationReasons ?? [];
+      const alreadyVoted = reasons[0]?.Code === 'ConditionalCheckFailed';
+      const commentMissing = reasons[1]?.Code === 'ConditionalCheckFailed';
+      // A missing comment (and not a duplicate vote) is a real 404; a duplicate vote is the
+      // idempotent happy path — the caller's vote is already recorded, so report success.
+      if (commentMissing && !alreadyVoted) throw new HttpError(404, 'comment not found');
+    }
+    return json(200, { ok: true });
+  }
+
+  // DELETE — toggle the vote off.
+  try {
+    await ddb.send(
+      new TransactWriteCommand({
+        TransactItems: [
+          {
+            Delete: {
+              TableName: TABLE_NAME,
+              Key: { pageId, commentId: voteSk },
+              ConditionExpression: 'attribute_exists(commentId)',
+            },
+          },
+          {
+            Update: {
+              TableName: TABLE_NAME,
+              Key: { pageId, commentId },
+              UpdateExpression: 'ADD voteCount :neg',
+              ConditionExpression: 'attribute_exists(commentId)',
+              ExpressionAttributeValues: { ':neg': -1 },
+            },
+          },
+        ],
+      }),
+    );
+  } catch (err) {
+    if (err.name !== 'TransactionCanceledException') throw err;
+    // The only cancellation reachable here is "no vote to remove" (comments aren't deletable in v1,
+    // so the comment always exists) — removing a vote that isn't there is an idempotent no-op.
+  }
+  return json(200, { ok: true });
+}
+
 // --- read path --------------------------------------------------------------
 
 // Allowlist projection (NOT a denylist): only these fields are ever returned, so a new internal
@@ -159,6 +272,11 @@ function toPublicComment(item) {
     authorName: item.authorName,
     authorId: item.authorSub, // stable Google sub — enables "is this mine"/moderation later; not PII
     createdAt: item.createdAt,
+    // The endorsement count, maintained atomically with each vote item (handleVote). Default 0 so a
+    // never-voted comment still carries the field (the UI always renders the affordance). The
+    // viewer's OWN vote (`youVoted`) is deliberately NOT here: it can't ride the shared, CDN-cached
+    // read (the cache key excludes Authorization), so the client tracks it locally (issue #22).
+    voteCount: item.voteCount ?? 0,
   };
 }
 
@@ -189,8 +307,10 @@ async function handleGet(event) {
   const result = await ddb.send(
     new QueryCommand({
       TableName: TABLE_NAME,
-      KeyConditionExpression: 'pageId = :pageId',
-      ExpressionAttributeValues: { ':pageId': pageId },
+      // Bound the sort key below the vote-item prefix so a page's votes (same partition) never leak
+      // into the comment list — they sort above every ULID comment SK (see VOTE_SK_PREFIX).
+      KeyConditionExpression: 'pageId = :pageId AND commentId < :voteSentinel',
+      ExpressionAttributeValues: { ':pageId': pageId, ':voteSentinel': VOTE_SK_PREFIX },
       // Eventually-consistent on purpose: ~half the read cost, and a sub-second stale read is
       // irrelevant behind a 30–60s CDN TTL. Do NOT "upgrade" this to ConsistentRead.
       ScanIndexForward: true, // ULID sort key => chronological order
@@ -224,6 +344,8 @@ export const handler = async (event) => {
   try {
     if (route === 'POST /comments') return await handlePost(event);
     if (route === 'GET /comments') return await handleGet(event);
+    if (route === 'POST /comments/{commentId}/vote') return await handleVote(event, 'POST');
+    if (route === 'DELETE /comments/{commentId}/vote') return await handleVote(event, 'DELETE');
     return json(404, { message: 'not found' });
   } catch (err) {
     if (err instanceof HttpError) return json(err.statusCode, { message: err.message });

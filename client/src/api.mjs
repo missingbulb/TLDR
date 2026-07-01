@@ -31,6 +31,19 @@ export async function getComments(pageUrl, { fetchImpl = fetch, nextToken, clien
   return res.json();
 }
 
+// Run an authenticated write: send first with a SILENT token (no UI); on a 401 (token likely expired)
+// force-refresh once, permitting a visible Google prompt as a last resort. Both POST /comments and the
+// vote routes are attributed writes with the identical token dance, so they share this. The caller runs
+// inside a real user gesture (the Post click, the upvote click), which is what licenses the one
+// interactive retry. `send(token)` performs the fetch and returns the Response.
+async function authedWrite(send, getIdToken) {
+  let res = await send(await getIdToken({ interactive: false }));
+  if (res.status === 401) {
+    res = await send(await getIdToken({ forceRefresh: true, interactive: true }));
+  }
+  return res;
+}
+
 export async function postComment(pageUrl, body, getIdToken, { fetchImpl = fetch, clientVersion } = {}) {
   const send = (token) =>
     fetchImpl(`${API_BASE_URL}/comments`, {
@@ -43,13 +56,38 @@ export async function postComment(pageUrl, body, getIdToken, { fetchImpl = fetch
       body: JSON.stringify({ pageUrl, body }),
     });
 
-  // First send uses a SILENT token only (no UI). This runs inside the Post user gesture, so the 401
-  // retry is the one place we permit an interactive prompt — and only if the silent refresh fails.
-  let res = await send(await getIdToken({ interactive: false }));
-  if (res.status === 401) {
-    // Token rejected (likely expired) — force-refresh once, allowing a visible prompt as a last resort.
-    res = await send(await getIdToken({ forceRefresh: true, interactive: true }));
-  }
+  const res = await authedWrite(send, getIdToken);
   if (!res.ok) throw new Error(`post failed: ${res.status}`);
   return res.json();
+}
+
+// Cast (POST) or toggle off (DELETE) the signed-in user's single vote on a comment. Authenticated like
+// a post (bearer token, 401-refresh-retry). The body carries `pageUrl` because the server needs the
+// page partition to find the comment; `commentId` rides in the path. The server is idempotent (a
+// repeat cast / a missing-vote toggle both succeed), so the client never has to reconcile the count
+// from the response — it tracks its own vote optimistically (issue #22).
+function voteRequest(method, pageUrl, commentId, getIdToken, { fetchImpl = fetch, clientVersion } = {}) {
+  const send = (token) =>
+    fetchImpl(`${API_BASE_URL}/comments/${encodeURIComponent(commentId)}/vote`, {
+      method,
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${token}`,
+        ...clientVersionHeader(clientVersion),
+      },
+      body: JSON.stringify({ pageUrl }),
+    });
+
+  return authedWrite(send, getIdToken).then((res) => {
+    if (!res.ok) throw new Error(`vote failed: ${res.status}`);
+    return res.json();
+  });
+}
+
+export function castVote(pageUrl, commentId, getIdToken, opts = {}) {
+  return voteRequest('POST', pageUrl, commentId, getIdToken, opts);
+}
+
+export function removeVote(pageUrl, commentId, getIdToken, opts = {}) {
+  return voteRequest('DELETE', pageUrl, commentId, getIdToken, opts);
 }

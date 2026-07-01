@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { getComments, postComment } from '../src/api.mjs';
+import { getComments, postComment, castVote, removeVote } from '../src/api.mjs';
 
 function jsonResponse(status, body) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
@@ -65,4 +65,46 @@ test('postComment refreshes the token once on a 401 and retries', async () => {
 test('postComment throws on a non-401 error', async () => {
   const fetchImpl = async () => jsonResponse(500, {});
   await assert.rejects(() => postComment('https://e.com', 'hi', async () => 'T', { fetchImpl }), /post failed: 500/);
+});
+
+test('castVote does an authenticated POST to /comments/<id>/vote with pageUrl in the body and the version header', async () => {
+  const calls = [];
+  const fetchImpl = async (url, opts) => { calls.push({ url, opts }); return jsonResponse(200, { ok: true }); };
+  await castVote('https://e.com/p', '01ABC', async () => 'ID_TOKEN', { fetchImpl, clientVersion: '1.2.3' });
+  assert.match(calls[0].url, /\/comments\/01ABC\/vote$/);
+  assert.equal(calls[0].opts.method, 'POST');
+  assert.equal(calls[0].opts.headers.authorization, 'Bearer ID_TOKEN');
+  assert.equal(calls[0].opts.headers['x-client-version'], '1.2.3');
+  assert.deepEqual(JSON.parse(calls[0].opts.body), { pageUrl: 'https://e.com/p' });
+});
+
+test('removeVote does an authenticated DELETE to the same vote path', async () => {
+  const calls = [];
+  const fetchImpl = async (url, opts) => { calls.push({ url, opts }); return jsonResponse(200, { ok: true }); };
+  await removeVote('https://e.com/p', '01ABC', async () => 'T', { fetchImpl });
+  assert.equal(calls[0].opts.method, 'DELETE');
+  assert.match(calls[0].url, /\/comments\/01ABC\/vote$/);
+});
+
+test('a commentId with URL-significant characters is percent-encoded into the path', async () => {
+  let seen;
+  const fetchImpl = async (url) => { seen = url; return jsonResponse(200, { ok: true }); };
+  await castVote('https://e.com', 'a/b#c', async () => 'T', { fetchImpl });
+  assert.match(seen, /\/comments\/a%2Fb%23c\/vote$/);
+});
+
+test('castVote refreshes the token once on a 401 and retries (silent first, interactive on retry)', async () => {
+  let attempt = 0;
+  const fetchImpl = async () => (attempt++ === 0 ? jsonResponse(401, {}) : jsonResponse(200, { ok: true }));
+  const tokenCalls = [];
+  const getIdToken = async (opts) => { tokenCalls.push(opts); return 'T'; };
+  await castVote('https://e.com', '01ABC', getIdToken, { fetchImpl });
+  assert.equal(attempt, 2);
+  assert.deepEqual(tokenCalls[0], { interactive: false });
+  assert.deepEqual(tokenCalls[1], { forceRefresh: true, interactive: true });
+});
+
+test('a vote throws on a non-401 error so the panel can roll back', async () => {
+  const fetchImpl = async () => jsonResponse(500, {});
+  await assert.rejects(() => castVote('https://e.com', '01ABC', async () => 'T', { fetchImpl }), /vote failed: 500/);
 });

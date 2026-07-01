@@ -13,8 +13,26 @@ export function makeOptimisticComment({ tempId, body, authorName, authorId, crea
 export function mergeComments(serverComments = [], localComments = []) {
   const byId = new Map();
   for (const c of localComments) byId.set(c.commentId, c);
-  for (const c of serverComments) byId.set(c.commentId, { ...c }); // authoritative; no pending flag
+  for (const c of serverComments) {
+    const prev = byId.get(c.commentId);
+    // The server record is authoritative (incl. voteCount), but it can't know YOUR vote — the public
+    // read is shared and CDN-cached, with the cache key excluding Authorization — so a refresh keeps
+    // the server's count while preserving the locally-known `youVoted` (issue #22).
+    byId.set(c.commentId, { ...c, youVoted: c.youVoted ?? prev?.youVoted });
+  }
   return [...byId.values()].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+}
+
+// Optimistically toggle the viewer's vote on one comment: flip `youVoted` and move `voteCount` by ±1
+// (floored at 0). Pure and self-inverse — to roll back a failed write, call it again with the prior
+// `voted`. A no-op on any list that doesn't hold the comment, so the panel can apply it to both the
+// server and local lists without knowing which one the row lives in (issue #22).
+export function applyVoteToggle(comments, commentId, voted) {
+  return comments.map((c) =>
+    c.commentId === commentId
+      ? { ...c, youVoted: voted, voteCount: Math.max(0, (c.voteCount ?? 0) + (voted ? 1 : -1)) }
+      : c,
+  );
 }
 
 // POST succeeded: replace the temp entry with the authoritative server record.

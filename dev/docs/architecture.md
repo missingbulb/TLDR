@@ -156,6 +156,8 @@ Read page = `Query` on `pageId`. Submit = `PutItem`.
 | `createdAt` | Number | Epoch ms, **derived from the same ULID** (one clock read, no drift). |
 | `pageUrlRaw` | String | Original URL, for debugging. Never returned in the read projection. |
 | `authorEmailHash` | String | **Salted one-way SHA-256** of the verified email. Moderation only; **never returned**. |
+| `voteCount` | Number | Endorsements on the comment, maintained atomically with each vote item (§9.2). Returned; defaults to 0. |
+| `voterSub` | String | *(vote items only)* the voter's Google `sub`. Bookkeeping; **never returned** (a voter's identity stays private). |
 | `expiresAt` | Number | *(rate-limit counter items only)* epoch seconds; DynamoDB TTL auto-deletes them. |
 
 🔧 **Decision (email → salted hash, owner-chosen):** the **raw** email is **never stored or returned** —
@@ -167,8 +169,9 @@ through reads.
 ### 5.3 Access patterns and indexes
 | Pattern | Implementation |
 |---------|----------------|
-| All comments for a page | `Query` PK = `pageId` (paginated via opaque `nextToken`) |
+| All comments for a page | `Query` PK = `pageId`, SK `< VOTE#` (excludes vote items) — paginated via opaque `nextToken` |
 | Create a comment | `PutItem` |
+| Cast / toggle a vote | `TransactWriteItems`: vote item (`SK = VOTE#<commentId>#<voterSub>`) + `voteCount` ±1 (§9.2) |
 | Per-author rate limit | conditional `UpdateItem` on `pageId = RL#<sub>`, TTL'd counter |
 | (future) All comments by a user | would need a **GSI** on `authorSub` — **not** in v1 |
 
@@ -323,11 +326,43 @@ commands, termination protection).
 
 | Method | Path | Auth | Request | Cached? | Success |
 |--------|------|------|---------|---------|---------|
-| `POST` | `/comments` | Bearer ID token | `{ "pageUrl", "body" }` | No | `201` + `{ "comment": { commentId, body, authorName, authorId, createdAt } }` |
-| `GET` | `/comments` | **public** | query `pageUrl` (+ optional `nextToken`) | Yes (TTL 30–60s) | `200` + `{ "comments": [ { commentId, body, authorName, authorId, createdAt } ], "nextToken"? }` |
+| `POST` | `/comments` | Bearer ID token | `{ "pageUrl", "body" }` | No | `201` + `{ "comment": { commentId, body, authorName, authorId, createdAt, voteCount } }` |
+| `GET` | `/comments` | **public** | query `pageUrl` (+ optional `nextToken`) | Yes (TTL 30–60s) | `200` + `{ "comments": [ { commentId, body, authorName, authorId, createdAt, voteCount } ], "nextToken"? }` |
+| `POST` | `/comments/{commentId}/vote` | Bearer ID token | `{ "pageUrl" }` | No | `200` + `{ "ok": true }` (idempotent cast) |
+| `DELETE` | `/comments/{commentId}/vote` | Bearer ID token | `{ "pageUrl" }` | No | `200` + `{ "ok": true }` (idempotent toggle-off) |
 
 Errors: `400` invalid body / missing or non-http(s) `pageUrl`; `401` missing/invalid token; `403` unverified
-email; `413` body too large; `429` per-author rate limit; `404` unknown route; `500` unexpected.
+email; `413` body too large; `429` per-author rate limit; `404` unknown route / vote on a missing comment;
+`500` unexpected.
+
+### 9.2 Upvoting (issue #22)
+
+A signed-in user casts **one vote per comment**, toggleable off — the substrate for later ranking (#25).
+It stays within every deliberate constraint (no GSI, frozen key schema, public CDN-cached reads):
+
+- **In-partition vote items.** A vote is its own item in the comment's page partition, sort key
+  `VOTE#<commentId>#<voterSub>`. The `VOTE#` prefix sorts strictly **above** every comment sort key (a
+  canonical ULID always starts with a digit `0`–`7`, and `'V' > '7'`), so the read `Query` bounds the
+  sort key `< VOTE#` to return only comments — votes never surface in the list. No GSI, no key-schema
+  change.
+- **Atomic count.** The comment carries a `voteCount` attribute, kept exactly equal to its number of
+  vote items via one `TransactWriteItems`: cast = `Put` the vote (only if absent) `+ ADD voteCount 1`;
+  toggle = `Delete` the vote (only if present) `+ ADD voteCount -1`. A duplicate cast / a missing-vote
+  toggle both cancel the transaction and are treated as **idempotent success**; a vote on a missing
+  comment is `404` (the count `Update` is guarded by `attribute_exists`, so no body-less stub is
+  conjured).
+- **Attributed writes.** Both routes opt into the same Google JWT authorizer as `POST /comments` — a
+  vote carries the voter's identity — and re-normalize `pageUrl` server-side. The runtime role gains
+  `dynamodb:DeleteItem` (a transaction is authorized by its underlying per-item actions).
+- **`voteCount` on the public read; own-vote on the client (🔧 owner decision, issue #22).** The count
+  is added to the allowlist projection and so rides the shared, CDN-cached read — **stale up to the
+  ~60s TTL and identical for every viewer**, an accepted trade-off that preserves the cache design. The
+  viewer's **own** vote (`youVoted`) **can't** ride that read (the cache key excludes `Authorization`),
+  so the client shows it optimistically and persists the own-vote set in `chrome.storage.local`
+  (`myVotes`), overlaying it on each read and preserving it across a refresh (`mergeComments`). The
+  projection never returns any per-voter identity.
+- **Additive under §9.1.** New routes + a new projection field only; no existing field is reshaped, so
+  an older client keeps working. `voteCount` is the first field added under the additive-only policy.
 
 Every request also carries **`X-Client-Version`** — the extension's manifest `version` — as a request header
 (see §9.1). It's telemetry only; it never changes a response, the cache key, or the body.
@@ -381,7 +416,7 @@ the logs carry a version baseline.
   concurrency are deferred — reserved concurrency can fail a new account's deploy when its concurrency limit is low,
   and HTTP API stage throttling is awkward via SAM's high-level resource. Add once account limits are known.
 - Multi-region writes (single region; CloudFront already gives read-edge reach).
-- Replies/threading, voting, rich text.
+- Replies/threading and rich text. (**Upvoting shipped** — issue #22, §9.2 — as the substrate for ranking, #25.)
 - Full end-to-end browser tests of the extension glue (the pure logic is unit-tested; the `chrome.*` glue is `node --check`'d).
 
 ---
