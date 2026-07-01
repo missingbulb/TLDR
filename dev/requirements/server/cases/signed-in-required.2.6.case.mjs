@@ -3,7 +3,7 @@
 // token" (2.2) — a crafted client without a token can't get past the server.
 "use strict";
 
-// The one request both the assertion and the evidence card drive — single-sourced so the card can
+// The one request both the assertion and the shown result drive — single-sourced so what's shown can
 // never depict inputs the assertion didn't run.
 const REQUEST = { claims: {}, body: { pageUrl: "https://example.com/x", body: "hi" } };
 
@@ -15,20 +15,10 @@ export default {
     const res = await postComment(REQUEST);
     assert.equal(res.statusCode, 401);
   },
-  evidence: async () => {
+  show: async () => {
     const { postComment } = await import("../handler-harness.mjs");
-    const { serverTxnModel } = await import("../evidence.mjs");
+    const { serverTxnLine } = await import("../show.mjs");
     const res = await postComment(REQUEST);
-    return serverTxnModel({
-      id: "2.6",
-      title: "signed-in-required",
-      method: "POST",
-      route: "/comments",
-      request: [
-        { k: "identity", v: "claims {} — no signed-in identity" },
-        { k: "body", v: JSON.stringify(REQUEST.body) },
-      ],
-      res,
-    });
+    return serverTxnLine({ method: "POST", route: "/comments", identity: "no auth", body: REQUEST.body, res });
   },
 };

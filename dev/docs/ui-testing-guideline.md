@@ -129,6 +129,30 @@ case is what a human reads to understand the requirement. The declarative expect
 the case list double as living documentation that, unlike unit tests, someone actually reads for
 *intent*.
 
+### 3.10 Show the result in the doc; minimize invisible trust
+A requirements doc that says "verified by `server.test.mjs`" asks the reader to *trust* that a test
+somewhere proves the leaf — they never *see* what it proved. Optimize the opposite way: **show the
+result of the test in the document**, in the form native to what the leaf is about. Decompose a complex
+requirement into its provable **phases** and add each to the doc individually: a **UI** phase as the
+minimal rendered UI (pixels, because it's genuinely visual); a **server-call / data** phase as the
+actual call rendered as **text** — the request that went in (with the field you cared about) and the
+status/response that came back (`POST /x — no auth → 401 …`; `GET … → 200 · surfaced count · dropped
+voterId`). The shown result is derived from the *real run* (the same run the assertion gates),
+single-sourced with the assertion so it can't depict a different one, and gated by a refresh-then-
+compare so a real change moves the shown text and must be re-approved. The assertion stays the sole
+gate on truth; the shown result is the review surface — never the pass/fail criterion.
+
+Two corollaries that are easy to get wrong:
+
+- **Don't rasterize text.** A status code, a header, a JSON field is *text* — show it as text
+  (generated markdown in the cell). Rendering text into an image only to pixel-diff the image buys
+  nothing and dilutes the approval surface. Reserve pixels for what is genuinely visual (§6.5 crops).
+- **Don't claim in the doc what you can't show or can't guarantee.** If a phase can't be exercised
+  hermetically (a managed platform component, a real device), don't describe it as verified — mark it a
+  tracked `tbd` and keep the boundary between *what you assert* and *what you model/trust* explicit. A
+  faithful fake (a fake browser, a fake gateway) validates your *model*, not the real platform; say so,
+  and route the real-platform proof to its own tracked (often deferred) leaf.
+
 ## 4. Starting a UI project with this from the get-go
 
 A practical setup recipe — cheaper to do on day one than to retrofit:

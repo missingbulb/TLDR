@@ -13,20 +13,10 @@ export default {
     const res = await vote(REQUEST);
     assert.equal(res.statusCode, 401);
   },
-  evidence: async () => {
+  show: async () => {
     const { vote } = await import("../handler-harness.mjs");
-    const { serverTxnModel } = await import("../evidence.mjs");
+    const { serverTxnLine } = await import("../show.mjs");
     const res = await vote(REQUEST);
-    return serverTxnModel({
-      id: "9.9",
-      title: "vote-requires-identity",
-      method: "POST",
-      route: "/comments/{commentId}/vote",
-      request: [
-        { k: "identity", v: "claims {} — no signed-in identity" },
-        { k: "body", v: JSON.stringify(REQUEST.body) },
-      ],
-      res,
-    });
+    return serverTxnLine({ method: "POST", route: "/comments/{commentId}/vote", identity: "no auth", body: REQUEST.body, res });
   },
 };

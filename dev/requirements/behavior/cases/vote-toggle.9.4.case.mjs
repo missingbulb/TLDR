@@ -2,13 +2,13 @@
 // toggles it back (count restored). Non-visual timing + the exact network verbs a static snapshot
 // can't show, so it's a behavior leaf: drive the real click twice and assert the DOM state and that a
 // cast (POST) then a remove (DELETE) went out. render() rebuilds the row each time, so re-query it.
-// The gallery evidence (evidence()) renders this same walk as a filmstrip — see behavior/evidence.mjs.
+// The gallery show() renders this same walk as text (the calls + count transition) — see behavior/show.mjs.
 "use strict";
 
 import { REFERENCE_NOW_MS } from "../../shared/reference-time.mjs";
 
-// The one scenario both the assertion and the evidence filmstrip drive (dated >1 day back so the crop
-// meta reads a stable absolute date). Single-sourced so the picture can't depict a different run.
+// The one scenario both the assertion and the shown result drive. Single-sourced so what's shown
+// can't depict a different run than the one verify() gates.
 const SCENARIO = {
   tabUrl: "https://example.com/article",
   comments: [{ commentId: "c-vote", body: "Worth a vote.", authorName: "Ada", createdAt: REFERENCE_NOW_MS - 2 * 86_400_000, voteCount: 3 }],
@@ -42,8 +42,8 @@ export default {
       session.close();
     }
   },
-  evidence: async () => {
-    const { voteFilmstrip } = await import("../evidence.mjs");
-    return voteFilmstrip({ id: "9.4", title: "vote-toggle", baseCase: SCENARIO, clicks: 2 });
+  show: async () => {
+    const { voteToggleLine } = await import("../show.mjs");
+    return voteToggleLine({ baseCase: SCENARIO, clicks: 2 });
   },
 };
