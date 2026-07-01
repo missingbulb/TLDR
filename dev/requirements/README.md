@@ -107,10 +107,13 @@ Rule of thumb: **if the requirement names an element, crop to it; if it names th
 the panel.**
 
 **Adding one.** Exactly like a `dom` case (below), under `component/cases/`, plus one field: `selector`
-— the element to crop (the first match). The crop renders at the panel's content width, so text wraps
-exactly as it does in the panel. Fidelity caveat: satori can't cascade from an ancestor the crop
-excludes, so the renderer folds `<body>`'s inherited font/colour onto the crop root; a style set by an
-*excluded ancestor other than `<body>`* isn't modelled (none is, today).
+— the element to crop (the first match). The crop renders at the panel's content width (so text wraps
+exactly as it does in the panel) and is **framed with the panel's body padding**, so the element shows
+as it sits *in place* — same width and margin, its own borders/separators, a little breathing room —
+not a bare edge-to-edge fragment; the framed image is the full panel width, so a crop lines up beside a
+`dom` render. Fidelity caveat: satori can't cascade from an ancestor the crop excludes, so the renderer
+folds `<body>`'s inherited font/colour onto the frame; a style set by an *excluded ancestor other than
+`<body>`* isn't modelled (none is, today).
 
 **Further crop candidates** (noted, not migrated — migrate a leaf to a crop when a real cross-cutting
 change would otherwise churn its image for nothing):

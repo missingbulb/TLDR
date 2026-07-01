@@ -255,12 +255,18 @@ export async function renderCaseImage(testCase) {
 // WIDTH minus the body's 12px padding each side). A cropped element is rendered at this width so its
 // text wraps EXACTLY as it does in the full panel.
 const COMPONENT_WIDTH = WIDTH - 24;
+// The panel's body padding. A crop is FRAMED with it (all sides) so the element sits exactly as it
+// does in the panel — same width, same margin — with a little breathing room, rather than bleeding
+// edge-to-edge. So the image shows "how the whole thing looks in place", not a bare fragment; the
+// framed width equals the full panel width, so a crop and a `dom` render line up side by side.
+const COMPONENT_PADDING = 12;
 
 // Render a `component` case: the SAME real DOM + real CSS as a `dom` render, but rasterize ONLY the
-// element `testCase.selector` names (e.g. `li.comment`, `.comments`) — a faithful CROP of the panel.
-// Because it's driven through the real render, the crop can never drift from what the panel paints;
-// because it excludes the surrounding chrome, an unrelated change (the header title, the composer)
-// leaves it byte-identical, so the requirement it pins isn't re-approved for a change it doesn't test.
+// element `testCase.selector` names (e.g. `li.comment`, `.comments`), FRAMED with the panel's body
+// padding — a faithful CROP of the panel. Because it's driven through the real render, the crop can
+// never drift from what the panel paints; because it excludes the surrounding chrome, an unrelated
+// change (the header title, the composer) leaves it byte-identical, so the requirement it pins isn't
+// re-approved for a change it doesn't test.
 export async function renderComponentImage(testCase) {
   if (!testCase.selector) {
     throw new Error(`component case "${testCase.name}" must set a \`selector\` (the element to crop)`);
@@ -272,23 +278,33 @@ export async function renderComponentImage(testCase) {
     if (!target) {
       throw new Error(`component case "${testCase.name}": selector "${testCase.selector}" matched no element`);
     }
-    const vdom = toVDom(target);
+    const cropWidth = testCase.width ?? COMPONENT_WIDTH;
+    const inner = toVDom(target);
+    Object.assign(inner.props.style, { width: cropWidth, boxSizing: "border-box" });
     // The cropped element inherits font/colour from <body> in real CSS; satori doesn't cascade from an
-    // ancestor we're not rendering, so fold the body's inherited text properties onto the crop root
-    // (the element's own inlined styles still win via the spread order below).
+    // ancestor we're not rendering, so put the body's inherited text properties on the FRAME so they
+    // cascade to the element (whose own inlined styles still win).
     const inherited = styleObject(body.getAttribute("style"));
-    const width = testCase.width ?? COMPONENT_WIDTH;
-    vdom.props.style = {
-      ...(inherited.fontSize != null && { fontSize: inherited.fontSize }),
-      ...(inherited.lineHeight != null && { lineHeight: inherited.lineHeight }),
-      ...(inherited.color != null && { color: inherited.color }),
-      ...vdom.props.style,
-      width,
-      boxSizing: "border-box",
-      fontFamily: FONT_FAMILY,
-      backgroundColor: "#fff",
+    const framedWidth = cropWidth + COMPONENT_PADDING * 2;
+    const frame = {
+      type: "div",
+      props: {
+        style: {
+          ...(inherited.fontSize != null && { fontSize: inherited.fontSize }),
+          ...(inherited.lineHeight != null && { lineHeight: inherited.lineHeight }),
+          ...(inherited.color != null && { color: inherited.color }),
+          display: "flex",
+          flexDirection: "column",
+          padding: COMPONENT_PADDING,
+          width: framedWidth,
+          boxSizing: "border-box",
+          fontFamily: FONT_FAMILY,
+          backgroundColor: "#fff",
+        },
+        children: inner,
+      },
     };
-    return rasterize(vdom, width);
+    return rasterize(frame, framedWidth);
   } finally {
     session.close();
   }

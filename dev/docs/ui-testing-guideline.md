@@ -261,10 +261,12 @@ pixel-exact gate, same owner-owned golden — just scoped, so it's **byte-identi
 outside that element and moves *only* when the element does. Split render leaves by **altitude**:
 whole-screen snapshots for page/panel-level *states* (what's shown/hidden, an empty/error state,
 overall layout), cropped snapshots for a single element's *internal* look. Rule of thumb: **if the
-requirement names an element, crop to it; if it names the screen's state, render the screen.** Two
+requirement names an element, crop to it; if it names the screen's state, render the screen.** Three
 fidelity notes when lifting a subtree out of context: render it at the width it has in place so text
-wraps identically, and fold the inherited text properties (font, colour) from the excluded ancestors
-onto the crop root — a static rasterizer won't cascade from a parent you didn't render. (Worked
+wraps identically; fold the inherited text properties (font, colour) from the excluded ancestors onto
+the crop root — a static rasterizer won't cascade from a parent you didn't render; and **frame it with
+the surrounding container's padding** so it reads as it sits *in place* (same width/margin, its own
+borders) rather than a bare edge-to-edge fragment. (Worked
 example: this repo's `component` kind, `dev/requirements/component/`, beside the whole-panel `dom` kind.)
 
 ## 7. Anti-patterns to avoid
