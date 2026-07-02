@@ -24,6 +24,10 @@ The extension authenticates with a Google **ID token** (a JWT) obtained via `chr
 ### 2. GitHub → AWS deploy role (OIDC, no stored keys)
 The deploy workflow assumes an IAM role via GitHub OIDC — no long-lived AWS keys anywhere.
 
+> **Two accounts.** This section sets up the **prod** account's role (`AWS_DEPLOY_ROLE_ARN`). Dev lives in a
+> **separate AWS account** with its own OIDC provider + deploy role (`AWS_DEV_DEPLOY_ROLE_ARN`) and a Claude
+> sandbox principal — full setup and policy JSON in [`dev/docs/dev-account-runbook.md`](../dev/docs/dev-account-runbook.md).
+
 1. Create the GitHub OIDC identity provider in IAM (once per account): provider URL `https://token.actions.githubusercontent.com`, audience `sts.amazonaws.com`.
 2. Create a role whose **trust policy** is scoped to this repo + branch:
 
