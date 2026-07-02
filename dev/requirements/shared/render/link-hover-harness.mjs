@@ -109,15 +109,16 @@ export async function open(testCase) {
     tooltipMounted() {
       return doc.body.querySelector("div")?.shadowRoot?.querySelector(".tldr-hover-tooltip") != null;
     },
-    // The tooltip's three text parts, read separately (its label/body/meta are sibling <p>s, so a bare
-    // textContent would concatenate them with no separator). Null when no tooltip is mounted.
+    // The tooltip's text parts, read separately (label/body/meta are sibling elements, and meta itself
+    // splits into author + votes, so a bare textContent would run them together). Null when unmounted.
     tooltipParts() {
       const el = doc.body.querySelector("div")?.shadowRoot?.querySelector(".tldr-hover-tooltip");
       if (!el) return null;
       return {
         label: el.querySelector(".label")?.textContent ?? "",
         body: el.querySelector(".body")?.textContent ?? "",
-        meta: el.querySelector(".meta")?.textContent ?? "",
+        author: el.querySelector(".meta .author")?.textContent ?? "",
+        votes: el.querySelector(".meta .votes")?.textContent ?? "",
       };
     },
     close() {

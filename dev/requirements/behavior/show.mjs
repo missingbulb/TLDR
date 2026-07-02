@@ -39,7 +39,7 @@ export async function voteToggleLine({ baseCase, clicks = 2 }) {
 
 import { open as openLinkHover } from "../shared/render/link-hover-harness.mjs";
 
-// `hover → debounce → \`getTopComment(tldr)\` → popup “TLDR · <body> · <author>”; mouseout → removed`
+// `hover → debounce → \`getTopComment(tldr)\` → popup “TLDR · <body> · <author> · ▲ <votes>”; mouseout → removed`
 export async function hoverShowsPopupLine({ baseCase, id = "link1" }) {
   const s = await openLinkHover(baseCase);
   try {
@@ -47,7 +47,7 @@ export async function hoverShowsPopupLine({ baseCase, id = "link1" }) {
     await s.flushTimers();
     const msg = s.calls.sendMessage[0];
     const p = s.tooltipParts();
-    const popup = p ? `popup “${p.label} · ${p.body} · ${p.meta}”` : "no popup (!)";
+    const popup = p ? `popup “${p.label} · ${p.body} · ${p.author} · ${p.votes}”` : "no popup (!)";
     s.unhover(id);
     const after = s.tooltipMounted() ? "still shown (!)" : "removed";
     return `hover → debounce → \`getTopComment(${msg.category})\` → ${popup}; mouseout → ${after}`;

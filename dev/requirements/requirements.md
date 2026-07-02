@@ -1116,13 +1116,14 @@ side panel honors, §4.2) is never a lookup candidate — no network call, no po
 <tr>
 <td valign="top" width="340">
 
-hover → debounce → `getTopComment(tldr)` → popup “TLDR · the gist of it · Ada”; mouseout → removed <!-- req-gallery:11.7 -->
+hover → debounce → `getTopComment(tldr)` → popup “TLDR · the gist of it · Ada · ▲ 5”; mouseout → removed <!-- req-gallery:11.7 -->
 
 </td>
 <td valign="top">
 
 `11.7` Hovering a candidate link **with** a leading comment shows a popup — after a short debounce —
-naming the current category and the comment's body/author; moving off the link removes it.
+naming the current category and the comment's body, author, and **vote count** (▲ N); moving off the
+link removes it.
 
 </td>
 </tr>
@@ -1204,8 +1205,10 @@ or `content_scripts` entry, so no user sees a new install-time warning.
 <td valign="top">
 
 `11.12` The **hover popup's look**: a compact **dark card** with the current category's label on top,
-the leading note's **body**, and its **author** below — rendered through the real content script and
-the shipped popup stylesheet, so this image moves when the popup's code or styles do.
+the leading note's **body** — hard-capped with an **ellipsis** when it's too long, so the popup stays
+small — and, on the meta line, the **author** and the note's **vote count** (▲ N). Rendered through the
+real content script and the shipped popup stylesheet, so this image moves when the popup's code or
+styles do.
 
 </td>
 </tr>

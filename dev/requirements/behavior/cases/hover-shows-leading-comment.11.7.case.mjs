@@ -15,7 +15,7 @@ const SCENARIO = {
 };
 
 export default {
-  description: "hovering a link with a leading comment shows a popup naming the category + comment; mouseout removes it",
+  description: "hovering a link with a leading comment shows a popup naming the category + comment + its vote count; mouseout removes it",
   verify: async () => {
     const assert = (await import("node:assert/strict")).default;
     const { open } = await import("../../shared/render/link-hover-harness.mjs");
@@ -40,7 +40,8 @@ export default {
       const parts = session.tooltipParts();
       assert.equal(parts.label, "TLDR", "names the current category");
       assert.equal(parts.body, "the gist of it", "shows the comment body");
-      assert.equal(parts.meta, "Ada", "shows the comment author");
+      assert.equal(parts.author, "Ada", "shows the comment author");
+      assert.equal(parts.votes, "▲ 5", "shows the leading note's vote count");
 
       session.unhover("link1");
       assert.equal(session.tooltipMounted(), false, "moving off the link removes the popup");

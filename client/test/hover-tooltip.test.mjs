@@ -6,7 +6,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { positionTooltip, TOOLTIP_CLASS } from '../src/hover-tooltip.mjs';
+import { positionTooltip, TOOLTIP_CLASS, truncateBody, MAX_BODY_CHARS } from '../src/hover-tooltip.mjs';
 
 function stubTooltip({ offsetWidth = 280, offsetHeight = 60 } = {}) {
   return { offsetWidth, offsetHeight, style: {} };
@@ -42,4 +42,33 @@ test('positionTooltip falls back to the CSS default size when offsetWidth/offset
 
 test('TOOLTIP_CLASS is a stable, namespaced class name (styled via the matching selector in TOOLTIP_STYLE)', () => {
   assert.equal(TOOLTIP_CLASS, 'tldr-hover-tooltip');
+});
+
+test('truncateBody leaves a short body untouched', () => {
+  assert.equal(truncateBody('a concise note'), 'a concise note');
+});
+
+test('truncateBody leaves a body of exactly MAX_BODY_CHARS untouched (boundary)', () => {
+  const exact = 'x'.repeat(MAX_BODY_CHARS);
+  assert.equal(truncateBody(exact), exact);
+});
+
+test('truncateBody crops an over-long body to MAX_BODY_CHARS with a trailing ellipsis', () => {
+  const long = 'x'.repeat(MAX_BODY_CHARS + 50);
+  const out = truncateBody(long);
+  assert.equal(out.length, MAX_BODY_CHARS, 'the ellipsis replaces the last kept char, so length stays at the cap');
+  assert.ok(out.endsWith('…'), 'ends with an ellipsis');
+});
+
+test('truncateBody trims trailing whitespace before the ellipsis (no " …")', () => {
+  // A space right at the cut point would otherwise leave "… " looking like a gap.
+  const text = `${'x'.repeat(MAX_BODY_CHARS - 1)}   yyyy`;
+  const out = truncateBody(text);
+  assert.ok(!/\s…$/.test(out), 'no whitespace immediately before the ellipsis');
+  assert.ok(out.endsWith('…'));
+});
+
+test('truncateBody coerces a non-string (null/undefined) to an empty string, never throws', () => {
+  assert.equal(truncateBody(null), '');
+  assert.equal(truncateBody(undefined), '');
 });
