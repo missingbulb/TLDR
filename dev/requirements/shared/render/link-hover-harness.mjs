@@ -109,6 +109,17 @@ export async function open(testCase) {
     tooltipMounted() {
       return doc.body.querySelector("div")?.shadowRoot?.querySelector(".tldr-hover-tooltip") != null;
     },
+    // The tooltip's three text parts, read separately (its label/body/meta are sibling <p>s, so a bare
+    // textContent would concatenate them with no separator). Null when no tooltip is mounted.
+    tooltipParts() {
+      const el = doc.body.querySelector("div")?.shadowRoot?.querySelector(".tldr-hover-tooltip");
+      if (!el) return null;
+      return {
+        label: el.querySelector(".label")?.textContent ?? "",
+        body: el.querySelector(".body")?.textContent ?? "",
+        meta: el.querySelector(".meta")?.textContent ?? "",
+      };
+    },
     close() {
       global.document = saved.document;
       global.window = saved.window;
@@ -118,5 +129,28 @@ export async function open(testCase) {
       dom.window.close();
     },
   };
+  return session;
+}
+
+// Open a link-hover session, drive the hover through to a MOUNTED tooltip, and materialize the
+// shadow-root tooltip element into `document.body` — jsdom shadow roots are invisible to
+// `body.querySelectorAll`, so the shared CSS-folding + crop pipeline (image-renderer.mjs) couldn't see
+// it otherwise. This is the session opener behind the `component` snapshot leaf pinning the popup's
+// look: the SAME real link-hover.mjs run as the behavior cases, just frozen at the shown-popup state.
+export async function openForTooltipSnapshot(testCase) {
+  const session = await open(testCase);
+  const [firstId] = Object.keys(testCase.links ?? {});
+  session.hover(testCase.hoverId ?? firstId);
+  await session.flushTimers();
+  const host = session.document.body.querySelector("div");
+  const tooltip = host?.shadowRoot?.querySelector(".tldr-hover-tooltip");
+  if (!tooltip) {
+    session.close();
+    throw new Error("link-hover snapshot: no tooltip mounted after the hover — check the case's onMessage/links");
+  }
+  // Drop positionTooltip's inline left/top (they place the popup over the host page's link — in a
+  // standalone crop they're meaningless), then adopt the tooltip as the body's only child.
+  tooltip.removeAttribute("style");
+  session.document.body.replaceChildren(tooltip);
   return session;
 }

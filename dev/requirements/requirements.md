@@ -1008,7 +1008,11 @@ toolbar menu changes what the NEXT hover shows without a page reload. Per the ow
 decision: a link with no leading comment in the current category shows **nothing** (`11.8`) — this stays
 a purely passive, read-only affordance. A shown popup is styled independently of the panel's
 `body[data-category]` theming (that selector has no meaning on a third-party page) but still names the
-category via the same design registry (`11.7`).
+category via the same design registry (`11.7`); its **look is pinned as an owner-approved image**
+(`11.12`), rendered through the real content script + the shipped popup stylesheet, as is the
+options-page opt-in section itself (`11.13`). The server leaves show the **real request → response**
+of each run; the gate and gesture leaves show the **real walk** (the outbound lookup, the popup's
+actual content, the permission round-trip) as generated text — results in the doc, not pointers.
 
 <table>
 <tr>
@@ -1080,7 +1084,7 @@ query runs — the same validation `resolveCategory` already applies on write.
 <tr>
 <td valign="top" width="340">
 
-🔧 _Logic leaf — verified by `logic/logic.test.mjs`._ <!-- req-gallery:11.5 -->
+`mailto:someone@example.com` → `null`; `javascript:alert(1)` → `null`; `https://example.com/x?utm_source=foo` → `https://example.com/x` <!-- req-gallery:11.5 -->
 
 </td>
 <td valign="top">
@@ -1096,7 +1100,7 @@ and any other non-http(s) scheme never trigger a lookup at all (no network call,
 <tr>
 <td valign="top" width="340">
 
-🔧 _Logic leaf — verified by `logic/logic.test.mjs`._ <!-- req-gallery:11.6 -->
+`google.com/search`, deny [google.com] → `null`; `www.google.com/search`, deny [google.com] → `null`; `example.com/x`, deny [google.com] → candidate; `chrome.google.com/webstore` → `null` <!-- req-gallery:11.6 -->
 
 </td>
 <td valign="top">
@@ -1112,7 +1116,7 @@ side panel honors, §4.2) is never a lookup candidate — no network call, no po
 <tr>
 <td valign="top" width="340">
 
-🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:11.7 -->
+hover → debounce → `getTopComment(tldr)` → popup “TLDR · the gist of it · Ada”; mouseout → removed <!-- req-gallery:11.7 -->
 
 </td>
 <td valign="top">
@@ -1128,7 +1132,7 @@ naming the current category and the comment's body/author; moving off the link r
 <tr>
 <td valign="top" width="340">
 
-🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:11.8 -->
+hover → `getTopComment(spoiler)` → `{ comment: null }` → nothing shown; hover a denylisted host → no lookup at all, nothing shown <!-- req-gallery:11.8 -->
 
 </td>
 <td valign="top">
@@ -1144,7 +1148,7 @@ naming the current category and the comment's body/author; moving off the link r
 <tr>
 <td valign="top" width="340">
 
-🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:11.9 -->
+hover → `getTopComment(tldr)`; switch current category → spoiler; hover again → `getTopComment(spoiler)` <!-- req-gallery:11.9 -->
 
 </td>
 <td valign="top">
@@ -1160,7 +1164,7 @@ current category between two hovers changes what the *second* hover looks up, wi
 <tr>
 <td valign="top" width="340">
 
-🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:11.10 -->
+check → `permissions.request(http://*/*, https://*/*)` granted → register `link-hover`; uncheck → unregister (0 left) + `permissions.remove` <!-- req-gallery:11.10 -->
 
 </td>
 <td valign="top">
@@ -1177,7 +1181,7 @@ unchecking it unregisters the script and **revokes** the granted permission.
 <tr>
 <td valign="top" width="340">
 
-🔧 _Logic leaf — verified by `logic/logic.test.mjs`._ <!-- req-gallery:11.11 -->
+`optional_host_permissions`: `["http://*/*","https://*/*"]` · `scripting` in permissions ✓ · static `host_permissions`: absent ✓ · static `content_scripts`: absent ✓ <!-- req-gallery:11.11 -->
 
 </td>
 <td valign="top">
@@ -1194,12 +1198,46 @@ or `content_scripts` entry, so no user sees a new install-time warning.
 <tr>
 <td valign="top" width="340">
 
-⚠️ _Behavior leaf — **untested here** — covered today by `node --check of the chrome.* glue in .github/workflows/client.yml (a real-Chrome e2e is a tracked follow-up)`._ <!-- req-gallery:11.12 -->
+![hover-popup-look.11.12](component/cases/hover-popup-look.11.12.png) <!-- req-gallery:11.12 -->
 
 </td>
 <td valign="top">
 
-`11.12` **(tbd)** The dynamically-registered content script actually intercepts hovers on a **real
+`11.12` The **hover popup's look**: a compact **dark card** with the current category's label on top,
+the leading note's **body**, and its **author** below — rendered through the real content script and
+the shipped popup stylesheet, so this image moves when the popup's code or styles do.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![hover-toggle-look.11.13](component/cases/hover-toggle-look.11.13.png) <!-- req-gallery:11.13 -->
+
+</td>
+<td valign="top">
+
+`11.13` The **options page's "Hover previews" section**: the title, the plain-language explanation of
+what granting access means (and that turning it off removes it again), and the toggle in its
+**off-by-default** state — a crop of the real options page render.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+⚠️ _Behavior leaf — **untested here** — covered today by `node --check of the chrome.* glue in .github/workflows/client.yml (a real-Chrome e2e is a tracked follow-up)`._ <!-- req-gallery:11.14 -->
+
+</td>
+<td valign="top">
+
+`11.14` **(tbd)** The dynamically-registered content script actually intercepts hovers on a **real
 third-party page in a real Chrome** — the harness cases (`11.5`–`11.10`) prove the model; only a
 real-Chrome e2e (the same tracked follow-up as `8.1`) proves the registration itself fires there.
 

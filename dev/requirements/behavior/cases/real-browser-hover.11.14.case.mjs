@@ -1,4 +1,4 @@
-// 11.12 — TBD (honesty leaf, the issue #26 counterpart to 8.1). The 11.5-11.10 cases drive the real
+// 11.14 — TBD (honesty leaf, the issue #26 counterpart to 8.1). The 11.5-11.10 cases drive the real
 // client/src/link-hover.mjs under jsdom + a fake chrome.* — faithful to our MODEL of a dynamically
 // registered content script, but not proof that a REAL Chrome actually fires chrome.scripting's
 // registration on a real third-party page and that the resulting hover/tooltip round-trip works there.

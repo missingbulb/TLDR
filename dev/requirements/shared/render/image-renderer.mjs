@@ -18,7 +18,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import satori from "satori";
 import { Resvg } from "@resvg/resvg-js";
 import { openForSnapshot } from "./harness.mjs";
@@ -108,6 +108,34 @@ function loadSheet(cssFileName) {
 // side panel and options page share sidepanel.css.
 function cssFor(surface) {
   return surface === "menu" ? "category-menu.css" : "sidepanel.css";
+}
+
+// The link-hover tooltip's stylesheet is a JS string in the SHIPPED module (the content script injects
+// it into its shadow root — there is no .css file for it), so its sheet is built from that same export:
+// single source, the snapshot can't drift from what the content script actually injects. Declarations
+// that only place the popup over the host page — position:fixed / z-index / left / top — plus the
+// paint-inert pointer-events are dropped: they're meaningless in a standalone crop, and satori doesn't
+// lay out `position: fixed`.
+let TOOLTIP_SHEET;
+async function loadTooltipSheet() {
+  if (TOOLTIP_SHEET) return TOOLTIP_SHEET;
+  const { TOOLTIP_STYLE } = await import(pathToFileURL(path.join(CLIENT, "src", "hover-tooltip.mjs")).href);
+  const DROP = new Set(["position", "z-index", "left", "top", "pointer-events"]);
+  const RULES = parseCssRules(stripAtRulesAndComments(TOOLTIP_STYLE)).map(({ selector, body }) => ({
+    selector,
+    body: body
+      .split(";")
+      .filter((decl) => !DROP.has(decl.slice(0, decl.indexOf(":")).trim()))
+      .join(";"),
+  }));
+  TOOLTIP_SHEET = { RULES, VARS: {}, BODY_RULE: null };
+  return TOOLTIP_SHEET;
+}
+
+// The sheet a case's surface folds onto its DOM: the linkHover surface uses the shipped tooltip style
+// string; every extension-page surface loads its real .css file.
+function sheetFor(testCase) {
+  return testCase.surface === "linkHover" ? loadTooltipSheet() : loadSheet(cssFor(testCase.surface));
 }
 
 // Replace var(--name) / var(--name, fallback) with the resolved value (or the fallback), against the
@@ -290,7 +318,7 @@ async function rasterize(vdom, width) {
 export async function renderCaseImage(testCase) {
   const session = await openForSnapshot(testCase);
   try {
-    const vdom = toVDom(prepareBody(session, loadSheet(cssFor(testCase.surface))));
+    const vdom = toVDom(prepareBody(session, await sheetFor(testCase)));
     Object.assign(vdom.props.style, {
       width: WIDTH,
       boxSizing: "border-box",
@@ -327,7 +355,7 @@ export async function renderComponentImage(testCase) {
   }
   const session = await openForSnapshot(testCase);
   try {
-    const body = prepareBody(session, loadSheet(cssFor(testCase.surface)));
+    const body = prepareBody(session, await sheetFor(testCase));
     const target = body.querySelector(testCase.selector);
     if (!target) {
       throw new Error(`component case "${testCase.name}": selector "${testCase.selector}" matched no element`);

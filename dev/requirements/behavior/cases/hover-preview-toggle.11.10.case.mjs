@@ -4,7 +4,8 @@
 // persist the enabled flag; declining the browser's own prompt leaves it unchecked and unregistered.
 // Unchecking it unregisters the script AND revokes the permission again, so the extension's footprint
 // shrinks back to zero the moment the user opts back out — this is the one place link-hover host access
-// is ever requested (11.11 is the manifest counterpart: it's never granted by default).
+// is ever requested (11.11 is the manifest counterpart: it's never granted by default). The gallery
+// show() renders the real check→uncheck walk as text; the section's LOOK is pinned by 11.13.
 "use strict";
 
 const HOVER_ORIGINS = ["http://*/*", "https://*/*"];
@@ -75,5 +76,9 @@ export default {
     } finally {
       session.close();
     }
+  },
+  show: async () => {
+    const { hoverToggleWalkLine } = await import("../show.mjs");
+    return hoverToggleWalkLine();
   },
 };

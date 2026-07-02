@@ -18,7 +18,7 @@
         <button id="save" type="submit" class="post">Save</button>
       </div>
     </form>
-    <section style="margin-top:24px">
+    <section id="hover-preview-section" style="margin-top:24px">
       <h2 class="title" style="font-size:15px">Hover previews</h2>
       <p class="status" style="text-align:left">
         Show a quick popup with the leading note for a link when you hover it, on any page. Off by
@@ -26,7 +26,9 @@
         detect which link you're hovering — turning it back off removes that access again.
       </p>
       <label style="display:flex; align-items:center; gap:8px">
-        <input type="checkbox" id="hover-preview-toggle" />
+        <!-- The size + border style is a no-op on Chrome's native checkbox widget, but gives the
+             satori snapshot render (which has no UA stylesheet) a visible box to draw. -->
+        <input type="checkbox" id="hover-preview-toggle" style="width:14px; height:14px; margin:0; border:1px solid #9ca3af; border-radius:3px" />
         Show hover previews on web pages
       </label>
     </section>
