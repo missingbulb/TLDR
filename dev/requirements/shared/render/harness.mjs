@@ -83,7 +83,7 @@ export async function open(surface, testCase) {
   // The shell's inert <script type="module"> never runs under jsdom; strip it so it isn't a stray node.
   for (const s of doc.querySelectorAll("script")) s.remove();
 
-  const { chrome, calls } = makeFakeChrome({
+  const { chrome, calls, registeredScripts } = makeFakeChrome({
     tabUrl: url,
     denylist: surface === "sidepanel" ? testCase.denylist ?? null : testCase.stored ?? null,
     authFails: Boolean(testCase.authFails),
@@ -91,6 +91,8 @@ export async function open(surface, testCase) {
     // Seed chrome.storage.local (e.g. `{ myVotes: [...] }`) so a case can render the viewer's own
     // vote state, which the public read can't carry (issue #22).
     localSeed: testCase.local ?? null,
+    // The options-page hover-preview toggle (issue #26): what chrome.permissions.request() resolves to.
+    permissionGranted: testCase.permissionGranted ?? true,
   });
   const fetchLog = [];
   const warnings = [];
@@ -153,6 +155,7 @@ export async function open(surface, testCase) {
     window: dom.window,
     chrome,
     calls,
+    registeredScripts,
     fetchLog,
     warnings,
     settle,

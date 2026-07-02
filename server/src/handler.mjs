@@ -166,6 +166,15 @@ async function handlePost(event) {
     // Raw email is NEVER stored (public reads would expose it). We keep a salted one-way hash for
     // moderation only; it is excluded from the public read projection below.
     authorEmailHash: hashEmail(claims.email),
+    // The CategoryRankIndex GSI's key (issue #26, link-hover preview: "the leading comment for this
+    // page+category"). categoryPageId is written ONLY here, on comment items — vote items and
+    // rate-limit counters never get it, which is what keeps the (sparse) GSI free of them. voteCount
+    // is written explicitly as 0 (not left absent, unlike the old read-time-defaulted convention) so a
+    // never-voted comment is STILL indexed from creation — a page with exactly one note should surface
+    // it as the leading comment even before anyone votes, not stay invisible to the hover preview until
+    // its first vote. handleVote's `ADD voteCount :one` then increments this same attribute in place.
+    categoryPageId: `${pageId}#${category}`,
+    voteCount: 0,
   };
 
   await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
@@ -345,6 +354,37 @@ async function handleGet(event) {
   });
 }
 
+// The leading (top-voted) comment for a page+category (issue #26, the link-hover preview). PUBLIC,
+// same as GET /comments — CloudFront caches it keyed on pageUrl+category (cdn-template.yaml). Queries
+// the CategoryRankIndex GSI (see template.yaml) for the single highest-voteCount item; `{ comment: null
+// }` (a 200, not a 404) is the correct, expected shape for "nothing posted in this category yet" — an
+// absent leader isn't an error.
+async function handleGetTop(event) {
+  const params = event.queryStringParameters ?? {};
+  let pageId;
+  try {
+    pageId = normalizePageUrl(params.pageUrl);
+  } catch (err) {
+    if (err instanceof InvalidPageUrlError) throw new HttpError(400, err.message);
+    throw err;
+  }
+  const category = resolveCategory(params.category);
+
+  const result = await ddb.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      IndexName: 'CategoryRankIndex',
+      KeyConditionExpression: 'categoryPageId = :categoryPageId',
+      ExpressionAttributeValues: { ':categoryPageId': `${pageId}#${category}` },
+      ScanIndexForward: false, // highest voteCount first
+      Limit: 1,
+    }),
+  );
+
+  const [top] = result.Items ?? [];
+  return json(200, { comment: top ? toPublicComment(top) : null });
+}
+
 // --- entry point ------------------------------------------------------------
 
 export const handler = async (event) => {
@@ -364,6 +404,7 @@ export const handler = async (event) => {
   try {
     if (route === 'POST /comments') return await handlePost(event);
     if (route === 'GET /comments') return await handleGet(event);
+    if (route === 'GET /comments/top') return await handleGetTop(event);
     if (route === 'POST /comments/{commentId}/vote') return await handleVote(event, 'POST');
     if (route === 'DELETE /comments/{commentId}/vote') return await handleVote(event, 'DELETE');
     return json(404, { message: 'not found' });

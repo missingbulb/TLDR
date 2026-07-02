@@ -21,15 +21,17 @@ Parameters:
       adds nearer edges (incl. Tel Aviv). At <10M req/mo CloudFront requests are free regardless.
 
 Resources:
-  # Cache key = pageUrl/nextToken querystring + Origin header. Authorization is EXCLUDED from the key,
-  # so every viewer shares one cached read per page. (Origin is keyed so per-origin CORS responses
-  # aren't cross-served.) This is safe ONLY because reads are public — same data for everyone.
+  # Cache key = pageUrl/nextToken/category querystring + Origin header. Authorization is EXCLUDED from
+  # the key, so every viewer shares one cached read per page (and, for /comments/top, per page+
+  # category). (Origin is keyed so per-origin CORS responses aren't cross-served.) This is safe ONLY
+  # because reads are public — same data for everyone. `category` (issue #26, GET /comments/top) is
+  # harmless in GET /comments' key too — that route ignores an unrecognized querystring.
   CommentsCachePolicy:
     Type: AWS::CloudFront::CachePolicy
     Properties:
       CachePolicyConfig:
         Name: !Sub ${AWS::StackName}-comments-cache
-        Comment: Short-TTL public read cache, keyed on pageUrl + Origin (not Authorization).
+        Comment: Short-TTL public read cache, keyed on pageUrl + category + Origin (not Authorization).
         DefaultTTL: 30
         MinTTL: 0
         MaxTTL: 60
@@ -45,6 +47,7 @@ Resources:
             QueryStrings:
               - pageUrl
               - nextToken
+              - category
           CookiesConfig:
             CookieBehavior: none
 
@@ -64,7 +67,8 @@ Resources:
               OriginProtocolPolicy: https-only
               OriginSSLProtocols:
                 - TLSv1.2
-        # Only /comments exists, so the default behavior covers it: GET cached, POST passed through.
+        # Every route is under /comments (/comments, /comments/top, /comments/{id}/vote), so the default
+        # behavior covers all of them: GET cached, POST/DELETE passed through.
         DefaultCacheBehavior:
           TargetOriginId: HttpApiOrigin
           ViewerProtocolPolicy: https-only

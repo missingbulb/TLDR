@@ -47,3 +47,21 @@ versions are what would propagate to the corpus `technologies/chrome-extension.m
   it only adds an install warning. (Conversely, a `host_permissions` grant alone wouldn't help if the
   server returned no usable CORS header.) Worked example: `CorsConfiguration` in `server/template.yaml`
   (allow `*`; `authorization`/`content-type` headers; `GET`/`POST`/`OPTIONS`).
+
+- **A feature that needs REAL host access (not just reaching your own CORS-open API) can still avoid an
+  install-time warning: `optional_host_permissions` + a user-gesture-bound `chrome.permissions.request()`
+  + dynamic `chrome.scripting.registerContentScripts()`.** A content script that must run on arbitrary
+  third-party pages (not just your own API's origin) genuinely needs a host grant — CORS on your server
+  can't substitute. List the origins under `optional_host_permissions` (not `permissions`/
+  `host_permissions`) and add the silent `"scripting"` permission; neither shows Chrome's install/update
+  warning. Only request the grant from `chrome.permissions.request()` called **synchronously inside a
+  real click handler** — Chrome requires a live user gesture and refuses the call from a background
+  service-worker message, so the request must happen in the foreground page (options/popup) that has the
+  gesture, not be proxied to the SW. On grant, register the content script **dynamically**
+  (`chrome.scripting.registerContentScripts([...])`) — never declare it statically in `manifest.json`'s
+  `content_scripts`, or its `matches` would need to already be a granted permission, defeating the
+  opt-in. Self-heal on every service-worker start (`chrome.permissions.contains` vs. your persisted
+  enabled flag): the grant can be revoked from `chrome://extensions` directly, bypassing your toggle.
+  Worked example: `client/src/hover-registration.mjs` (register/unregister/reconcile) +
+  `client/src/options.mjs` (the toggle click handler calling `chrome.permissions.request` directly) +
+  `client/manifest.json` (`optional_host_permissions`, `scripting`, no static `content_scripts`).

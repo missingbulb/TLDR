@@ -30,10 +30,16 @@ test('manifest declares the side panel, an ESM service worker, and icons', () =>
 });
 
 test('permissions are least-privilege', () => {
-  const expected = ['identity', 'sidePanel', 'storage', 'tabs', 'webNavigation'];
+  const expected = ['identity', 'scripting', 'sidePanel', 'storage', 'tabs', 'webNavigation'];
   assert.deepEqual([...manifest.permissions].sort(), [...expected].sort());
-  // No host access at all: the extension reaches the API via the server's '*' CORS (API Gateway v2
+  // No DEFAULT host access: the extension reaches the API via the server's '*' CORS (API Gateway v2
   // rejects the chrome-extension:// origin, so CORS is '*'), and launchWebAuthFlow uses a
-  // browser-managed window — so no host_permissions is requested (not even the API host).
-  assert.ok(!('host_permissions' in manifest), 'should request no host_permissions');
+  // browser-managed window — so no host_permissions is requested (not even the API host), and no
+  // content_scripts are declared statically. "scripting" itself carries no install-time warning.
+  assert.ok(!('host_permissions' in manifest), 'should request no ALWAYS-ON host_permissions');
+  assert.ok(!('content_scripts' in manifest), 'the link-hover script is registered dynamically, never statically');
+});
+
+test('the link-hover preview host access is OPTIONAL (issue #26) — opt-in only, never granted at install', () => {
+  assert.deepEqual(manifest.optional_host_permissions, ['http://*/*', 'https://*/*']);
 });

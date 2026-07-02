@@ -18,6 +18,18 @@
         <button id="save" type="submit" class="post">Save</button>
       </div>
     </form>
+    <section style="margin-top:24px">
+      <h2 class="title" style="font-size:15px">Hover previews</h2>
+      <p class="status" style="text-align:left">
+        Show a quick popup with the leading note for a link when you hover it, on any page. Off by
+        default. Turning this on asks Chrome to grant TLDR access to read the pages you visit, so it can
+        detect which link you're hovering — turning it back off removes that access again.
+      </p>
+      <label style="display:flex; align-items:center; gap:8px">
+        <input type="checkbox" id="hover-preview-toggle" />
+        Show hover previews on web pages
+      </label>
+    </section>
     <script type="module" src="options.mjs"></script>
   </body>
 </html>

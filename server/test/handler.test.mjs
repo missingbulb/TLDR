@@ -53,6 +53,10 @@ function getEvent(queryStringParameters, headers) {
   return { requestContext: { http: { method: 'GET', path: '/comments' } }, headers, queryStringParameters };
 }
 
+function getTopEvent(queryStringParameters, headers) {
+  return { requestContext: { http: { method: 'GET', path: '/comments/top' } }, headers, queryStringParameters };
+}
+
 function conditionalFailure() {
   return Object.assign(new Error('conditional check failed'), {
     name: 'ConditionalCheckFailedException',
@@ -251,6 +255,66 @@ test('GET round-trips an opaque nextToken into ExclusiveStartKey', async () => {
 
 test('GET without a pageUrl is rejected (400)', async () => {
   const res = await handler(getEvent({}));
+  assert.equal(res.statusCode, 400);
+});
+
+// --- GET /comments/top (issue #26, the link-hover preview's "leading comment") --------------------
+
+test('GET /comments/top queries the CategoryRankIndex GSI keyed on pageId#category, highest voteCount first', async () => {
+  ddbMock.on(QueryCommand).resolves({
+    Items: [
+      {
+        pageId: 'https://example.com/x',
+        commentId: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+        authorSub: 'user-123',
+        authorName: 'Ada',
+        body: 'the leading note',
+        category: 'tldr',
+        createdAt: 1700000000000,
+        voteCount: 9,
+        categoryPageId: 'https://example.com/x#tldr',
+      },
+    ],
+  });
+
+  const res = await handler(getTopEvent({ pageUrl: 'https://example.com/x', category: 'tldr' }));
+  assert.equal(res.statusCode, 200);
+  const out = JSON.parse(res.body);
+  // Same allowlist projection as GET /comments — no internal field (categoryPageId, authorSub) leaks.
+  assert.deepEqual(Object.keys(out.comment).sort(), ['authorId', 'authorName', 'body', 'category', 'commentId', 'createdAt', 'voteCount']);
+  assert.equal(out.comment.body, 'the leading note');
+  assert.equal(out.comment.voteCount, 9);
+
+  const query = ddbMock.commandCalls(QueryCommand)[0].args[0].input;
+  assert.equal(query.IndexName, 'CategoryRankIndex');
+  assert.equal(query.KeyConditionExpression, 'categoryPageId = :categoryPageId');
+  assert.equal(query.ExpressionAttributeValues[':categoryPageId'], 'https://example.com/x#tldr');
+  assert.equal(query.ScanIndexForward, false, 'highest voteCount first');
+  assert.equal(query.Limit, 1);
+});
+
+test('GET /comments/top returns { comment: null } (a 200, not a 404) when nothing is posted in that category yet', async () => {
+  ddbMock.on(QueryCommand).resolves({ Items: [] });
+  const res = await handler(getTopEvent({ pageUrl: 'https://example.com/x', category: 'tldr' }));
+  assert.equal(res.statusCode, 200);
+  assert.equal(JSON.parse(res.body).comment, null);
+});
+
+test('GET /comments/top with no category defaults to chitchat — the additive-only optional param', async () => {
+  ddbMock.on(QueryCommand).resolves({ Items: [] });
+  await handler(getTopEvent({ pageUrl: 'https://example.com/x' }));
+  const query = ddbMock.commandCalls(QueryCommand)[0].args[0].input;
+  assert.equal(query.ExpressionAttributeValues[':categoryPageId'], 'https://example.com/x#chitchat');
+});
+
+test('GET /comments/top with an unknown category is rejected (400)', async () => {
+  const res = await handler(getTopEvent({ pageUrl: 'https://example.com/x', category: 'rating' }));
+  assert.equal(res.statusCode, 400);
+  assert.equal(ddbMock.commandCalls(QueryCommand).length, 0, 'rejected before any query');
+});
+
+test('GET /comments/top without a pageUrl is rejected (400)', async () => {
+  const res = await handler(getTopEvent({ category: 'tldr' }));
   assert.equal(res.statusCode, 400);
 });
 

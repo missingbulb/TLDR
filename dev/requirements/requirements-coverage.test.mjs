@@ -30,7 +30,7 @@ const SNAPSHOT_RUNNER = path.join(REQ_DIR, "shared", "render", "dom-snapshots.te
 // The leaves deliberately NOT verified here — a tbd case tracks each, naming where it's covered
 // today. This is a committed allowlist so that downgrading a wired leaf to `tbd` (which would stop
 // its verify() from ever running) is a reviewed change, not a silent hole.
-const TBD_LEAVES = ["8.1"];
+const TBD_LEAVES = ["8.1", "11.12"];
 
 const allIds = new Set(allRequirementIds());
 const leaves = leafRequirementIds();
