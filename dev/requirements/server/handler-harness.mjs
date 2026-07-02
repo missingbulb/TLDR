@@ -36,6 +36,15 @@ export function getComments({ pageUrl } = {}) {
   });
 }
 
+// GET /comments/top?pageUrl=…&category=… (public read; issue #26, the link-hover preview's "leading
+// comment"). Pair with `ddbMock.on(QueryCommand).resolves({ Items })` on the CategoryRankIndex GSI.
+export function getTopComment({ pageUrl, category } = {}) {
+  return handler({
+    requestContext: { routeKey: "GET /comments/top", http: { method: "GET", path: "/comments/top" } },
+    queryStringParameters: { ...(pageUrl ? { pageUrl } : {}), ...(category ? { category } : {}) },
+  });
+}
+
 // POST or DELETE /comments/{commentId}/vote with the given claims. The path param + the templated
 // routeKey mirror what API Gateway passes; the body carries the page url the server re-normalizes.
 export function vote({ method = "POST", claims = {}, commentId = "01ARZ3NDEKTSV4RRFFQ69G5FAV", body } = {}) {

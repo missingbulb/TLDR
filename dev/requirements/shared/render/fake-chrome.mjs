@@ -52,9 +52,28 @@ function mintIdToken(nonce, nowMs) {
  * @param {number} opts.nowMs         the pinned "now" (so the minted token's exp is deterministic).
  * @param {object|null} opts.localSeed  initial chrome.storage.local contents (e.g. `{ myVotes: [...] }`
  *   to render the voted-by-me state — the viewer's own votes the public read can't carry).
+ * @param {Function|null} opts.onMessage  a `(message) => response` fake for `chrome.runtime.sendMessage`
+ *   (issue #26, the link-hover content-script -> service-worker round trip). Defaults to a stub that
+ *   throws "no listener" — like a real `sendMessage` when no onMessage listener is registered — so a
+ *   case that doesn't need it doesn't have to pass one, and a case that DOES need it gets an explicit,
+ *   readable failure if it forgot to.
+ * @param {boolean} opts.permissionGranted  what `chrome.permissions.request()` resolves to (issue #26,
+ *   the options-page hover-preview toggle) — models the browser's own grant/decline prompt.
  * @returns a `chrome` object plus `calls`, capturing what the UI asked the browser to do.
  */
-export function makeFakeChrome({ tabUrl, denylist = null, authFails = false, nowMs = Date.now(), localSeed = null }) {
+export function makeFakeChrome({
+  tabUrl,
+  denylist = null,
+  authFails = false,
+  nowMs = Date.now(),
+  localSeed = null,
+  onMessage = null,
+  permissionGranted = true,
+}) {
+  // The dynamically-registered content scripts (issue #26's hover-registration.mjs), keyed by id —
+  // shared, mutable state so registerContentScripts/unregisterContentScripts/getRegisteredContentScripts
+  // agree with each other exactly like the real chrome.scripting API would.
+  const registeredScripts = [];
   // In-memory stores per area, seeded from the case (the synced denylist; the local login_hint email /
   // own-vote set / current category). set() emits chrome.storage.onChanged like the real API, so a case
   // can drive a live reaction (e.g. the toolbar menu switching the current category, issue #25).
@@ -64,7 +83,14 @@ export function makeFakeChrome({ tabUrl, denylist = null, authFails = false, now
     local: { ...(localSeed ?? {}) },
   };
   const changeListeners = [];
-  const calls = { syncSet: [], launchWebAuthFlow: 0, sidePanelOpen: 0 };
+  const calls = {
+    syncSet: [],
+    launchWebAuthFlow: 0,
+    sidePanelOpen: 0,
+    sendMessage: [],
+    permissionsRequest: [],
+    permissionsRemove: [],
+  };
 
   function areaApi(name) {
     const store = stores[name];
@@ -122,8 +148,47 @@ export function makeFakeChrome({ tabUrl, denylist = null, authFails = false, now
       // The side panel opens a Port to the SW so the toolbar toggle can close it (issue #25). A no-op
       // port here — the pane/SW handshake itself is chrome glue covered by the real-browser e2e (§8.1).
       connect: () => ({ onMessage: NOOP_EVENT, onDisconnect: NOOP_EVENT, postMessage() {}, disconnect() {} }),
+      // link-hover.mjs's content-script -> service-worker round trip (issue #26). This fakes the SW's
+      // ANSWER directly (via the case-supplied onMessage), not the real service-worker.mjs message
+      // handler — that handler has its own dedicated unit test (client/test/service-worker.test.mjs).
+      // Faithful to the real API's error behavior when the extension side is unreachable: onMessage
+      // itself throwing propagates as a rejected sendMessage, matching link-hover.mjs's catch/fail-silent.
+      sendMessage: async (message) => {
+        calls.sendMessage.push(message);
+        if (!onMessage) throw new Error('no onMessage listener registered for this fake');
+        return onMessage(message);
+      },
+    },
+    // The hover-preview opt-in toggle (issue #26, options.mjs + hover-registration.mjs).
+    // permissions.request() must be reachable from a live user gesture in real Chrome — this fake just
+    // resolves per `permissionGranted`, modeling the browser's own grant/decline prompt.
+    permissions: {
+      request: async (opts) => {
+        calls.permissionsRequest.push(opts);
+        return permissionGranted;
+      },
+      remove: async (opts) => {
+        calls.permissionsRemove.push(opts);
+        for (const origin of opts.origins ?? []) void origin; // nothing to track beyond the call itself
+        return true;
+      },
+      contains: async () => registeredScripts.length > 0,
+    },
+    scripting: {
+      getRegisteredContentScripts: async ({ ids }) => registeredScripts.filter((s) => ids.includes(s.id)),
+      registerContentScripts: async (scripts) => {
+        registeredScripts.push(...scripts);
+      },
+      unregisterContentScripts: async ({ ids }) => {
+        const missing = ids.some((id) => !registeredScripts.some((s) => s.id === id));
+        if (missing) throw new Error("not registered");
+        for (const id of ids) {
+          const i = registeredScripts.findIndex((s) => s.id === id);
+          if (i >= 0) registeredScripts.splice(i, 1);
+        }
+      },
     },
   };
 
-  return { chrome, calls };
+  return { chrome, calls, registeredScripts };
 }

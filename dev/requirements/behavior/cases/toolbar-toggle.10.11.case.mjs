@@ -22,9 +22,24 @@ export default {
     const reg = {};
     const listener = (key) => ({ addListener: (fn) => { reg[key] = fn; } });
     const fakeChrome = {
-      runtime: { onConnect: listener("connect"), onInstalled: listener("installed"), onStartup: listener("startup") },
+      runtime: {
+        onConnect: listener("connect"),
+        onInstalled: listener("installed"),
+        onStartup: listener("startup"),
+        onMessage: listener("message"),
+        getManifest: () => ({ version: "0.0.0-test" }),
+      },
       action: { onClicked: listener("clicked"), setPopup: async ({ popup }) => setPopupCalls.push(popup) },
       storage: { sync: { get: async () => ({}), set: async () => {} } },
+      // reconcileHoverRegistration (issue #26) now runs on every onInstalled/onStartup — stub its
+      // dependencies so this pre-existing toggle case, which never touches hover-preview itself, still
+      // loads the real service-worker.mjs cleanly (an "always-off, always-ungranted" environment).
+      permissions: { contains: async () => false },
+      scripting: {
+        getRegisteredContentScripts: async () => [],
+        registerContentScripts: async () => {},
+        unregisterContentScripts: async () => {},
+      },
     };
     const last = () => setPopupCalls[setPopupCalls.length - 1];
     const tick = () => new Promise((r) => setTimeout(r, 0));

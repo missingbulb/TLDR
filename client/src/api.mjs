@@ -31,6 +31,22 @@ export async function getComments(pageUrl, { fetchImpl = fetch, nextToken, clien
   return res.json();
 }
 
+// The leading (top-voted) comment for a page in one category — the link-hover preview's lookup (issue
+// #26). PUBLIC and unauthenticated, same as getComments; `category` is optional (the server defaults
+// it), included only when supplied so an omitted category doesn't add a stray empty querystring value.
+// Resolves to `{ comment }`, where `comment` is `null` when nothing has been posted in that category —
+// that's the expected empty-state shape, not an error.
+export async function getTopComment(pageUrl, category, { fetchImpl = fetch, clientVersion } = {}) {
+  const params = new URLSearchParams({ pageUrl });
+  if (category) params.set('category', category);
+  const res = await fetchImpl(`${API_BASE_URL}/comments/top?${params.toString()}`, {
+    method: 'GET',
+    headers: clientVersionHeader(clientVersion),
+  });
+  if (!res.ok) throw new Error(`top-comment read failed: ${res.status}`);
+  return res.json();
+}
+
 // Run an authenticated write: send first with a SILENT token (no UI); on a 401 (token likely expired)
 // force-refresh once, permitting a visible Google prompt as a last resort. Both POST /comments and the
 // vote routes are attributed writes with the identical token dance, so they share this. The caller runs

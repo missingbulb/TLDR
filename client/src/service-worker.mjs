@@ -12,10 +12,13 @@
 // window-agnostic (the common case is one window); the menu opens the pane per the active tab.
 
 import { DEFAULT_USER_DENYLIST } from './denylist.mjs';
+import { getTopComment } from './api.mjs';
+import { reconcileHoverRegistration } from './hover-registration.mjs';
 
 export const DENYLIST_STORAGE_KEY = 'userDenylist';
 const CATEGORY_MENU_POPUP = 'src/category-menu.html';
 const PANEL_PORT = 'panel';
+const CLIENT_VERSION = chrome.runtime.getManifest().version;
 
 // The live connections from open side panels. Non-empty ⇒ a pane is open somewhere.
 const panelPorts = new Set();
@@ -66,10 +69,26 @@ async function seedDenylist() {
   }
 }
 
+// LINK-HOVER PREVIEW (issue #26): the content script (src/link-hover.mjs) runs in an arbitrary
+// third-party page's origin, so it can't reach the API directly under a predictable CORS/CSP story —
+// it messages the SW (a genuine extension context, already covered by the server's `*` CORS the same
+// way sidepanel.mjs's fetches are) to do the actual read on its behalf.
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type !== 'link-hover:getTopComment') return; // not ours — let another listener handle it
+  getTopComment(message.pageUrl, message.category, { clientVersion: CLIENT_VERSION })
+    .then((result) => sendResponse(result))
+    .catch((err) => sendResponse({ error: String(err?.message ?? err) }));
+  return true; // keep the message channel open for the async sendResponse above
+});
+
 chrome.runtime.onInstalled.addListener(async () => {
   await reflectPopup(); // default (no pane open): the icon opens the category menu
   await seedDenylist();
+  await reconcileHoverRegistration(); // self-heal the hover-preview registration vs. its permission
 });
 
 // Re-assert the default popup on startup in case it was ever cleared while no pane is open.
-chrome.runtime.onStartup.addListener(reflectPopup);
+chrome.runtime.onStartup.addListener(async () => {
+  await reflectPopup();
+  await reconcileHoverRegistration();
+});

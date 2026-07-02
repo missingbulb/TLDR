@@ -153,13 +153,14 @@ Read page = `Query` on `pageId`. Submit = `PutItem`.
 | `authorSub` | String | Google `sub`. Durable author identity. Returned to clients as `authorId`. |
 | `authorName` | String | Display name from the token. |
 | `body` | String | Comment text, validated before write (≤ 8 KB). |
-| `category` | String | The comment's category id (issue #25), one of the shared allowlist (`shared/categories.mjs`). A plain item attribute (no GSI, key schema unchanged). Returned; **read-time default `chitchat`** for legacy rows written before categories existed. |
+| `category` | String | The comment's category id (issue #25), one of the shared allowlist (`shared/categories.mjs`). Returned; **read-time default `chitchat`** for legacy rows written before categories existed. |
 | `createdAt` | Number | Epoch ms, **derived from the same ULID** (one clock read, no drift). |
 | `pageUrlRaw` | String | Original URL, for debugging. Never returned in the read projection. |
 | `authorEmailHash` | String | **Salted one-way SHA-256** of the verified email. Moderation only; **never returned**. |
-| `voteCount` | Number | Endorsements on the comment, maintained atomically with each vote item (§9.2). Returned; defaults to 0. |
+| `voteCount` | Number | Endorsements on the comment, maintained atomically with each vote item (§9.2). Written as `0` at creation (not left absent) so a never-voted comment is still indexed by `CategoryRankIndex` below; returned, defaults to 0 for legacy rows written before this. |
 | `voterSub` | String | *(vote items only)* the voter's Google `sub`. Bookkeeping; **never returned** (a voter's identity stays private). |
 | `expiresAt` | Number | *(rate-limit counter items only)* epoch seconds; DynamoDB TTL auto-deletes them. |
+| `categoryPageId` | String | *(comment items only)* `"<pageId>#<category>"` — the `CategoryRankIndex` GSI's partition key (issue #26). Internal; **never returned** (outside the allowlist projection). |
 
 🔧 **Decision (email → salted hash, owner-chosen):** the **raw** email is **never stored or returned** —
 public, CDN-cached reads would make any returned field world-readable. A **salted one-way hash**
@@ -174,9 +175,21 @@ through reads.
 | Create a comment | `PutItem` |
 | Cast / toggle a vote | `TransactWriteItems`: vote item (`SK = VOTE#<commentId>#<voterSub>`) + `voteCount` ±1 (§9.2) |
 | Per-author rate limit | conditional `UpdateItem` on `pageId = RL#<sub>`, TTL'd counter |
+| The leading comment for a page + category (§9.2, issue #26) | `Query` the `CategoryRankIndex` **GSI** — PK `categoryPageId`, SK `voteCount`, `ScanIndexForward: false, Limit: 1` |
 | (future) All comments by a user | would need a **GSI** on `authorSub` — **not** in v1 |
 
-No GSI in v1.
+**`CategoryRankIndex` (issue #26, the link-hover preview's "leading comment" lookup):** PK
+`categoryPageId` (`"<pageId>#<category>"`, written only on comment items), SK `voteCount`. **Sparse by
+construction** — vote items and rate-limit counters never carry `categoryPageId`, so they never appear
+in it, with no extra filtering needed. Adding a GSI is an **additive** `UpdateTable` — it does not touch
+the base table's `pageId`/`commentId` key schema (still frozen, §5.1) and does not replace the table.
+Ties at the top `voteCount` break arbitrarily (DynamoDB's own tie order, not a documented contract) —
+accepted for a "leading comment" preview.
+
+🔧 **Known limitation (no backfill):** a GSI only indexes items that already carry its key attributes at
+write time. A comment posted **before** this GSI shipped has no `categoryPageId` and is invisible to the
+ranking query until it's rewritten — there is no backfill migration, consistent with this table's
+existing no-migration, default-at-read-time treatment of `category` itself (§5.2).
 
 ### 5.4 Capacity mode
 **On-demand** — spiky, idle much of the time, zero cost when idle. Items are < 1 KB → ~1 WRU/write, a
@@ -331,10 +344,12 @@ commands, termination protection).
 | `GET` | `/comments` | **public** | query `pageUrl` (+ optional `nextToken`) | Yes (TTL 30–60s) | `200` + `{ "comments": [ { commentId, body, authorName, authorId, createdAt, voteCount, category } ], "nextToken"? }` |
 | `POST` | `/comments/{commentId}/vote` | Bearer ID token | `{ "pageUrl" }` | No | `200` + `{ "ok": true }` (idempotent cast) |
 | `DELETE` | `/comments/{commentId}/vote` | Bearer ID token | `{ "pageUrl" }` | No | `200` + `{ "ok": true }` (idempotent toggle-off) |
+| `GET` | `/comments/top` | **public** | query `pageUrl` (+ optional `category`) | Yes (TTL 30–60s) | `200` + `{ "comment": { commentId, body, authorName, authorId, createdAt, voteCount, category } \| null }` |
 
 Errors: `400` invalid body / missing or non-http(s) `pageUrl` / unknown `category`; `401` missing/invalid token; `403` unverified
 email; `413` body too large; `429` per-author rate limit; `404` unknown route / vote on a missing comment;
-`500` unexpected.
+`500` unexpected. `GET /comments/top` returns `200` with `comment: null` (never `404`) when the page +
+category has no comments yet — an absent leader is an expected empty state, not an error (§9.4).
 
 ### 9.2 Upvoting (issue #22)
 
@@ -408,9 +423,41 @@ deliberate constraint (no GSI, frozen key schema, one CDN-cached read per page):
   `sidePanel.open()` (Chrome **116+**, so `minimum_chrome_version` is bumped 114 → 116). Best-effort and
   window-agnostic (the common case is one window); the pane↔SW handshake is chrome glue covered by the
   real-browser e2e (§8.1 / §10).
-- **Ranking (the top note per category) is a follow-up.** Per-category ranking by upvotes — the leading
-  note per category the hover preview (#26) surfaces — is layered on the upvoting substrate (§9.2) and
-  is **not built here**; it's a thin client-side computation over the already-fetched page when it lands.
+- **Ranking (the top note per category) is built as `GET /comments/top` (issue #26)**, layered on the
+  upvoting substrate (§9.2) via the `CategoryRankIndex` GSI (§5.3) — see §9.4.
+
+### 9.4 Link-hover preview (issue #26)
+
+Hovering an **http(s) link** while browsing shows a small popup with the **leading (top-voted) comment**
+for that link's URL, in the reader's **current category** — without opening the panel.
+
+- **Server: a dedicated ranking endpoint, not a client-side scan.** `GET /comments/top` queries the
+  `CategoryRankIndex` GSI (§5.3) directly, so the answer is correct regardless of how many comments a
+  page has — unlike the side panel's own read (§4.4, §9), which only ever sees the first `nextToken`
+  page. Same public/CDN-cached shape as `GET /comments` (§9); `category` joins `pageUrl`/`nextToken` in
+  the CDN cache-key whitelist (§6.3).
+- **Content script, not the panel — the one feature reaching beyond the extension's own pages.**
+  `client/src/link-hover.mjs` runs on an arbitrary third-party page, registered **dynamically**
+  (`chrome.scripting.registerContentScripts`) rather than declared in the manifest, so it only exists
+  after the reader opts in.
+- **🔧 Optional permission, opt-in via toggle (owner decision — supersedes #30's "zero host access" only
+  for this one feature).** The manifest requests `optional_host_permissions` (`http://*/*`,
+  `https://*/*`) — never a static `host_permissions`/`content_scripts` entry — plus the silent
+  `scripting` permission. Both carry **no install-time warning**. An options-page toggle
+  (`chrome.permissions.request()`, which must run inside the click handler — Chrome refuses it from a
+  background message) is the **only** place host access is ever requested; unchecking it revokes the
+  permission and unregisters the script, so the extension's default footprint stays exactly what #30
+  established. `hover-registration.mjs` self-heals the enabled-flag/granted-permission pair on every
+  service-worker start (e.g. a permission revoked via `chrome://extensions` directly).
+- **Same gates as the side panel, reused not reimplemented.** A hovered link is a lookup candidate only
+  if `evaluatePage` (§4.2 — http(s)-only, the synced per-site denylist) says so for the link's *target*
+  URL; the category used is read fresh from `chrome.storage.local` at hover time (no page reload needed
+  after a toolbar-menu category switch). No comment in the category ⇒ **show nothing** (🔧 owner-chosen
+  empty state — a purely passive, read-only affordance).
+- **The fetch runs in the service worker, never the content script.** A content script sits in an
+  arbitrary, CSP-unpredictable page origin; `link-hover.mjs` messages the SW
+  (`chrome.runtime.sendMessage`) to do the actual `GET /comments/top` call, the same extension context
+  (and same `*` CORS, §6.3/§12-A10) the side panel's own reads already use.
 
 ### 9.1 Versioning & backward-compatibility policy (issue #29)
 
@@ -529,6 +576,13 @@ Corrections that changed the build (verified against authoritative docs during t
   your data on `<host>`" install warning at no functional cost. (Earlier A9 wording called `host_permissions` the
   reach mechanism — it never was once CORS is `*`.) Pre-release gate: confirm a real-browser read + post, since
   full end-to-end browser testing is a tracked v1 follow-up (§10).
+- **A11 — Link-hover preview's host access is OPTIONAL, not A10's zero (issue #26).** Passive
+  hover-detection on arbitrary pages needs SOME host access — there's no permission that means "hover
+  any link, anywhere, and a popup just appears" with zero grant. Rather than reopen A10 for every user,
+  the manifest requests it only as `optional_host_permissions` (§9.4) — no install-time warning, and the
+  ONLY prompt a user ever sees is the one they trigger themselves via the options-page toggle. A10's
+  actual point (no *default*, no-action-required host access) stays intact; this adds an explicit,
+  reversible opt-in for one feature, not a blanket reversal.
 
 Choices made and noted (not detrimental):
 - **Two stacks** (app + CDN) split at the change-frequency line, over a single stack with an `EnableCdn` toggle —

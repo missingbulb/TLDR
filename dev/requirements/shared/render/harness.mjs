@@ -83,7 +83,7 @@ export async function open(surface, testCase) {
   // The shell's inert <script type="module"> never runs under jsdom; strip it so it isn't a stray node.
   for (const s of doc.querySelectorAll("script")) s.remove();
 
-  const { chrome, calls } = makeFakeChrome({
+  const { chrome, calls, registeredScripts } = makeFakeChrome({
     tabUrl: url,
     denylist: surface === "sidepanel" ? testCase.denylist ?? null : testCase.stored ?? null,
     authFails: Boolean(testCase.authFails),
@@ -91,6 +91,8 @@ export async function open(surface, testCase) {
     // Seed chrome.storage.local (e.g. `{ myVotes: [...] }`) so a case can render the viewer's own
     // vote state, which the public read can't carry (issue #22).
     localSeed: testCase.local ?? null,
+    // The options-page hover-preview toggle (issue #26): what chrome.permissions.request() resolves to.
+    permissionGranted: testCase.permissionGranted ?? true,
   });
   const fetchLog = [];
   const warnings = [];
@@ -153,6 +155,7 @@ export async function open(surface, testCase) {
     window: dom.window,
     chrome,
     calls,
+    registeredScripts,
     fetchLog,
     warnings,
     settle,
@@ -191,7 +194,15 @@ export async function open(surface, testCase) {
 // Convenience for the dom kind: open the right surface for a case, apply its optional `action`
 // (a gesture that leaves the DOM in the state to snapshot), and return the session. The caller
 // serializes session.document.body, then closes.
+//
+// `surface: "linkHover"` is the one surface NOT in SURFACES (it has no extension HTML shell — it's a
+// content script on a synthetic third-party page): it routes to the link-hover harness, which drives
+// the real hover and materializes the shadow-root tooltip into the body for the crop pipeline.
 export async function openForSnapshot(testCase) {
+  if (testCase.surface === "linkHover") {
+    const { openForTooltipSnapshot } = await import("./link-hover-harness.mjs");
+    return openForTooltipSnapshot(testCase);
+  }
   const surface = testCase.surface || "sidepanel";
   const session = await open(surface, testCase);
   if (testCase.action) await testCase.action(session);

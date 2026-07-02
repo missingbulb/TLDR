@@ -979,3 +979,271 @@ _(Its click behaviour is `10.7`.)_
 </td>
 </tr>
 </table>
+
+
+## 11. Link hover preview
+
+Follow-up to the categories/upvoting ranking deferral noted in §10: while browsing, hovering an
+**http(s) link** shows a small popup with the **leading (top-voted) comment** for that link's URL, in
+the reader's **currently selected category** — a TLDR for every link on the page, without opening the
+panel. This is the one feature that reaches **beyond the extension's own pages**: it runs as a
+DYNAMICALLY-registered content script (`client/src/link-hover.mjs`) on an arbitrary third-party page,
+opted into per the options-page toggle (`11.10`), never declared statically in the manifest (`11.11`) —
+so the host-access it needs is requested, and can be revoked, only through that one gesture (§12,
+"optional permission, opt-in via toggle").
+
+The **leading comment** is served by a new, dedicated endpoint — `GET /comments/top` — backed by a new
+`CategoryRankIndex` GSI keyed on `pageId#category` and sorted by `voteCount` (`11.1`–`11.4`); the base
+table's `pageId`/`commentId` key schema stays untouched (only a GSI was added, not a key-schema change).
+**Known limitation:** a GSI only indexes items that already carry its key attributes at write time, so a
+comment posted **before** this shipped is invisible to the ranking query until it's rewritten — there is
+no backfill (consistent with the project's existing no-migration, default-at-read-time treatment of
+`category` itself).
+
+On the client, hovering a link is gated exactly like the side panel gates the active tab — reusing
+`evaluatePage` (the same http(s)-only + per-site-denylist rule, `11.5`–`11.6`) — before any lookup is
+even attempted. The category used for a lookup is always read fresh from `chrome.storage.local` at
+hover time, never one cached when the content script loaded (`11.9`), so switching category via the
+toolbar menu changes what the NEXT hover shows without a page reload. Per the owner-chosen empty-state
+decision: a link with no leading comment in the current category shows **nothing** (`11.8`) — this stays
+a purely passive, read-only affordance. A shown popup is styled independently of the panel's
+`body[data-category]` theming (that selector has no meaning on a third-party page) but still names the
+category via the same design registry (`11.7`); its **look is pinned as an owner-approved image**
+(`11.12`), rendered through the real content script + the shipped popup stylesheet, as is the
+options-page opt-in section itself (`11.13`). The server leaves show the **real request → response**
+of each run; the gate and gesture leaves show the **real walk** (the outbound lookup, the popup's
+actual content, the permission round-trip) as generated text — results in the doc, not pointers.
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+`GET /comments/top?pageUrl=https://example.com/x&category=tldr` — public → `200` <!-- req-gallery:11.1 -->
+
+</td>
+<td valign="top">
+
+`11.1` `GET /comments/top?pageUrl=…&category=…` returns the **highest-`voteCount` comment** for that
+page + category, via the `CategoryRankIndex` GSI — the same public allowlist projection as
+`GET /comments` (no internal field leaks).
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+`GET /comments/top?pageUrl=https://example.com/x&category=spoiler` — public → `200` <!-- req-gallery:11.2 -->
+
+</td>
+<td valign="top">
+
+`11.2` When nothing has been posted in that page + category yet, `GET /comments/top` returns **`{
+comment: null }` with a `200`** — an absent leader is an expected empty state, never a `404`/error.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+`GET /comments/top?pageUrl=https://example.com/x` — public (no category param) → `200` <!-- req-gallery:11.3 -->
+
+</td>
+<td valign="top">
+
+`11.3` `GET /comments/top` with **no `category`** defaults to `DEFAULT_CATEGORY` — the additive-only
+optional-parameter contract (§9.1), mirroring the write-side default an older/absent category resolves
+to.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+`GET /comments/top?pageUrl=https://example.com/x&category=rating` — public → `400` unknown category: rating <!-- req-gallery:11.4 -->
+
+</td>
+<td valign="top">
+
+`11.4` `GET /comments/top` with an **unknown, present** category value is rejected (`400`) before any
+query runs — the same validation `resolveCategory` already applies on write.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+`mailto:someone@example.com` → `null`; `javascript:alert(1)` → `null`; `https://example.com/x?utm_source=foo` → `https://example.com/x` <!-- req-gallery:11.5 -->
+
+</td>
+<td valign="top">
+
+`11.5` A hovered link is a lookup **candidate only if its href is http(s)** — `mailto:`, `javascript:`,
+and any other non-http(s) scheme never trigger a lookup at all (no network call, no popup).
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+`google.com/search`, deny [google.com] → `null`; `www.google.com/search`, deny [google.com] → `null`; `example.com/x`, deny [google.com] → candidate; `chrome.google.com/webstore` → `null` <!-- req-gallery:11.6 -->
+
+</td>
+<td valign="top">
+
+`11.6` A hovered link whose host is on the reader's **per-site denylist** (the SAME synced denylist the
+side panel honors, §4.2) is never a lookup candidate — no network call, no popup, for that host.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+hover → debounce → `getTopComment(tldr)` → popup “TLDR · the gist of it · Ada · ▲ 5”; mouseout → removed <!-- req-gallery:11.7 -->
+
+</td>
+<td valign="top">
+
+`11.7` Hovering a candidate link **with** a leading comment shows a popup — after a short debounce —
+naming the current category and the comment's body, author, and **vote count** (▲ N); moving off the
+link removes it.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+hover → `getTopComment(spoiler)` → `{ comment: null }` → nothing shown; hover a denylisted host → no lookup at all, nothing shown <!-- req-gallery:11.8 -->
+
+</td>
+<td valign="top">
+
+`11.8` Hovering a candidate link with **no** leading comment in the current category shows **nothing**
+— the owner-chosen empty state (no "no notes yet" placeholder either).
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+hover → `getTopComment(tldr)`; switch current category → spoiler; hover again → `getTopComment(spoiler)` <!-- req-gallery:11.9 -->
+
+</td>
+<td valign="top">
+
+`11.9` The category used for a lookup is read **fresh from storage at hover time**: changing the
+current category between two hovers changes what the *second* hover looks up, with no page reload.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+check → `permissions.request(http://*/*, https://*/*)` granted → register `link-hover`; uncheck → unregister (0 left) + `permissions.remove` <!-- req-gallery:11.10 -->
+
+</td>
+<td valign="top">
+
+`11.10` The **options-page toggle** ("Show hover previews on web pages") requests exactly the
+hover-preview host origins and registers the content script on grant (declining leaves it off);
+unchecking it unregisters the script and **revokes** the granted permission.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+`optional_host_permissions`: `["http://*/*","https://*/*"]` · `scripting` in permissions ✓ · static `host_permissions`: absent ✓ · static `content_scripts`: absent ✓ <!-- req-gallery:11.11 -->
+
+</td>
+<td valign="top">
+
+`11.11` The shipped manifest requests the link-hover host access **only as `optional_host_permissions`**
+(`http://*/*`, `https://*/*`) alongside the `scripting` permission — never as a static `host_permissions`
+or `content_scripts` entry, so no user sees a new install-time warning.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![hover-popup-look.11.12](component/cases/hover-popup-look.11.12.png) <!-- req-gallery:11.12 -->
+
+</td>
+<td valign="top">
+
+`11.12` The **hover popup's look**: a compact **dark card** with the current category's label on top,
+the leading note's **body** — hard-capped with an **ellipsis** when it's too long, so the popup stays
+small — and, on the meta line, the **author** and the note's **vote count** (▲ N). Rendered through the
+real content script and the shipped popup stylesheet, so this image moves when the popup's code or
+styles do.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![hover-toggle-look.11.13](component/cases/hover-toggle-look.11.13.png) <!-- req-gallery:11.13 -->
+
+</td>
+<td valign="top">
+
+`11.13` The **options page's "Hover previews" section**: the title, the plain-language explanation of
+what granting access means (and that turning it off removes it again), and the toggle in its
+**off-by-default** state — a crop of the real options page render.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+⚠️ _Behavior leaf — **untested here** — covered today by `node --check of the chrome.* glue in .github/workflows/client.yml (a real-Chrome e2e is a tracked follow-up)`._ <!-- req-gallery:11.14 -->
+
+</td>
+<td valign="top">
+
+`11.14` **(tbd)** The dynamically-registered content script actually intercepts hovers on a **real
+third-party page in a real Chrome** — the harness cases (`11.5`–`11.10`) prove the model; only a
+real-Chrome e2e (the same tracked follow-up as `8.1`) proves the registration itself fires there.
+
+</td>
+</tr>
+</table>

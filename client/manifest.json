@@ -6,10 +6,15 @@
   "minimum_chrome_version": "116",
   "permissions": [
     "identity",
+    "scripting",
     "sidePanel",
     "storage",
     "tabs",
     "webNavigation"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
   ],
   "background": {
     "service_worker": "src/service-worker.mjs",

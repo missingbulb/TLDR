@@ -77,18 +77,44 @@ Resources:
       # so it's physically distinct from prod's data store.
       TableName: !If [IsProd, tldr-comments, !Sub '${AWS::StackName}-comments']
       BillingMode: PAY_PER_REQUEST
-      # FROZEN: editing KeySchema / AttributeDefinitions REPLACES the table — a new EMPTY table; the
-      # data does NOT follow. Treat any changeset showing "Replacement: True" here as a hard stop.
+      # FROZEN: editing the base table's KeySchema / AttributeDefinitions for pageId/commentId REPLACES
+      # the table — a new EMPTY table; the data does NOT follow. Treat any changeset showing
+      # "Replacement: True" here as a hard stop. Adding a GSI (below) is a separate, additive
+      # UpdateTable operation — it does NOT touch the base KeySchema and does not replace the table.
       AttributeDefinitions:
         - AttributeName: pageId
           AttributeType: S
         - AttributeName: commentId
           AttributeType: S
+        - AttributeName: categoryPageId
+          AttributeType: S
+        - AttributeName: voteCount
+          AttributeType: N
       KeySchema:
         - AttributeName: pageId
           KeyType: HASH
         - AttributeName: commentId
           KeyType: RANGE
+      # Issue #26 (link-hover preview): "the leading comment for pageId+category" needs a query the
+      # base table can't answer (its only key is pageId+commentId, sorted by creation time, not votes).
+      # `categoryPageId` (= "<pageId>#<category>") is written ONLY on comment items (handler.mjs), so
+      # this GSI is naturally SPARSE — vote items and rate-limit counters never carry it and so never
+      # appear here. `voteCount` already updates atomically via the existing vote TransactWriteItems
+      # (handleVote), so the GSI tracks it with no new write path. A Query keyed on categoryPageId with
+      # ScanIndexForward=false, Limit=1 returns the top-voted comment; ties (equal top voteCount) break
+      # arbitrarily (DynamoDB's tie order, not a documented contract) — acceptable for a "leading
+      # comment" preview. KNOWN LIMITATION: a GSI only indexes items that already carry its key
+      # attributes, so comments written BEFORE this shipped are invisible to this index until rewritten
+      # — there is no backfill (dev/docs/architecture.md §5.3).
+      GlobalSecondaryIndexes:
+        - IndexName: CategoryRankIndex
+          KeySchema:
+            - AttributeName: categoryPageId
+              KeyType: HASH
+            - AttributeName: voteCount
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       # Per-author rate-limit counter items carry an `expiresAt` (epoch seconds) and self-delete.
@@ -152,6 +178,13 @@ Resources:
             Method: GET
             Path: /comments
             # No Auth => public read.
+        GetTopComment:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CommentsApi
+            Method: GET
+            Path: /comments/top
+            # No Auth => public read, same as GetComments (issue #26, the CategoryRankIndex GSI above).
         CastVote:
           Type: HttpApi
           Properties:
@@ -180,7 +213,11 @@ Resources:
                 - dynamodb:Query
                 - dynamodb:UpdateItem
                 - dynamodb:DeleteItem
-              Resource: !GetAtt CommentsTable.Arn
+              # A GSI Query is authorized against the INDEX's own ARN, not just the table's (issue #26,
+              # GetTopComment querying CategoryRankIndex) — the table ARN alone is insufficient for that.
+              Resource:
+                - !GetAtt CommentsTable.Arn
+                - !Sub '${CommentsTable.Arn}/index/CategoryRankIndex'
     Metadata:
       BuildMethod: esbuild
       BuildProperties:

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { getComments, postComment, castVote, removeVote } from '../src/api.mjs';
+import { getComments, postComment, castVote, removeVote, getTopComment } from '../src/api.mjs';
 
 function jsonResponse(status, body) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
@@ -121,4 +121,33 @@ test('castVote refreshes the token once on a 401 and retries (silent first, inte
 test('a vote throws on a non-401 error so the panel can roll back', async () => {
   const fetchImpl = async () => jsonResponse(500, {});
   await assert.rejects(() => castVote('https://e.com', '01ABC', async () => 'T', { fetchImpl }), /vote failed: 500/);
+});
+
+test('getTopComment builds a public GET (no Authorization) to /comments/top with pageUrl + category', async () => {
+  const calls = [];
+  const fetchImpl = async (url, opts) => { calls.push({ url, opts }); return jsonResponse(200, { comment: null }); };
+  await getTopComment('https://example.com/x', 'tldr', { fetchImpl, clientVersion: '1.2.3' });
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].url, /\/comments\/top\?pageUrl=https%3A%2F%2Fexample\.com%2Fx&category=tldr$/);
+  assert.equal(calls[0].opts.method, 'GET');
+  assert.ok(!('authorization' in (calls[0].opts.headers || {})), 'reads must not send an Authorization header');
+  assert.equal(calls[0].opts.headers['x-client-version'], '1.2.3');
+});
+
+test('getTopComment omits the category querystring when none is supplied', async () => {
+  let seen;
+  const fetchImpl = async (url) => { seen = url; return jsonResponse(200, { comment: null }); };
+  await getTopComment('https://e.com', undefined, { fetchImpl });
+  assert.doesNotMatch(seen, /category=/);
+});
+
+test('getTopComment resolves the { comment: null } empty-state shape as a success, not a throw', async () => {
+  const fetchImpl = async () => jsonResponse(200, { comment: null });
+  const out = await getTopComment('https://e.com', 'tldr', { fetchImpl });
+  assert.deepEqual(out, { comment: null });
+});
+
+test('getTopComment throws on a non-2xx response', async () => {
+  const fetchImpl = async () => jsonResponse(400, { message: 'unknown category' });
+  await assert.rejects(() => getTopComment('https://e.com', 'bogus', { fetchImpl }), /top-comment read failed: 400/);
 });
