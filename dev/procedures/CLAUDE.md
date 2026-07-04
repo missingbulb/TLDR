@@ -11,7 +11,8 @@ trigger fires; don't pre-load.
 
 ## Project reference
 
-- [architecture & decision log](../../docs/architecture.md) — the as-built backend (SAM + CloudFront) + MV3 extension + CI/CD design, with the decision rationale.
+- [working instructions](working-instructions.md) — **the entry point for working in this repo**: the project's category (MV3 extension + AWS serverless monorepo), the area→doc map, the cross-cutting invariants (shared-code vendoring, additive-only API, owner-owned expecteds), and the build/test/deploy/release mechanics.
+- [architecture & decision log](../docs/architecture.md) — the as-built backend (SAM + CloudFront) + MV3 extension + CI/CD design, with the decision rationale.
 
 ## Lessons — read the matching one before working in that area
 
