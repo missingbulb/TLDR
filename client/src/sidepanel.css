@@ -35,6 +35,12 @@ body {
 
 .status { color: var(--muted); font-size: 13px; padding: 16px 4px; text-align: center; }
 
+/* The redirect hint (issue #58) rides the no-notes state: a quiet framed note plus an outline
+   button carrying the cleaner URL (which can be long — let it wrap, never overflow). */
+.redirect-hint { border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 8px; text-align: center; }
+.redirect-hint-text { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+.redirect-hint-show { background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; padding: 7px 12px; font: inherit; font-size: 13px; cursor: pointer; max-width: 100%; overflow-wrap: anywhere; }
+
 .comments { list-style: none; margin: 0; padding: 0; }
 /* The comment separator uses the per-category --separator token (issue #25), so the line between
    notes takes on the active category's colour. */

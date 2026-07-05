@@ -21,6 +21,14 @@
 
     <p id="status" class="status" hidden></p>
 
+    <!-- The redirect hint (issue #58): shown only alongside the no-notes state, when the tab was
+         redirected here from a cleaner same-site URL. sidepanel.mjs fills the button with that URL
+         and, on click, switches the panel to its notes. -->
+    <div id="redirect-hint" class="redirect-hint" hidden>
+      <p class="redirect-hint-text">You were redirected here — this might not be the page's main address.</p>
+      <button id="redirect-hint-show" type="button" class="redirect-hint-show"></button>
+    </div>
+
     <ul id="comments" class="comments" aria-live="polite"></ul>
 
     <form id="composer" class="composer" hidden>

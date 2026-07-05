@@ -40,17 +40,21 @@ const SURFACES = {
   menu: { html: "src/category-menu.html", mod: "src/category-menu.mjs" },
 };
 
-// Build the fake `fetch` the UI's read/post path hits. Returns the configured comments for a GET,
-// and records every POST so a behavior case can assert the write carried a bearer token (and the
-// read did not). `readFails`/`postFails` exercise the error UIs; `postHangs` freezes a post mid-flight
-// so the optimistic "posting…" state can be snapshotted without it resolving.
+// Build the fake `fetch` the UI's read/post path hits. Returns the configured comments for a GET —
+// `comments` for every page, or `commentsByPage` (pageUrl → comments) when a case needs two pages to
+// differ (issue #58's cleaner-URL switch) — and records every POST so a behavior case can assert the
+// write carried a bearer token (and the read did not). `readFails`/`postFails` exercise the error UIs;
+// `postHangs` freezes a post mid-flight so the optimistic "posting…" state can be snapshotted without
+// it resolving.
 function makeFakeFetch(testCase, fetchLog) {
   return async (url, options = {}) => {
     const method = options.method || "GET";
     fetchLog.push({ url: String(url), method, headers: options.headers || {}, body: options.body });
     if (method === "GET") {
       if (testCase.readFails) return { ok: false, status: 500, json: async () => ({}) };
-      return { ok: true, status: 200, json: async () => ({ comments: testCase.comments ?? [] }) };
+      const requested = new URL(String(url)).searchParams.get("pageUrl");
+      const comments = testCase.commentsByPage ? (testCase.commentsByPage[requested] ?? []) : (testCase.comments ?? []);
+      return { ok: true, status: 200, json: async () => ({ comments }) };
     }
     // POST (write)
     if (testCase.postHangs) return new Promise(() => {});
@@ -91,6 +95,9 @@ export async function open(surface, testCase) {
     // Seed chrome.storage.local (e.g. `{ myVotes: [...] }`) so a case can render the viewer's own
     // vote state, which the public read can't carry (issue #22).
     localSeed: testCase.local ?? null,
+    // Seed chrome.storage.session (issue #58) with the redirect-provenance record the service worker
+    // would have written for the active tab (the fake tab's id is 1).
+    sessionSeed: testCase.sessionSeed ?? null,
     // The options-page hover-preview toggle (issue #26): what chrome.permissions.request() resolves to.
     permissionGranted: testCase.permissionGranted ?? true,
   });

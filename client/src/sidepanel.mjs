@@ -8,6 +8,7 @@ import { normalizePageUrl } from '../vendor/normalizeUrl.GENERATED.mjs';
 import { DEFAULT_CATEGORY, isValidCategory } from '../vendor/categories.GENERATED.mjs';
 import { designFor } from './categories/registry.mjs';
 import { evaluatePage, DEFAULT_USER_DENYLIST } from './denylist.mjs';
+import { cleanerSourceOffer, provenanceKeyFor } from './redirect-provenance.mjs';
 import { getComments, postComment, castVote, removeVote } from './api.mjs';
 import { getIdToken } from './auth.mjs';
 import { makeOptimisticComment, mergeComments, reconcileSuccess, markFailed, applyVoteToggle } from './optimistic.mjs';
@@ -45,6 +46,8 @@ const els = {
   body: document.getElementById('body'),
   post: document.getElementById('post'),
   error: document.getElementById('composer-error'),
+  redirectHint: document.getElementById('redirect-hint'),
+  redirectShow: document.getElementById('redirect-hint-show'),
 };
 
 const state = {
@@ -59,6 +62,14 @@ const state = {
   // here with no network fetch; we only refetch on a real navigation/reload. pageId -> bucket
   // ({ serverComments, localComments }).
   cache: new Map(),
+  // The redirect offer for the CURRENT page, when it earned one (issue #58): the active tab reached
+  // this page via a redirect from a cleaner same-site URL. { forPageId, pageId } — the landing page
+  // it belongs to, and the cleaner page id the hint's button switches to. Null when no offer.
+  redirectOffer: null,
+  // Accepted offers (issue #58): landing pageId -> the cleaner pageId the user chose to view
+  // instead. Keyed by page (not tab) so the choice survives a tab switch away and back, and applies
+  // to every tab resting on the same landing page. Capped like the comment cache.
+  redirectOverrides: new Map(),
 };
 
 // --- helpers ----------------------------------------------------------------
@@ -101,11 +112,12 @@ function setStatus(message) {
   els.status.textContent = message;
   els.status.hidden = !message;
   els.composer.hidden = true;
+  els.redirectHint.hidden = true;
 }
 
-async function getActiveTabUrl() {
+async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  return tab?.url ?? '';
+  return tab ?? null;
 }
 
 function timeAgo(createdAt) {
@@ -163,6 +175,12 @@ function render() {
   } else if (!els.composer.hidden) {
     els.status.hidden = true;
   }
+  // The redirect hint (issue #58) rides ONLY the no-notes state of the page the offer was earned on
+  // — never a page that has notes, and never after the user already switched to the cleaner page.
+  const offer = state.redirectOffer?.forPageId === state.pageId ? state.redirectOffer : null;
+  const showHint = Boolean(offer) && comments.length === 0 && !els.composer.hidden;
+  els.redirectHint.hidden = !showHint;
+  if (showHint) els.redirectShow.textContent = `Show notes for ${offer.pageId}`;
 }
 
 // Wear the current category's look & feel (issue #25): tag <body> with its id (so its scoped
@@ -212,7 +230,8 @@ function renderVoteRail(c) {
 // hit. `useCache: false` (initial load, reload, navigation) always refetches — rendering any cached
 // copy first so there's no loading flash — and updates the cache.
 async function refresh({ useCache = false } = {}) {
-  const rawUrl = await getActiveTabUrl();
+  const tab = await getActiveTab();
+  const rawUrl = tab?.url ?? '';
   const verdict = evaluatePage(rawUrl, state.userDenylist);
   if (!verdict.commentable) {
     state.pageId = null;
@@ -229,6 +248,13 @@ async function refresh({ useCache = false } = {}) {
     setStatus('TLDR is off for this page.');
     return;
   }
+
+  // Redirect provenance (issue #58): an already-accepted offer for this landing page swaps the whole
+  // panel — notes, page line, composer — to the cleaner page id; otherwise ask whether the tab's
+  // arrival here earns the hint. A page with no override and no qualifying arrival gets neither.
+  const override = state.redirectOverrides.get(pageId);
+  state.redirectOffer = override ? null : await redirectOfferFor(tab, pageId);
+  if (override) pageId = override;
 
   const cached = state.cache.has(pageId);
   state.pageId = pageId;
@@ -262,8 +288,46 @@ async function refresh({ useCache = false } = {}) {
     if (state.pageId === pageId && state.serverComments.length === 0) {
       els.status.textContent = "Couldn't load notes.";
       els.status.hidden = false;
+      // A failed read proves nothing about the page having no notes — no redirect hint on top of it.
+      els.redirectHint.hidden = true;
     }
   }
+}
+
+// Does the active tab's arrival at `landedPageId` earn the cleaner-URL offer (issue #58)? Reads the
+// provenance record the service worker keeps per tab, discards a stale one (it must describe THIS
+// page — an SPA pushState moves the tab on without a new committed navigation), then applies the
+// same-site + strictly-cleaner offer rule.
+async function redirectOfferFor(tab, landedPageId) {
+  if (tab?.id == null) return null;
+  const key = provenanceKeyFor(tab.id);
+  const stored = await chrome.storage.session.get(key);
+  const record = stored[key];
+  if (!record?.from || !record?.lastCommittedUrl) return null;
+  try {
+    if (normalizePageUrl(record.lastCommittedUrl) !== landedPageId) return null;
+  } catch {
+    return null;
+  }
+  const offer = cleanerSourceOffer({
+    fromUrl: record.from,
+    toUrl: record.lastCommittedUrl,
+    userDenylist: state.userDenylist,
+  });
+  return offer ? { forPageId: landedPageId, pageId: offer.pageId } : null;
+}
+
+// Accept the redirect offer (issue #58): remember the choice for this landing page — capped like the
+// comment cache — and re-run the refresh, which now resolves it to the cleaner page id end to end
+// (its notes shown, the page line renamed, and the composer/votes posting there).
+function onShowCleanerNotes() {
+  const offer = state.redirectOffer;
+  if (!offer || offer.forPageId !== state.pageId) return;
+  if (state.redirectOverrides.size >= MAX_CACHE_PAGES) {
+    state.redirectOverrides.delete(state.redirectOverrides.keys().next().value);
+  }
+  state.redirectOverrides.set(offer.forPageId, offer.pageId);
+  refresh({ useCache: false });
 }
 
 // Tab switches reuse the cache; reloads/navigations force a refetch.
@@ -395,6 +459,7 @@ async function init() {
   connectToWorker(); // let the toolbar icon toggle this pane closed (issue #25)
 
   els.composer.addEventListener('submit', onSubmit);
+  els.redirectShow.addEventListener('click', onShowCleanerNotes); // accept the redirect offer (issue #58)
 
   // A plain tab switch reuses the cache (no refetch); a reload/navigation refetches.
   chrome.tabs.onActivated.addListener(debouncedRefreshCached);
