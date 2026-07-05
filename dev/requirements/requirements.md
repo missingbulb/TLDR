@@ -439,6 +439,10 @@ here**, to avoid a parallel, drift-prone duplicate:
 - **The read/write API split** (public read, bearer write, the 401-refresh-retry) —
   `client/test/api.test.mjs`.
 - **The Google ID-token helpers** (URL building, nonce/state, expiry) — `client/test/auth.test.mjs`.
+- **The redirect-provenance model** (the per-tab navigation reducer the service worker feeds, its
+  storage.session recording glue, and the same-site + strictly-cleaner offer rule) —
+  `client/test/redirect-provenance.test.mjs` + `client/test/service-worker.test.mjs`. The offer
+  rule's *product* contract is leaf `12.4`; the UI it drives is §12.
 
 The rendered §1–§4 requirements are the executable UI contract over that model.
 
@@ -1243,6 +1247,92 @@ what granting access means (and that turning it off removes it again), and the t
 `11.14` **(tbd)** The dynamically-registered content script actually intercepts hovers on a **real
 third-party page in a real Chrome** — the harness cases (`11.5`–`11.10`) prove the model; only a
 real-Chrome e2e (the same tracked follow-up as `8.1`) proves the registration itself fires there.
+
+</td>
+</tr>
+</table>
+
+
+## 12. Redirected landing pages
+
+Notes are keyed by the tab's **final** URL, so a clean shareable address that redirects to a messier
+same-site one (a locale path, session/variant params the tracker-stripper doesn't know) lands its
+visitors on a fragmented page id — while the thread's natural shared address is the **pre-redirect**
+URL. The service worker records each tab's redirect provenance (`webNavigation` — a permission the
+manifest already held — into `chrome.storage.session`, so it survives worker recycles and dies with
+the browser session); the model is the pure `client/src/redirect-provenance.mjs` (§5). When the
+landing page shows **no notes** and the arrival **earns the offer** — the source URL is commentable,
+**same-site** (host-suffix relation), a **different page id** (a tracking-only diff normalizes away),
+and **strictly cleaner** (the redirect *added* path/params; cross-site shorteners never prompt) — the
+panel shows the hint plus a **"Show notes for `<cleaner URL>`"** button (`12.1`). Accepting is a
+**full switch** to the cleaner page id — its notes, the page line, and the composer posting there
+(`12.2`) — consolidating the thread under the shareable address; the hint rides only the genuine
+no-notes state (`12.3`); the offer rule itself is `12.4`. Both owner decisions — *same-site + cleaner
+only*, and *accept = full switch* — were made in issue #58.
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+![redirect-hint.12.1](dom/cases/redirect-hint.12.1.png) <!-- req-gallery:12.1 -->
+
+</td>
+<td valign="top">
+
+`12.1` On a redirected landing page with **no notes**, the empty state additionally shows the
+**redirect hint** — **"You were redirected here — this might not be the page's main address."** —
+and a **"Show notes for `<cleaner URL>`"** button carrying the pre-redirect page id.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+land on `https://example.com/article?session=abc123` (0 notes) → hint → click “Show notes for https://example.com/article” → `GET /comments?pageUrl=https://example.com/article` (1 note) → post → `POST` body.pageUrl=`https://example.com/article` <!-- req-gallery:12.2 -->
+
+</td>
+<td valign="top">
+
+`12.2` **Accepting switches the panel fully** to the cleaner page id: its notes are fetched and
+shown, the page line renames to it, the hint disappears, and a **new note posts under it** — the
+thread consolidates under the shareable address instead of the redirect target.
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:12.3 -->
+
+</td>
+<td valign="top">
+
+`12.3` The hint rides **only the genuine no-notes state**: a landing page **with** notes never shows
+it, a page reached with **no qualifying arrival** never shows it, and a **failed read** never shows
+it (a failure proves nothing about the page having no notes).
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+`https://example.com/article` → `https://example.com/article?session=abc123` ⇒ offer `https://example.com/article`; `https://t.co/x9` → `https://example.com/some/long/article?id=1` ⇒ `null`; `https://example.com/a?utm_source=nl` → `https://example.com/a` ⇒ `null`; `https://example.com/a?x=1&y=2` → `https://example.com/a?x=1` ⇒ `null` <!-- req-gallery:12.4 -->
+
+</td>
+<td valign="top">
+
+`12.4` The offer is made **only** for a redirect whose source is **same-site** and **strictly
+cleaner** and a **different page id** — a cross-site hop (link shortener), a tracking-only
+difference, or a redirect *to* a cleaner URL never prompts.
 
 </td>
 </tr>
