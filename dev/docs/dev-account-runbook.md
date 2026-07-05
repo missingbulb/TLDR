@@ -20,7 +20,7 @@ strongest isolation boundary AWS offers.
 > AWS Organizations best-practices guide all say: isolate prod from dev/test at the **account** level.
 
 Region stays **`il-central-1`** (as prod). Prod account = **`665911299748`**; the new dev account id is
-`<DEV_ACCOUNT_ID>` (recorded in Phase A). Repo = **`missingbulb/TLDR`** (canonical casing — matters for OIDC).
+**`605599552045`** (recorded in Phase A — where policy JSON below says `<DEV_ACCOUNT_ID>`, that's this). Repo = **`missingbulb/TLDR`** (canonical casing — matters for OIDC).
 
 ---
 
@@ -189,13 +189,18 @@ Shipped in this PR:
 - `samconfig.toml` / `architecture.md` / `server/README.md` note the split.
 
 Owner, after Phase B:
-- [ ] **E.1** GitHub → **Settings → Secrets and variables → Actions → Variables** → add
+- [x] **E.1** GitHub → **Settings → Secrets and variables → Actions → Variables** → add
   `AWS_DEV_DEPLOY_ROLE_ARN` = `<AWS_DEV_DEPLOY_ROLE_ARN>` (from B.4). `GOOGLE_CLIENT_ID` and the
   `EMAIL_HASH_SALT` secret are reused for dev (same OAuth app; the salt can be shared).
-- [ ] **E.2** Trigger a dev deploy: push a server change to `main` (auto), or **Actions → deploy → Run
+- [x] **E.2** Trigger a dev deploy: push a server change to `main` (auto), or **Actions → deploy → Run
   workflow → environment: dev**. It creates `tldr-app-dev` **in the dev account**, fresh — no `ROLLBACK_COMPLETE`
   history to clean up. Record the `ApiUrl` output.
-- [ ] **E.3** Point the dev extension build (`npm run build:dev`) at the new dev `ApiUrl`.
+  *Done 2026-07-05: clean `CREATE` of `tldr-app-dev` in `605599552045` (the #54-merge auto-deploy created it;
+  a follow-up `workflow_dispatch environment: dev` updated it). `ApiUrl` =
+  `https://x9yiwjm735.execute-api.il-central-1.amazonaws.com`; smoke test `GET /comments?pageUrl=…` → `200 {"comments":[]}`.*
+- [x] **E.3** Point the dev extension build (`npm run build:dev`) at the new dev `ApiUrl`.
+  *Done: the committed default `API_BASE_URL` in `client/config.mjs` (what `build:dev`/unpacked builds use
+  when no `API_BASE_URL_DEV`/`API_BASE_URL` env is set) now carries this `ApiUrl`.*
 
 ---
 
@@ -203,9 +208,11 @@ Owner, after Phase B:
 
 The broken `tldr-app-dev` stack (in `ROLLBACK_COMPLETE`) still sits in the **prod** account. Remove it so no dev
 cruft remains in prod:
-- [ ] **F.1** Delete stack `tldr-app-dev` in account `665911299748` (CloudFormation console, or a one-shot CI
+- [x] **F.1** Delete stack `tldr-app-dev` in account `665911299748` (CloudFormation console, or a one-shot CI
   `aws cloudformation delete-stack`). The `Retain` table `tldr-app-dev-comments` survives as an orphan (empty) —
   delete it by hand if you want it gone.
+  *Done 2026-07-05 (owner, console). No orphan table existed — the failed CREATE rolled back before the
+  table resource was created, so there was nothing retained. Prod holds no dev cruft.*
 - [ ] **F.2 (optional)** Tighten the **prod** deploy role: now that no dev stack lives in the prod account, its
   `tldr-app-*` wildcards (DynamoDB/Lambda/logs/IAM) can be narrowed to prod's exact names. Not required.
 
@@ -213,7 +220,7 @@ cruft remains in prod:
 
 ## Result
 
-- **Dev** lives in `<DEV_ACCOUNT_ID>`; Claude has admin there (SCP-capped), CI deploys it via the dev-account
+- **Dev** lives in `605599552045`; Claude has admin there (SCP-capped), CI deploys it via the dev-account
   OIDC role. Full create/delete/rollback power.
 - **Prod** lives in `665911299748`; the only thing that touches it is the prod-account GitHub deploy role. The
   dev account holds **no prod ARNs** — zero reach, structurally, not just by policy.

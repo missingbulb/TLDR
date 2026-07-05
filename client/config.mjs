@@ -6,13 +6,12 @@
 // download is prod, while a local/unpacked/`build:dev` build keeps this dev default.
 //
 // API_BASE_URL  — committed default = the dev app stack's ApiUrl output
-//                 (https://<id>.execute-api.<region>.amazonaws.com). Set the value below to the dev
-//                 stack's ApiUrl after the first dev deploy; until then it's a non-resolving
-//                 placeholder. The release build overrides it with the prod CloudFront domain. No
+//                 (https://<id>.execute-api.<region>.amazonaws.com), i.e. `tldr-app-dev` in the
+//                 dev AWS account. The release build overrides it with the prod CloudFront domain. No
 //                 trailing slash. (The extension reaches the API via the server's '*' CORS, so there's
 //                 no manifest host_permissions to keep in sync — a test guards this isn't a prod URL.)
 // GOOGLE_CLIENT_ID — the Google Cloud OAuth "Web application" client id (same value the server's JWT
 //                 authorizer uses as its audience); injected at build time, stays a placeholder here.
 
-export const API_BASE_URL = 'https://dev-api.tldr.invalid';
+export const API_BASE_URL = 'https://x9yiwjm735.execute-api.il-central-1.amazonaws.com';
 export const GOOGLE_CLIENT_ID = 'REPLACE_WITH_GOOGLE_WEB_CLIENT_ID.apps.googleusercontent.com';
