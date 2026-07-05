@@ -20,7 +20,7 @@ strongest isolation boundary AWS offers.
 > AWS Organizations best-practices guide all say: isolate prod from dev/test at the **account** level.
 
 Region stays **`il-central-1`** (as prod). Prod account = **`665911299748`**; the new dev account id is
-`<DEV_ACCOUNT_ID>` (recorded in Phase A). Repo = **`missingbulb/TLDR`** (canonical casing — matters for OIDC).
+**`605599552045`** (recorded in Phase A — where policy JSON below says `<DEV_ACCOUNT_ID>`, that's this). Repo = **`missingbulb/TLDR`** (canonical casing — matters for OIDC).
 
 ---
 
@@ -189,13 +189,18 @@ Shipped in this PR:
 - `samconfig.toml` / `architecture.md` / `server/README.md` note the split.
 
 Owner, after Phase B:
-- [ ] **E.1** GitHub → **Settings → Secrets and variables → Actions → Variables** → add
+- [x] **E.1** GitHub → **Settings → Secrets and variables → Actions → Variables** → add
   `AWS_DEV_DEPLOY_ROLE_ARN` = `<AWS_DEV_DEPLOY_ROLE_ARN>` (from B.4). `GOOGLE_CLIENT_ID` and the
   `EMAIL_HASH_SALT` secret are reused for dev (same OAuth app; the salt can be shared).
-- [ ] **E.2** Trigger a dev deploy: push a server change to `main` (auto), or **Actions → deploy → Run
+- [x] **E.2** Trigger a dev deploy: push a server change to `main` (auto), or **Actions → deploy → Run
   workflow → environment: dev**. It creates `tldr-app-dev` **in the dev account**, fresh — no `ROLLBACK_COMPLETE`
   history to clean up. Record the `ApiUrl` output.
-- [ ] **E.3** Point the dev extension build (`npm run build:dev`) at the new dev `ApiUrl`.
+  *Done 2026-07-05: clean `CREATE` of `tldr-app-dev` in `605599552045` (the #54-merge auto-deploy created it;
+  a follow-up `workflow_dispatch environment: dev` updated it). `ApiUrl` =
+  `https://x9yiwjm735.execute-api.il-central-1.amazonaws.com`; smoke test `GET /comments?pageUrl=…` → `200 {"comments":[]}`.*
+- [x] **E.3** Point the dev extension build (`npm run build:dev`) at the new dev `ApiUrl`.
+  *Done: the committed default `API_BASE_URL` in `client/config.mjs` (what `build:dev`/unpacked builds use
+  when no `API_BASE_URL_DEV`/`API_BASE_URL` env is set) now carries this `ApiUrl`.*
 
 ---
 
