@@ -133,6 +133,29 @@ gate and the §6 CDN: even a cache miss is usually a cheap edge hit, and now rep
 entirely. (The per-page bucket also scopes optimistic local comments per page, so a pending post on one tab
 can't leak onto another tab's view.)
 
+### 4.5 Redirect provenance — the cleaner-URL offer (issue #58)
+
+§4.3's normalization can't fix **redirect aliasing**: notes are keyed by the tab's *final* URL, so a clean
+shareable address that redirects to a messier same-site one (a locale path, session/variant params outside
+the tracker set) fragments its visitors across page ids while the thread's natural shared key is the
+**pre-redirect** URL. The service worker records each tab's arrival (`webNavigation.onBeforeNavigate`/
+`onCommitted`, top frame only — a permission the manifest already held, so no new install warning) into
+`chrome.storage.session` — it survives SW recycles, dies with the browser session, and is dropped when the
+tab closes; `client_redirect` commits chain multi-hop journeys back to the URL the user actually opened.
+When the landing page shows **no notes** and the arrival qualifies, the panel offers the pre-redirect page's
+notes; accepting switches the panel to that page id end to end (reads *and* writes), consolidating the
+thread under the shareable address — the same key the §9.4 link-hover preview looks up. The model is the
+pure `client/src/redirect-provenance.mjs`; the UI contract is requirements §12.
+
+🔧 **Decision (owner-chosen — same-site + cleaner only):** the offer fires only when the redirect source is
+same-site (host-suffix relation) **and** strictly cleaner (its normalized URL is shorter — the redirect
+*added* path/params) **and** a different page id. Cross-site hops (t.co/bit.ly shorteners) never prompt —
+low noise first; widen later if real aliases are missed.
+
+🔧 **Decision (owner-chosen — accept = full switch):** accepting doesn't just peek at the cleaner page's
+notes; the composer and votes post there too. A read-only peek would keep fragmenting new notes across
+redirect targets, defeating the consolidation the offer exists for.
+
 ---
 
 ## 5. DynamoDB table design

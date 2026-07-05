@@ -52,6 +52,8 @@ function mintIdToken(nonce, nowMs) {
  * @param {number} opts.nowMs         the pinned "now" (so the minted token's exp is deterministic).
  * @param {object|null} opts.localSeed  initial chrome.storage.local contents (e.g. `{ myVotes: [...] }`
  *   to render the voted-by-me state — the viewer's own votes the public read can't carry).
+ * @param {object|null} opts.sessionSeed  initial chrome.storage.session contents (issue #58, e.g. a
+ *   `redirectProvenance:<tabId>` record the service worker would have written for the active tab).
  * @param {Function|null} opts.onMessage  a `(message) => response` fake for `chrome.runtime.sendMessage`
  *   (issue #26, the link-hover content-script -> service-worker round trip). Defaults to a stub that
  *   throws "no listener" — like a real `sendMessage` when no onMessage listener is registered — so a
@@ -67,6 +69,7 @@ export function makeFakeChrome({
   authFails = false,
   nowMs = Date.now(),
   localSeed = null,
+  sessionSeed = null,
   onMessage = null,
   permissionGranted = true,
 }) {
@@ -79,7 +82,7 @@ export function makeFakeChrome({
   // can drive a live reaction (e.g. the toolbar menu switching the current category, issue #25).
   const stores = {
     sync: denylist != null ? { userDenylist: denylist } : {},
-    session: {}, // token cache
+    session: { ...(sessionSeed ?? {}) }, // token cache + redirect provenance (issue #58)
     local: { ...(localSeed ?? {}) },
   };
   const changeListeners = [];

@@ -14,6 +14,7 @@
 import { DEFAULT_USER_DENYLIST } from './denylist.mjs';
 import { getTopComment } from './api.mjs';
 import { reconcileHoverRegistration } from './hover-registration.mjs';
+import { beginNavigation, commitNavigation, provenanceKeyFor } from './redirect-provenance.mjs';
 
 export const DENYLIST_STORAGE_KEY = 'userDenylist';
 const CATEGORY_MENU_POPUP = 'src/category-menu.html';
@@ -79,6 +80,51 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     .then((result) => sendResponse(result))
     .catch((err) => sendResponse({ error: String(err?.message ?? err) }));
   return true; // keep the message channel open for the async sendResponse above
+});
+
+// REDIRECT PROVENANCE (issue #58): record, per tab, the URL a redirect chain started at, so the side
+// panel can offer the cleaner pre-redirect URL's notes when the landing page has none. The record
+// lives in chrome.storage.session — it survives this worker's recycles (the panel may open long after
+// the navigation) and dies with the browser session. Listeners are registered at the top level so a
+// navigation wakes a recycled worker.
+
+// Per-tab promise chains serializing the read-modify-write on a tab's record, so an onBeforeNavigate/
+// onCommitted pair (which arrive back-to-back) can't interleave. In-memory only: a worker recycle
+// drops an empty map, not pending work.
+const provenanceQueues = new Map();
+
+function updateTabProvenance(tabId, mutate) {
+  const next = (provenanceQueues.get(tabId) ?? Promise.resolve())
+    .then(async () => {
+      const key = provenanceKeyFor(tabId);
+      const stored = await chrome.storage.session.get(key);
+      const nextState = mutate(stored[key] ?? null);
+      if (nextState == null) await chrome.storage.session.remove(key);
+      else await chrome.storage.session.set({ [key]: nextState });
+    })
+    .catch((err) => console.warn('redirect-provenance update failed', err))
+    .finally(() => {
+      if (provenanceQueues.get(tabId) === next) provenanceQueues.delete(tabId);
+    });
+  provenanceQueues.set(tabId, next);
+  return next;
+}
+
+// frameId 0 is the top-level frame — iframe navigations say nothing about the page the tab is on.
+chrome.webNavigation.onBeforeNavigate.addListener((details) => {
+  if (details.frameId !== 0) return;
+  updateTabProvenance(details.tabId, (state) => beginNavigation(state, details.url));
+});
+
+chrome.webNavigation.onCommitted.addListener((details) => {
+  if (details.frameId !== 0) return;
+  updateTabProvenance(details.tabId, (state) =>
+    commitNavigation(state, { url: details.url, qualifiers: details.transitionQualifiers ?? [] }),
+  );
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  updateTabProvenance(tabId, () => null);
 });
 
 chrome.runtime.onInstalled.addListener(async () => {
