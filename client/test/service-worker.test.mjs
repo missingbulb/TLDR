@@ -15,6 +15,8 @@ let loadCounter = 0;
 function stubChrome({ fetchImpl } = {}) {
   const reg = {};
   const listener = (key) => ({ addListener: (fn) => { reg[key] = fn; } });
+  // In-memory chrome.storage.session, inspectable by the redirect-provenance tests below.
+  const sessionStore = {};
   const chrome = {
     runtime: {
       onConnect: listener('connect'),
@@ -24,7 +26,18 @@ function stubChrome({ fetchImpl } = {}) {
       getManifest: () => ({ version: '9.9.9-test' }),
     },
     action: { onClicked: listener('clicked'), setPopup: async () => {} },
-    storage: { sync: { get: async () => ({}), set: async () => {} } },
+    storage: {
+      sync: { get: async () => ({}), set: async () => {} },
+      session: {
+        get: async (key) => (key in sessionStore ? { [key]: sessionStore[key] } : {}),
+        set: async (obj) => Object.assign(sessionStore, obj),
+        remove: async (key) => {
+          delete sessionStore[key];
+        },
+      },
+    },
+    tabs: { onRemoved: listener('tabRemoved') },
+    webNavigation: { onBeforeNavigate: listener('beforeNavigate'), onCommitted: listener('committed') },
     permissions: { contains: async () => false },
     scripting: {
       getRegisteredContentScripts: async () => [],
@@ -32,7 +45,7 @@ function stubChrome({ fetchImpl } = {}) {
       unregisterContentScripts: async () => {},
     },
   };
-  return { chrome, reg };
+  return { chrome, reg, sessionStore };
 }
 
 async function load(chrome) {
@@ -92,6 +105,72 @@ test('onMessage forwards an API failure as { error } instead of leaving the send
       reg.message({ type: 'link-hover:getTopComment', pageUrl: 'https://example.com/x', category: 'tldr' }, {}, resolve);
     });
     assert.match(responded.error, /top-comment read failed: 500/);
+  } finally {
+    restore();
+  }
+});
+
+// --- redirect provenance (issue #58): the webNavigation → storage.session recording glue ---------
+
+// The listeners fire-and-forget an async storage update; drain the microtask queue so it lands.
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+test('a top-frame redirect records the pre-redirect URL under the tab key in storage.session', async () => {
+  const { chrome, reg, sessionStore } = stubChrome();
+  const restore = await load(chrome);
+  try {
+    reg.beforeNavigate({ tabId: 5, frameId: 0, url: 'https://example.com/article' });
+    reg.committed({ tabId: 5, frameId: 0, url: 'https://example.com/article?session=abc', transitionQualifiers: [] });
+    await settle();
+    assert.deepEqual(sessionStore['redirectProvenance:5'], {
+      pendingUrl: null,
+      lastCommittedUrl: 'https://example.com/article?session=abc',
+      from: 'https://example.com/article',
+    });
+  } finally {
+    restore();
+  }
+});
+
+test('a subframe navigation is ignored — it says nothing about the page the tab is on', async () => {
+  const { chrome, reg, sessionStore } = stubChrome();
+  const restore = await load(chrome);
+  try {
+    reg.beforeNavigate({ tabId: 5, frameId: 3, url: 'https://ads.example.net/frame' });
+    reg.committed({ tabId: 5, frameId: 3, url: 'https://ads.example.net/frame', transitionQualifiers: [] });
+    await settle();
+    assert.deepEqual(sessionStore, {});
+  } finally {
+    restore();
+  }
+});
+
+test('navigating on to a different page replaces the record with a no-redirect one', async () => {
+  const { chrome, reg, sessionStore } = stubChrome();
+  const restore = await load(chrome);
+  try {
+    reg.beforeNavigate({ tabId: 5, frameId: 0, url: 'https://example.com/a' });
+    reg.committed({ tabId: 5, frameId: 0, url: 'https://example.com/a?v=2', transitionQualifiers: [] });
+    reg.beforeNavigate({ tabId: 5, frameId: 0, url: 'https://example.com/elsewhere' });
+    reg.committed({ tabId: 5, frameId: 0, url: 'https://example.com/elsewhere', transitionQualifiers: [] });
+    await settle();
+    assert.equal(sessionStore['redirectProvenance:5'].from, null);
+  } finally {
+    restore();
+  }
+});
+
+test('closing the tab removes its provenance record', async () => {
+  const { chrome, reg, sessionStore } = stubChrome();
+  const restore = await load(chrome);
+  try {
+    reg.beforeNavigate({ tabId: 5, frameId: 0, url: 'https://example.com/a' });
+    reg.committed({ tabId: 5, frameId: 0, url: 'https://example.com/a?v=2', transitionQualifiers: [] });
+    await settle();
+    assert.ok(sessionStore['redirectProvenance:5'], 'the record exists while the tab lives');
+    reg.tabRemoved(5);
+    await settle();
+    assert.equal('redirectProvenance:5' in sessionStore, false);
   } finally {
     restore();
   }

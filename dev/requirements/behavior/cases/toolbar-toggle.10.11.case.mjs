@@ -30,7 +30,15 @@ export default {
         getManifest: () => ({ version: "0.0.0-test" }),
       },
       action: { onClicked: listener("clicked"), setPopup: async ({ popup }) => setPopupCalls.push(popup) },
-      storage: { sync: { get: async () => ({}), set: async () => {} } },
+      storage: {
+        sync: { get: async () => ({}), set: async () => {} },
+        // The redirect-provenance recorder (issue #58) reads/writes storage.session — inert here.
+        session: { get: async () => ({}), set: async () => {}, remove: async () => {} },
+      },
+      // The redirect-provenance recorder (issue #58) registers webNavigation/tab listeners at import;
+      // this toggle case never navigates, so registration succeeding is all it needs.
+      webNavigation: { onBeforeNavigate: listener("beforeNavigate"), onCommitted: listener("committed") },
+      tabs: { onRemoved: listener("tabRemoved") },
       // reconcileHoverRegistration (issue #26) now runs on every onInstalled/onStartup — stub its
       // dependencies so this pre-existing toggle case, which never touches hover-preview itself, still
       // loads the real service-worker.mjs cleanly (an "always-off, always-ungranted" environment).
