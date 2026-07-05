@@ -208,9 +208,11 @@ Owner, after Phase B:
 
 The broken `tldr-app-dev` stack (in `ROLLBACK_COMPLETE`) still sits in the **prod** account. Remove it so no dev
 cruft remains in prod:
-- [ ] **F.1** Delete stack `tldr-app-dev` in account `665911299748` (CloudFormation console, or a one-shot CI
+- [x] **F.1** Delete stack `tldr-app-dev` in account `665911299748` (CloudFormation console, or a one-shot CI
   `aws cloudformation delete-stack`). The `Retain` table `tldr-app-dev-comments` survives as an orphan (empty) —
   delete it by hand if you want it gone.
+  *Done 2026-07-05 (owner, console). No orphan table existed — the failed CREATE rolled back before the
+  table resource was created, so there was nothing retained. Prod holds no dev cruft.*
 - [ ] **F.2 (optional)** Tighten the **prod** deploy role: now that no dev stack lives in the prod account, its
   `tldr-app-*` wildcards (DynamoDB/Lambda/logs/IAM) can be narrowed to prod's exact names. Not required.
 
@@ -218,7 +220,7 @@ cruft remains in prod:
 
 ## Result
 
-- **Dev** lives in `<DEV_ACCOUNT_ID>`; Claude has admin there (SCP-capped), CI deploys it via the dev-account
+- **Dev** lives in `605599552045`; Claude has admin there (SCP-capped), CI deploys it via the dev-account
   OIDC role. Full create/delete/rollback power.
 - **Prod** lives in `665911299748`; the only thing that touches it is the prod-account GitHub deploy role. The
   dev account holds **no prod ARNs** — zero reach, structurally, not just by policy.
