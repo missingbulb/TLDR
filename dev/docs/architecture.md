@@ -345,14 +345,22 @@ job-level `if:` can skip cleanly → the run is *gray/skipped*, never red, until
   source** to `tldr-comments` (renaming would replace the live table) — prod takes no environment input,
   so nothing at deploy time can repoint it. Any other stack name (`tldr-app-dev`, or an ad-hoc
   `tldr-app-<x>`) is non-prod and gets a stack-scoped table (`<stack>-comments`, e.g.
-  `tldr-app-dev-comments`) in the **same account**, so dev testing can't read or write prod data. No dev
+  `tldr-app-dev-comments`), so dev testing can't read or write prod data. No dev
   CDN (the dev client hits `ApiUrl` directly); the dev client build is `npm run build:dev`.
   Seed/teardown: `server/scripts/seed-dev.mjs` / `sam delete --config-env dev`.
+- **Dev lives in its own AWS account** (🔧 owner decision, #53): dev is being moved out of the prod
+  account into a **separate `tldr-dev` account** under AWS Organizations (non-prod OU) — AWS's flagship
+  isolation boundary (Well-Architected SEC01-BP01). This gives the repo's Claude sandbox full create/
+  delete/rollback power over dev with **structurally zero reach into prod** (the dev account holds no prod
+  ARNs), while the prod-account GitHub deploy role stays prod's only mutator. Same-account IAM can't match
+  this: API Gateway IDs are non-nameable, the SAM S3 bucket is shared, and account quotas/cost are shared.
+  Setup + all policy JSON: `dev/docs/dev-account-runbook.md`.
 - **Promotion model** (🔧 owner decision, #27): a push to `main` with server changes **auto-deploys
   dev** (the always-current sandbox); **prod is never automatic** — it's a deliberate manual promotion
-  (`workflow_dispatch`, `environment: prod`) run once a change is verified in dev. Both run from
-  `refs/heads/main`, so the OIDC trust policy stays scoped as-is (no broadening). This decouples *code
-  merged to main* from *prod live*, which matters because the table is the one stateful resource.
+  (`workflow_dispatch`, `environment: prod`) run once a change is verified in dev. Deploys assume a role
+  **per account** — prod → `AWS_DEPLOY_ROLE_ARN`, dev → `AWS_DEV_DEPLOY_ROLE_ARN` — each trusting
+  `refs/heads/main` (no trust broadening). This decouples *code merged to main* from *prod live*, which
+  matters because the table is the one stateful resource.
 
 See `server/README.md` for the exact one-time setup (Google OAuth client, OIDC role + trust policy, deploy
 commands, termination protection).

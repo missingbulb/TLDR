@@ -22,11 +22,13 @@ parameter_overrides = "GoogleClientId=\"REPLACE_WITH_GOOGLE_WEB_CLIENT_ID\" Allo
 cached = true
 parallel = true
 
-# --- dev/sandbox (same account & region; distinct stack => distinct table) ----------------------
-# Deploy with `sam deploy --config-env dev`. In CI this stack is the AUTO-deploy target (a push to main
-# with server changes redeploys it; prod is a separate manual promotion). No dev CDN — point the dev
-# extension build straight at this stack's ApiUrl output. Teardown: `sam delete --config-env dev` (the
-# table is Retain, so it survives as an orphan — delete tldr-app-dev-comments by hand if you want it gone).
+# --- dev/sandbox (its OWN AWS account; same region; distinct stack => distinct table) -----------
+# Dev lives in a SEPARATE AWS account from prod (dev/docs/dev-account-runbook.md) — which account this
+# deploys to is chosen by the credentials/OIDC role in use, not by anything here; the stack name stays
+# tldr-app-dev. Deploy with `sam deploy --config-env dev`. In CI this stack is the AUTO-deploy target (a
+# push to main with server changes redeploys it; prod is a separate manual promotion). No dev CDN — point
+# the dev extension build straight at this stack's ApiUrl output. Teardown: `sam delete --config-env dev`
+# (the table is Retain, so it survives as an orphan — delete tldr-app-dev-comments by hand to remove it).
 [dev.deploy.parameters]
 stack_name = "tldr-app-dev"
 region = "il-central-1"

@@ -8,7 +8,13 @@ name: deploy
 # Promotion model: a push to main with server changes auto-deploys DEV (the always-current sandbox),
 # so every merged server change is immediately exercisable end-to-end. PROD is NEVER automatic — it's
 # a deliberate manual promotion (workflow_dispatch, environment: prod) you run once a change has been
-# verified in dev. Both run from refs/heads/main, so the OIDC role needs no trust-policy change.
+# verified in dev.
+#
+# Account model: DEV and PROD live in SEPARATE AWS ACCOUNTS (dev/docs/dev-account-runbook.md). Each account
+# has its own GitHub-OIDC deploy role trusting this repo+branch, so the job assumes a role PER ENVIRONMENT:
+# prod => AWS_DEPLOY_ROLE_ARN (prod account), dev => AWS_DEV_DEPLOY_ROLE_ARN (dev account). Until the dev role
+# variable is set, dev FALLS BACK to AWS_DEPLOY_ROLE_ARN, so this is a no-op before the dev account exists.
+# Both roles trust refs/heads/main, so neither trust policy changes.
 
 on:
   # Push to main that changes something the app stack actually DEPLOYS => auto-deploy DEV only (prod is
@@ -57,8 +63,9 @@ jobs:
       # Resolve the target environment once. A push to main auto-deploys DEV; a manual dispatch honors
       # its input (prod = the deliberate promotion). Each env maps to a codified samconfig section
       # (prod => default, dev => dev), which carries the stack name — the template derives prod-vs-dev
-      # from that stack name, so there's no Environment parameter to pass. Both run from
-      # refs/heads/main, so the OIDC role stays scoped as-is.
+      # from that stack name, so there's no Environment parameter to pass. The env also selects WHICH
+      # ACCOUNT'S OIDC role to assume (prod vs dev account); dev falls back to the prod role until the
+      # dev-account role variable exists. Both roles trust refs/heads/main, so neither stays un-scoped.
       - name: Resolve target environment
         id: env
         run: |
@@ -67,10 +74,21 @@ jobs:
           else
             ENV="dev"
           fi
-          if [ "$ENV" = "prod" ]; then CONFIG="default"; STACK="tldr-app"; else CONFIG="$ENV"; STACK="tldr-app-$ENV"; fi
+          if [ "$ENV" = "prod" ]; then
+            CONFIG="default"; STACK="tldr-app"; ROLE="${{ vars.AWS_DEPLOY_ROLE_ARN }}"
+          else
+            CONFIG="$ENV"; STACK="tldr-app-$ENV"; ROLE="${{ vars.AWS_DEV_DEPLOY_ROLE_ARN }}"
+          fi
+          # Pre-migration fallback: no dedicated dev-account role yet => use the prod-account role.
+          if [ -z "$ROLE" ]; then ROLE="${{ vars.AWS_DEPLOY_ROLE_ARN }}"; fi
+          if [ -z "$ROLE" ]; then
+            echo "::error::No deploy role configured for env '$ENV' (set AWS_DEPLOY_ROLE_ARN / AWS_DEV_DEPLOY_ROLE_ARN)."
+            exit 1
+          fi
           echo "name=$ENV" >> "$GITHUB_OUTPUT"
           echo "config=$CONFIG" >> "$GITHUB_OUTPUT"
           echo "stack=$STACK" >> "$GITHUB_OUTPUT"
+          echo "role=$ROLE" >> "$GITHUB_OUTPUT"
           echo "Deploying environment '$ENV' (samconfig env '$CONFIG') to stack '$STACK'." >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/setup-node@v5
@@ -93,7 +111,7 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-to-assume: ${{ steps.env.outputs.role }}
           aws-region: il-central-1
 
       - name: sam build
