@@ -172,8 +172,8 @@ No code editing — the build injects config from variables (see top). You only 
 > ⚠️ **Merge to `main` first.** CI runs workflows and the build from `main`. The config-injection build, the fail-fast guard, and the termination-protection step must be on `main` — a release cut before they land would ship **placeholder config**. Bumping the version is the release trigger, so the bump must be *on `main`*.
 
 - [ ] **6.1** Bump the version in `client/manifest.json` **and** `client/package.json` together (must match, `X.Y.Z`) and land on `main`. The **Release: Create Package** workflow tests, builds the injected zip, and publishes GitHub Release `v<version>` with `tldr.zip` attached. (Fails fast if `API_BASE_URL`/`GOOGLE_CLIENT_ID`/`EXTENSION_PUBLIC_KEY` aren't set.)
-- [ ] **6.2 CI publishing creds** (so `publish-chrome-store.yml` can ship): mint them per the canon release guide's "Minting the API credentials" (`.claudinite/technologies/chrome-extension-release.md` — Google Cloud project, **Chrome Web Store API** enabled, **published** consent screen, **Desktop app** OAuth client, by-hand refresh-token exchange). Add Secrets `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`, `CHROME_REFRESH_TOKEN`.
-  > These are a **separate** OAuth client (Desktop, for *uploading*) from the Phase-2 Web-application client (for *sign-in*).
+- [ ] **6.2 CI publishing creds** (so `publish-chrome-store.yml` can ship): mint them per the canon release guide's "Minting the API credentials" (`.claudinite/technologies/chrome-extension-release.md` — the canon owns every step; don't restate them here, they drift). Add Secrets `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`, `CHROME_REFRESH_TOKEN`.
+  > These are a **separate** OAuth client (for *uploading* to the store) from the Phase-2 client (for user *sign-in*) — don't reuse one for the other.
 
 ---
 

@@ -26,27 +26,25 @@ automatically by the daily auto-release. The Create-Package workflow never chang
 
 ## The workflows (the standard set)
 
-- **Release: Create Package** (`release.yml`) — runs on a version-bump merge to `main` (or
-  dispatch, or a `workflow_call` from the daily auto-release); clean no-op when the version is
-  already released; tags `vX.Y.Z` and attaches `tldr.zip`, so the newest build is always at
-  `https://github.com/missingbulb/TLDR/releases/latest/download/tldr.zip`. This repo's deviation
-  from the standard: the "Require release config" step fails fast when the three injection
-  variables are unset, rather than shipping a dev-pointed zip.
-- **Release: Publish to Chrome Web Store** (`publish-chrome-store.yml`) — manual dispatch (blank
-  tag = latest release) or called by the daily auto-release; uploads via
-  `chrome-webstore-upload-cli@3` with the four standard secrets `CHROME_EXTENSION_ID` /
-  `CHROME_CLIENT_ID` / `CHROME_CLIENT_SECRET` / `CHROME_REFRESH_TOKEN`, and refreshes the privacy
-  page. Minting the secrets is the standard procedure — "Minting the API credentials" in the
-  canon release guide.
-- **Release: Daily Auto-Release** (`daily-release.yml`) — daily at 03:00 UTC; ships only when the
-  diff since the latest release tag touches the shipping set
-  (`client/scripts/filter-shipped-paths.mjs`), patch-bumping first via
-  `client/scripts/bump-patch-version.mjs`.
-- **Deploy privacy policy to GitHub Pages** (`deploy-privacy-page.yml`) — publishes
-  [`store_artifacts/PRIVACY.md`](store_artifacts/PRIVACY.md) at
-  `https://missingbulb.github.io/TLDR/privacy/` (standalone dispatch, and on every store publish).
-- **Report workflow failure** (`report-failure.yml`) — the reusable reporter all of the above
-  escalate to (standing `workflow-failure` tracking issues).
+Four thin stubs in `.github/workflows/` call the standard's reusable workflows in the Claudinite
+canon — the set's shape, triggers, and behavior (including failure reporting to standing
+`workflow-failure` tracking issues) are the canon release guide's "Workflows" section; don't
+restate them here. Only this repo's values, passed as the stubs' `with:` inputs, live here:
+
+- Zip: `client/dist/tldr.zip`, asset name `tldr.zip` — the newest build is always at
+  `https://github.com/missingbulb/TLDR/releases/latest/download/tldr.zip`.
+- Paths: manifest and package.json under `client/`; no root install (`setup_command: ""`); test
+  gate = root `npm test`, then `npm test` in `client/`; build runs in `client/`.
+- This repo's deviation, expressed via the `build_env` input: the release config is injected at
+  build time from the repo variables `API_BASE_URL` / `GOOGLE_CLIENT_ID` /
+  `EXTENSION_PUBLIC_KEY`, and the canon fails the run when any is unset rather than shipping a
+  dev-pointed zip.
+- Daily bump/filter commands (dependency-free): `client/scripts/bump-patch-version.mjs` /
+  `client/scripts/filter-shipped-paths.mjs`.
+- Privacy page: [`store_artifacts/PRIVACY.md`](store_artifacts/PRIVACY.md) at
+  `https://missingbulb.github.io/TLDR/privacy/`.
+- The four store secrets are the standard names — minting them is "Minting the API credentials"
+  in the canon release guide.
 
 ## First publish to the Chrome Web Store
 
