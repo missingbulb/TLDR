@@ -58,7 +58,13 @@ guide. This repo's values:
   `key`**; afterwards copy the dashboard's Package-tab public key into the
   `EXTENSION_PUBLIC_KEY` repo variable and the item ID into the `CHROME_EXTENSION_ID` secret.
   The full ordering (it interleaves with the Google/AWS setup) is the runbook's Phases 1 and 6–7.
-- Listing screenshot: [`store_artifacts/chrome-store-screenshot-1280x800.png`](store_artifacts/chrome-store-screenshot-1280x800.png);
-  the single-purpose statement and per-permission justifications are the runbook's Phase 7 table.
+- Every dashboard answer — listing copy, single purpose, per-permission justifications
+  (optional host permissions and `scripting` included), data-usage declarations, reviewer
+  notes — is pre-written in the submission kit,
+  [`store_artifacts/STORE-LISTING.md`](store_artifacts/STORE-LISTING.md); the screenshot sits
+  beside it. ⚠️ The committed icons are placeholders — replace them before submission. A PR
+  that changes the manifest's permissions updates the kit's table in the same PR and opens an
+  issue for the manual dashboard step (canon release guide, "When a change touches the
+  extension's permissions").
 - Privacy Policy URL: `https://missingbulb.github.io/TLDR/privacy/` — the GitHub Pages copy of
   `store_artifacts/PRIVACY.md`, never a `blob/main` link.

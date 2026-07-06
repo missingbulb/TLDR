@@ -182,20 +182,9 @@ No code editing — the build injects config from variables (see top). You only 
 Open the item from Phase 1 in the [Developer Dashboard](https://chrome.google.com/webstore/devconsole).
 
 - [ ] **7.1 Upload the final package** — drag the released `tldr.zip` in, or run **Actions → Release: Publish to Chrome Web Store → Run workflow** (uncheck *auto_publish* to upload as a draft first).
-- [ ] **7.2 Store listing:** description, category, language, a **screenshot** (1280×800 or 640×400), tiles.
-- [ ] **7.3 Privacy tab** (gates approval — TLDR uses `identity`, `storage`, `tabs`, `webNavigation`, and collects a Google identity + user text):
-  - [ ] **Single purpose:** *"Show and post short community 'tl;dr' notes attached to the web page the user is currently viewing."*
-  - [ ] **Per-permission justification** (each grounded in actual code use):
-
-    | Field | Justification |
-    |-------|---------------|
-    | `identity` | Sign the user in with Google via `launchWebAuthFlow` to obtain an ID token, only when they choose to post a note. |
-    | `sidePanel` | The entire UI is a side panel listing notes for the current page and letting the user post one. |
-    | `storage` | The user's per-site on/off list (`chrome.storage.sync`) + a short-lived sign-in token cache (`chrome.storage.session`). No browsing data. |
-    | `tabs` | Read the active tab's URL to fetch the notes for the page being viewed, and refresh on tab switch. |
-    | `webNavigation` | Detect in-page (SPA) navigations so the list refreshes when the URL changes without a full reload. |
-
-  - [ ] **Data usage:** declare **Authentication information** (Google sign-in) + **User-generated content** (note text); check the three certifications (no selling, no unrelated use, no creditworthiness use). Raw email is never stored (only a salted hash), so don't declare email collection.
+- [ ] **7.2 Store listing:** fill name/summary/description/category/language and upload the **screenshot** from the submission kit — [`dev/build/release/store_artifacts/STORE-LISTING.md`](../build/release/store_artifacts/STORE-LISTING.md). ⚠️ Replace the placeholder icons first (`client/README.md`).
+- [ ] **7.3 Privacy tab** (gates approval):
+  - [ ] Fill **Single purpose**, the **per-permission justifications** (all seven rows — the optional host permissions and `scripting` included), and **Data usage** from the kit's "Privacy practices tab" section.
   - [ ] **Privacy policy URL** (**required**, public). The page is rendered from [`dev/build/release/store_artifacts/PRIVACY.md`](../build/release/store_artifacts/PRIVACY.md) and published to GitHub Pages at `/privacy/` by the **Deploy privacy policy to GitHub Pages** workflow (dispatch it once here; it also refreshes on every store publish). One-time: **Settings → Pages → Source = "GitHub Actions"**. Paste the live URL — shown in the workflow's `deploy` step output and under Settings → Pages (typically `https://missingbulb.github.io/TLDR/privacy/`).
 - [ ] **7.4 Submit for review** (approval: a few days to a couple of weeks).
 
