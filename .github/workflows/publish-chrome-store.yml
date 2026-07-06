@@ -1,18 +1,39 @@
-name: publish-chrome-store
+name: "Release: Publish to Chrome Web Store"
 
-# Publishes a released zip to the Chrome Web Store. Manual only. Requires four secrets (set under
-# Settings → Secrets and variables → Actions): CHROME_EXTENSION_ID, CHROME_CLIENT_ID,
-# CHROME_CLIENT_SECRET, CHROME_REFRESH_TOKEN (see https://github.com/fregante/chrome-webstore-upload-keys).
-
+# Takes the tldr.zip from a GitHub Release and uploads it to the Chrome Web
+# Store (optionally publishing it to users), via the Web Store API using
+# chrome-webstore-upload-cli.
+#
+# Run it manually from the Actions tab ("Run workflow") once you've created the
+# release package and are ready to ship it to users. The daily auto-release
+# (daily-release.yml) also calls it (workflow_call) with the tag it just
+# released; a workflow_call caller must pass `secrets: inherit` so the four
+# store secrets below resolve.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   CHROME_EXTENSION_ID     the item/app ID from the Web Store dashboard URL
+#   CHROME_CLIENT_ID        OAuth client ID  } minted once against the
+#   CHROME_CLIENT_SECRET    OAuth client secret } Chrome Web Store API — see
+#   CHROME_REFRESH_TOKEN    OAuth refresh token } dev/build/release/releasing.md
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to publish (blank = latest release)'
+        description: "Release tag to publish (blank = latest release)"
         required: false
         type: string
       auto_publish:
-        description: 'Publish to users after upload (uncheck to leave it as a draft in the dashboard)'
+        description: "Publish to users after upload (uncheck to leave it as a draft in the dashboard)"
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      tag:
+        description: "Release tag to publish (blank = latest release)"
+        required: false
+        type: string
+      auto_publish:
+        description: "Publish to users after upload (false = leave it as a draft in the dashboard)"
         type: boolean
         default: true
 
@@ -24,6 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # chrome-webstore-upload-cli reads these env vars directly.
       EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
       CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
       CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
@@ -41,21 +63,23 @@ jobs:
           done
           if [ -n "$missing" ]; then
             echo "Missing required secret(s):$missing" >&2
-            echo "Add them under Settings → Secrets and variables → Actions (see README)." >&2
+            echo "Add them under Settings → Secrets and variables → Actions (see dev/build/release/releasing.md)." >&2
             exit 1
           fi
 
       - name: Download the release zip
         run: |
           mkdir -p dist
+          # An empty tag makes `gh release download` pick the latest release.
           gh release download ${{ inputs.tag }} \
             --repo "${{ github.repository }}" \
-            --pattern "tldr-extension.zip" \
+            --pattern "tldr.zip" \
             --dir dist
           ls -l dist
 
       - name: Show the version being published
-        run: echo "Publishing $(unzip -p dist/tldr-extension.zip manifest.json | grep '\"version\"')"
+        run: |
+          echo "Publishing $(unzip -p dist/tldr.zip manifest.json | grep '"version"')"
 
       - name: Upload to the Chrome Web Store
         run: |
@@ -66,5 +90,31 @@ jobs:
             flags="--auto-publish"
           fi
           npx --yes chrome-webstore-upload-cli@3 upload \
-            --source dist/tldr-extension.zip \
+            --source dist/tldr.zip \
             $flags
+
+  # Refresh the Pages-hosted privacy policy alongside the store upload, from the
+  # same PRIVACY.md the listing points at. The deploy lives in its own reusable
+  # workflow so it can ALSO be run on its own (workflow_dispatch) to make the URL
+  # live without uploading to the store — see deploy-privacy-page.yml. It reports
+  # its OWN failures, so the issues:write below lets that nested reporter run.
+  deploy-privacy-page:
+    uses: ./.github/workflows/deploy-privacy-page.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      issues: write
+
+  # This workflow is run by hand and then left alone, so a failed upload
+  # otherwise just turns the run red with nobody alerted. Open/append a tracking
+  # issue instead. Covers only `publish`; the deploy-privacy-page reusable
+  # workflow reports its own failures.
+  report-failure:
+    needs: publish
+    if: failure()
+    permissions:
+      issues: write
+    uses: ./.github/workflows/report-failure.yml
+    with:
+      workflow: "Release: Publish to Chrome Web Store"

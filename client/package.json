@@ -1,6 +1,6 @@
 {
   "name": "tldr-client",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "description": "TLDR Chrome extension (MV3) — side-panel-gated community notes for any web page.",

@@ -1,5 +1,8 @@
-// Packages the extension into dist/tldr-extension.zip — ONLY the shippable files, never dev/test
+// Packages the extension into dist/tldr.zip — ONLY the shippable files, never dev/test
 // tooling. Uses the system `zip` (present on CI runners). Run with `npm run build`.
+// The zip name is stable (kebab-cased repo name, never version-stamped) per the shared
+// chrome-extension-release standard, so a GitHub Release serves the newest build at a
+// permanent URL: …/releases/latest/download/tldr.zip.
 //
 // Build-time config injection: the committed source points at the DEV stack (API_BASE_URL), with the
 // client id and `key` left as placeholders. The PROD URL lives only in a GitHub variable (it's public,
@@ -18,7 +21,7 @@ export const clientDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // dev scripts in client/scripts/ — neither is listed here, so neither is packaged.
 export const SHIP = ['manifest.json', 'config.mjs', 'src', 'vendor', 'icons'];
 
-export const ZIP_NAME = 'tldr-extension.zip';
+export const ZIP_NAME = 'tldr.zip';
 
 // Rewrite the STAGED config.mjs + manifest.json from the environment. Each value is optional; whatever
 // is absent stays at its committed placeholder (so a partial env is a no-op, never a corruption).

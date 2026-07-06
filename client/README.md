@@ -52,12 +52,13 @@ so the id matters for the redirect URI, not for API access):
   from the `EXTENSION_PUBLIC_KEY` repository variable.
 
 ## Build
-The shippable zip is produced by CI — the release workflow runs `npm run build`, injecting the repo
-variables above into staged copies (the committed source is never touched). The build itself runs
-anywhere; with no env set it produces a **dev-pointed** zip from the committed defaults:
+The shippable zip is produced by CI — the **Release: Create Package** workflow runs `npm run build`,
+injecting the repo variables above into staged copies (the committed source is never touched). The
+build itself runs anywhere; with no env set it produces a **dev-pointed** zip from the committed
+defaults:
 ```bash
 cd client
-npm run build      # -> dist/tldr-extension.zip (only the shippable files)
+npm run build      # -> dist/tldr.zip (only the shippable files)
 ```
 Load unpacked for development: `chrome://extensions` → Developer mode → **Load unpacked** → select `client/`.
 
