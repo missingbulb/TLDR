@@ -66,7 +66,7 @@ nothing real is committed:
 Creates the store item as a **draft** so Chrome assigns the permanent id. **No public review here.**
 
 - [ ] **1.1 Register** at the [Developer Dashboard](https://chrome.google.com/webstore/devconsole), accept the agreement, pay the **one-time $5** (covers up to 20 items).
-- [ ] **1.2 Get a first zip.** It just needs to be a valid package with the current placeholders — you're only reserving the id. The zip is produced by CI/the VM (ask Claude to build & send `client/dist/tldr-extension.zip`, or download it from a GitHub Release).
+- [ ] **1.2 Get a first zip.** It just needs to be a valid package with the current placeholders — you're only reserving the id. The zip is produced by CI/the VM (ask Claude to build & send `client/dist/tldr.zip`, or download it from a GitHub Release).
   > ⚠️ The first upload must have **no `key`** in the manifest — Chrome rejects a `key` field on a brand-new item ("key field not allowed in manifest"). The committed manifest has none, so a plain build is correct here.
 - [ ] **1.3 Create the item.** Dashboard → **+ New item** → upload the zip. **Do not submit.**
 - [ ] **1.4 Record the id.** The item URL shows the **Item ID** (32-char `a–p`). → set `<EXTENSION_ID>`.
@@ -171,8 +171,8 @@ No code editing — the build injects config from variables (see top). You only 
 
 > ⚠️ **Merge to `main` first.** CI runs workflows and the build from `main`. The config-injection build, the fail-fast guard, and the termination-protection step must be on `main` — a release cut before they land would ship **placeholder config**. Bumping the version is the release trigger, so the bump must be *on `main`*.
 
-- [ ] **6.1** Bump the version in `client/manifest.json` **and** `client/package.json` together (must match, `X.Y.Z`) and land on `main`. The **release** workflow tests, builds the injected zip, and publishes GitHub Release `v<version>` with `tldr-extension.zip` attached. (Fails fast if `API_BASE_URL`/`GOOGLE_CLIENT_ID`/`EXTENSION_PUBLIC_KEY` aren't set.)
-- [ ] **6.2 CI publishing creds** (so `publish-chrome-store.yml` can ship): in a Google Cloud project, enable the **Chrome Web Store API**, create a **Desktop app** OAuth client, then `npx --yes chrome-webstore-upload-keys` for the refresh token (see <https://github.com/fregante/chrome-webstore-upload-keys>). Add Secrets `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`, `CHROME_REFRESH_TOKEN`.
+- [ ] **6.1** Bump the version in `client/manifest.json` **and** `client/package.json` together (must match, `X.Y.Z`) and land on `main`. The **Release: Create Package** workflow tests, builds the injected zip, and publishes GitHub Release `v<version>` with `tldr.zip` attached. (Fails fast if `API_BASE_URL`/`GOOGLE_CLIENT_ID`/`EXTENSION_PUBLIC_KEY` aren't set.)
+- [ ] **6.2 CI publishing creds** (so `publish-chrome-store.yml` can ship): mint them per the canon release guide's "Minting the API credentials" (`.claudinite/technologies/chrome-extension-release.md` — Google Cloud project, **Chrome Web Store API** enabled, **published** consent screen, **Desktop app** OAuth client, by-hand refresh-token exchange). Add Secrets `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`, `CHROME_REFRESH_TOKEN`.
   > These are a **separate** OAuth client (Desktop, for *uploading*) from the Phase-2 Web-application client (for *sign-in*).
 
 ---
@@ -181,7 +181,7 @@ No code editing — the build injects config from variables (see top). You only 
 
 Open the item from Phase 1 in the [Developer Dashboard](https://chrome.google.com/webstore/devconsole).
 
-- [ ] **7.1 Upload the final package** — drag the released `tldr-extension.zip` in, or run **Actions → publish-chrome-store → Run workflow** (uncheck *auto-publish* to upload as a draft first).
+- [ ] **7.1 Upload the final package** — drag the released `tldr.zip` in, or run **Actions → Release: Publish to Chrome Web Store → Run workflow** (uncheck *auto_publish* to upload as a draft first).
 - [ ] **7.2 Store listing:** description, category, language, a **screenshot** (1280×800 or 640×400), tiles.
 - [ ] **7.3 Privacy tab** (gates approval — TLDR uses `identity`, `storage`, `tabs`, `webNavigation`, and collects a Google identity + user text):
   - [ ] **Single purpose:** *"Show and post short community 'tl;dr' notes attached to the web page the user is currently viewing."*
@@ -196,7 +196,7 @@ Open the item from Phase 1 in the [Developer Dashboard](https://chrome.google.co
     | `webNavigation` | Detect in-page (SPA) navigations so the list refreshes when the URL changes without a full reload. |
 
   - [ ] **Data usage:** declare **Authentication information** (Google sign-in) + **User-generated content** (note text); check the three certifications (no selling, no unrelated use, no creditworthiness use). Raw email is never stored (only a salted hash), so don't declare email collection.
-  - [ ] **Privacy policy URL** (**required**, public). The page is rendered from [`dev/docs/privacy-policy.md`](privacy-policy.md) and published to GitHub Pages at `/privacy/` by the **publish-privacy** workflow. One-time: **Settings → Pages → Source = "GitHub Actions"**, then the workflow runs on push to `main` (or dispatch it). Paste the live URL — shown in the workflow's `deploy` step output and under Settings → Pages (typically `https://missingbulb.github.io/TLDR/privacy/`).
+  - [ ] **Privacy policy URL** (**required**, public). The page is rendered from [`dev/build/release/store_artifacts/PRIVACY.md`](../build/release/store_artifacts/PRIVACY.md) and published to GitHub Pages at `/privacy/` by the **Deploy privacy policy to GitHub Pages** workflow (dispatch it once here; it also refreshes on every store publish). One-time: **Settings → Pages → Source = "GitHub Actions"**. Paste the live URL — shown in the workflow's `deploy` step output and under Settings → Pages (typically `https://missingbulb.github.io/TLDR/privacy/`).
 - [ ] **7.4 Submit for review** (approval: a few days to a couple of weeks).
 
 > **Don't submit until it actually works.** Without a local Chrome to "load unpacked," verify against a **draft/unlisted store install** first — a reviewer who opens a broken panel can reject under "functions as described."
