@@ -43,10 +43,6 @@ for the active tab, and only on commentable pages. A comment is one DynamoDB ite
 CloudFront edge lookup. See [`dev/docs/architecture.md`](dev/docs/architecture.md).
 
 ## Quickstart (owner setup)
-> **Going live from zero?** Follow [`dev/docs/go-live-runbook.md`](dev/docs/go-live-runbook.md) — an action-by-action
-> checklist from no AWS/Chrome-Store accounts to a published, working extension. The summary below is the
-> five inputs it operationalizes.
-
 The code is complete; bringing it live needs five owner-specific inputs (none can be defaulted):
 
 1. **Google OAuth "Web application" client** → its client id. (`server/README.md` §1)

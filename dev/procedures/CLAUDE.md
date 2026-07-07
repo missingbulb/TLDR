@@ -12,7 +12,7 @@ trigger fires; don't pre-load.
 ## Project reference
 
 - [architecture & decision log](../docs/architecture.md) — the as-built backend (SAM + CloudFront) + MV3 extension + CI/CD design, with the decision rationale.
-- releasing & store publication — this repo's instance of the shared chrome-extension-release standard (the canon guide in Claudinite owns the cross-repo contract and manual store procedures); the zero-to-live sequence is the [go-live runbook](../docs/go-live-runbook.md). Read **only** when cutting/publishing a release or touching the release workflows.
+- releasing & store publication — this repo's instance of the shared chrome-extension-release standard (the canon guide in Claudinite owns the cross-repo contract and manual store procedures). Read **only** when cutting/publishing a release or touching the release workflows.
 
 ## Lessons — read the matching one before working in that area
 
