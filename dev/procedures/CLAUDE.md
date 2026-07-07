@@ -11,6 +11,7 @@ trigger fires; don't pre-load.
 
 ## Project reference
 
+- [working-instructions](working-instructions.md) — **start here.** The single entry-point for a fresh session/contributor: set up from a clean clone, run it / see a change work, verify (`npm run test:all`), propose a change, match the conventions, and hand off. Links out to everything below rather than restating it.
 - [architecture & decision log](../../docs/architecture.md) — the as-built backend (SAM + CloudFront) + MV3 extension + CI/CD design, with the decision rationale.
 - [releasing & store publication](../build/release/releasing.md) — this repo's instance of the shared chrome-extension-release standard (the canon guide owns the cross-repo contract and manual store procedures); the zero-to-live sequence is the [go-live runbook](../docs/go-live-runbook.md). Read **only** when cutting/publishing a release or touching the release workflows.
 
