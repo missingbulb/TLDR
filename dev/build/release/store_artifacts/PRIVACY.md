@@ -55,6 +55,20 @@ Notes persist until removed for moderation. You can request removal of notes you
 Notes are stored on Amazon Web Services (DynamoDB) and served via Amazon CloudFront. Data is processed in the
 AWS `il-central-1` (Tel Aviv) region.
 
+## Permissions
+
+The extension requests only the permissions its features need; each is used solely as described above.
+
+| Permission | Why it is needed |
+|---|---|
+| `identity` | Google sign-in via `launchWebAuthFlow` to obtain a verified ID token — only when you choose to post a note. |
+| `sidePanel` | The whole UI is a side panel that lists notes for the current page and lets you post one. |
+| `storage` | Your per-site on/off list (`chrome.storage.sync`) and a short-lived sign-in token cache (`chrome.storage.session`). No browsing data. |
+| `tabs` | Reads the active tab's URL to fetch that page's notes, and refreshes when you switch tabs. |
+| `webNavigation` | Detects in-page (single-page-app) navigations so the list refreshes when the URL changes without a full reload. |
+| `scripting` | Registers the optional link-hover content script dynamically, and only after you grant host access at runtime — nothing is injected without your opt-in. |
+| Optional host permissions (`http://*/*`, `https://*/*`) | Requested at runtime with your explicit consent to enable the link-hover notes preview; nothing is granted at install time. |
+
 ## Contact
 
 Questions or removal requests: **legal@missingbulb.com**.

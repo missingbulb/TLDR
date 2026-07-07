@@ -8,8 +8,7 @@ URL-normalization rule.
 
 ## Install
 
-*Not yet on the Chrome Web Store — the listing goes live after the first manual publish (see
-[dev/build/release/releasing.md](dev/build/release/releasing.md)).*
+**[Install from the Chrome Web Store →](https://chromewebstore.google.com/detail/tldr-%E2%80%94-community-notes/cgfkbaigkiccdpnmmbfmookalaombhil)**
 
 Or load the latest development build:
 
@@ -24,7 +23,7 @@ Or load the latest development build:
 The version users see is [`client/manifest.json`](client/manifest.json)'s `version`. Merging a
 version bump to `main` cuts GitHub Release `vX.Y.Z` with `tldr.zip` attached, and the daily
 auto-release ships shipped-file changes to the Chrome Web Store on its own (patch-bumping as
-needed). Full procedure: [dev/build/release/releasing.md](dev/build/release/releasing.md).
+needed).
 
 ## Layout
 | Path | What |
@@ -35,7 +34,7 @@ needed). Full procedure: [dev/build/release/releasing.md](dev/build/release/rele
 | [`dev/requirements/`](dev/requirements/README.md) | The executable-requirements suite (client UI + server), spanning both apps. |
 | [`dev/docs/`](dev/docs/architecture.md) | The as-built [architecture](dev/docs/architecture.md) + the portable [UI-testing guideline](dev/docs/ui-testing-guideline.md). |
 | [`dev/build/tools/`](dev/build/tools/sync-shared.mjs) | Build tooling: the shared-code sync + its drift guard (`dev/build/tools/test/`). |
-| `.github/workflows/` | CI (`server`, `client`, `requirements`), gated deploy (`deploy`), and the standard extension-release set (`release`, `publish-chrome-store`, `daily-release`, `deploy-privacy-page`, `report-failure`) — see [dev/build/release/releasing.md](dev/build/release/releasing.md). |
+| `.github/workflows/` | CI (`server`, `client`, `requirements`), gated deploy (`deploy`), and the standard extension-release set (`release`, `publish-chrome-store`, `daily-release`, `deploy-privacy-page`, `report-failure`). |
 
 ## Architecture in one breath
 Public, CDN-cached reads; authenticated writes. The client fetches only while the side panel is open,
@@ -44,10 +43,6 @@ for the active tab, and only on commentable pages. A comment is one DynamoDB ite
 CloudFront edge lookup. See [`dev/docs/architecture.md`](dev/docs/architecture.md).
 
 ## Quickstart (owner setup)
-> **Going live from zero?** Follow [`dev/docs/go-live-runbook.md`](dev/docs/go-live-runbook.md) — an action-by-action
-> checklist from no AWS/Chrome-Store accounts to a published, working extension. The summary below is the
-> five inputs it operationalizes.
-
 The code is complete; bringing it live needs five owner-specific inputs (none can be defaulted):
 
 1. **Google OAuth "Web application" client** → its client id. (`server/README.md` §1)
@@ -57,7 +52,7 @@ The code is complete; bringing it live needs five owner-specific inputs (none ca
    release build injects them into the zip; committed source stays placeholder. (`client/README.md`)
 5. Release via **Release: Create Package** (bump the version on `main`) + **Release: Publish to
    Chrome Web Store**; once live, the daily auto-release ships changes on its own. The zip is
-   built in CI ([dev/build/release/releasing.md](dev/build/release/releasing.md)).
+   built in CI.
 
 Open product/config questions are tracked in [`dev/docs/architecture.md`](dev/docs/architecture.md) §11.
 

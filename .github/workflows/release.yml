@@ -6,7 +6,7 @@ name: "Release: Create Package"
 # values: the client/ paths, the no-install two-level test gate, and the
 # release-config injection (repo variables exported via build_env — the canon
 # fails the run if any is unset, so a dev-pointed placeholder zip can never
-# ship; see dev/docs/go-live-runbook.md).
+# ship).
 #
 # Cutting a release is merging a version bump to main (the push trigger below);
 # it's also runnable from the Actions tab.
