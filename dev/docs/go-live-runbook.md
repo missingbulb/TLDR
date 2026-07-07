@@ -126,7 +126,7 @@ CI deploys to AWS via **GitHub OIDC** — no long-lived keys (`dev/docs/architec
   }
   ```
   > ⚠️ **Casing matters.** GitHub's OIDC `sub` claim uses the repo's *canonical* casing (`missingbulb/TLDR`), and IAM `StringEquals` is case-sensitive. Listing both casings avoids a silent `Not authorized to perform sts:AssumeRoleWithWebIdentity`.
-- [ ] **3.6 Attach the permissions policy** (inline) — the full JSON is in [`server/README.md`](../server/README.md) §2.3. Key points: `cloudformation:*` and `cloudfront:*` are service-wide (`Resource: "*"`) because change-set creation authorizes against the SAM **transform** macro ARN and the SAM-managed bucket stack, and CloudFront ARNs aren't region-scoped; the data-plane (`lambda`/`apigateway`/`dynamodb`/`logs`/`iam`/`s3`) stays scoped to this stack. **Not** `AdministratorAccess`. Copy the role ARN → `<AWS_DEPLOY_ROLE_ARN>`.
+- [ ] **3.6 Attach the permissions policy** (inline) — the full JSON is in [`server/README.md`](../../server/README.md) §2.3. Key points: `cloudformation:*` and `cloudfront:*` are service-wide (`Resource: "*"`) because change-set creation authorizes against the SAM **transform** macro ARN and the SAM-managed bucket stack, and CloudFront ARNs aren't region-scoped; the data-plane (`lambda`/`apigateway`/`dynamodb`/`logs`/`iam`/`s3`) stays scoped to this stack. **Not** `AdministratorAccess`. Copy the role ARN → `<AWS_DEPLOY_ROLE_ARN>`.
 
 ### 3C. Repo variables + secret
 GitHub → **Settings → Secrets and variables → Actions**. The deploy job stays *skipped* (gray) until both gating variables exist (`deploy.yml`).
@@ -182,7 +182,7 @@ No code editing — the build injects config from variables (see top). You only 
 Open the item from Phase 1 in the [Developer Dashboard](https://chrome.google.com/webstore/devconsole).
 
 - [ ] **7.1 Upload the final package** — drag the released `tldr.zip` in, or run **Actions → Release: Publish to Chrome Web Store → Run workflow** (uncheck *auto_publish* to upload as a draft first).
-- [ ] **7.2 Store listing:** fill name/summary/description/category/language and upload the **screenshot** from the submission kit — [`dev/build/release/store_artifacts/STORE-LISTING.md`](../build/release/store_artifacts/STORE-LISTING.md). ⚠️ Replace the placeholder icons first (`client/README.md`).
+- [ ] **7.2 Store listing:** fill name/summary/description/category/language directly in the dashboard and upload the **screenshot** from [`dev/build/release/store_artifacts/`](../build/release/store_artifacts). ⚠️ Replace the placeholder icons first (`client/README.md`).
 - [ ] **7.3 Privacy tab** (gates approval):
   - [ ] Fill **Single purpose**, the **per-permission justifications** (all seven rows — the optional host permissions and `scripting` included), and **Data usage** from the kit's "Privacy practices tab" section.
   - [ ] **Privacy policy URL** (**required**, public). The page is rendered from [`dev/build/release/store_artifacts/PRIVACY.md`](../build/release/store_artifacts/PRIVACY.md) and published to GitHub Pages at `/privacy/` by the **Deploy privacy policy to GitHub Pages** workflow (dispatch it once here; it also refreshes on every store publish). One-time: **Settings → Pages → Source = "GitHub Actions"**. Paste the live URL — shown in the workflow's `deploy` step output and under Settings → Pages (typically `https://missingbulb.github.io/TLDR/privacy/`).

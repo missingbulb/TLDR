@@ -1,7 +1,7 @@
 # Testing — lessons
 
 Project-specific testing lessons for TLDR, layered on the shared Claudinite testing practices
-([`.claudinite/tasks/testingPractices.md`](../../.claudinite/tasks/testingPractices.md) — the portable
+(the Claudinite `writing-tests` skill — the portable
 canon). Where a local rule refines a portable one, the local one wins; it carries this repo's concrete
 files and gotchas. Read before writing or changing a test under `client/`, `server/`, or
 `dev/requirements/`. A portable lesson here propagates to the corpus via the separate
