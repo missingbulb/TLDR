@@ -1,5 +1,7 @@
-.claudinite/
-.claudinite.new/
+# Claudinite mount (synced contents ignored; only the .gitkeep signal marker tracked)
+/.claudinite/*
+!/.claudinite/.gitkeep
+/.claudinite.new/
 
 # Dependencies
 node_modules/
