@@ -2,6 +2,7 @@
   "packs": [
     "chrome-extension",
     "chrome-extension-release",
+    "executable-requirements",
     "github-actions",
     "node",
     "spec-driven-product"
