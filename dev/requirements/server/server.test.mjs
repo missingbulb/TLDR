@@ -5,7 +5,7 @@
 // (auth in §2, the size limit in §3) and prove the guarantee the UI half can only assume.
 //
 // Requires server/node_modules (the handler's AWS-SDK deps resolve there); CI installs them before
-// this suite (.github/workflows/requirements.yml).
+// this suite (.github/workflows/test-requirements.yml).
 "use strict";
 
 import { test } from "node:test";

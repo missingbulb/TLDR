@@ -1,12 +1,12 @@
-name: server
+name: "test: server"
 
 on:
   pull_request:
     branches: [main]
-    paths: ['server/**', 'shared/**', 'dev/build/**', '.github/workflows/server.yml']
+    paths: ['server/**', 'shared/**', 'dev/build/**', '.github/workflows/test-server.yml']
   push:
     branches: [main, 'claude/**']
-    paths: ['server/**', 'shared/**', 'dev/build/**', '.github/workflows/server.yml']
+    paths: ['server/**', 'shared/**', 'dev/build/**', '.github/workflows/test-server.yml']
 
 permissions:
   contents: read

@@ -69,7 +69,10 @@ export function flavorEnv(flavor = 'prod', env = process.env) {
 }
 
 export function buildZip(env = process.env) {
-  const distDir = resolve(clientDir, 'dist');
+  // The zip goes to the repo-root dist/ — the forced-uniform standard location
+  // the chrome-extension-release standard derives (dist/<kebab repo>.zip), the
+  // same place GCEC and CrosswordChat write, so no per-repo zip_path config.
+  const distDir = resolve(clientDir, '..', 'dist');
   const stageDir = resolve(distDir, 'staging');
   const zipPath = resolve(distDir, ZIP_NAME);
   mkdirSync(distDir, { recursive: true });

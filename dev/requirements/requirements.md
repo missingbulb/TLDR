@@ -544,7 +544,7 @@ the icon does.
 <tr>
 <td valign="top" width="340">
 
-⚠️ _Behavior leaf — **untested here** — covered today by `node --check of the chrome.* glue in .github/workflows/client.yml (a real-Chrome e2e is a tracked follow-up)`._ <!-- req-gallery:8.1 -->
+⚠️ _Behavior leaf — **untested here** — covered today by `node --check of the chrome.* glue in .github/workflows/test-client.yml (a real-Chrome e2e is a tracked follow-up)`._ <!-- req-gallery:8.1 -->
 
 </td>
 <td valign="top">
@@ -1239,7 +1239,7 @@ what granting access means (and that turning it off removes it again), and the t
 <tr>
 <td valign="top" width="340">
 
-⚠️ _Behavior leaf — **untested here** — covered today by `node --check of the chrome.* glue in .github/workflows/client.yml (a real-Chrome e2e is a tracked follow-up)`._ <!-- req-gallery:11.14 -->
+⚠️ _Behavior leaf — **untested here** — covered today by `node --check of the chrome.* glue in .github/workflows/test-client.yml (a real-Chrome e2e is a tracked follow-up)`._ <!-- req-gallery:11.14 -->
 
 </td>
 <td valign="top">
