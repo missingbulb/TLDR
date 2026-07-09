@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
-import { SHIP } from '../scripts/build-zip.mjs';
+import { SHIP } from '../../dev/build/tools/build-zip.mjs';
 
 // client/test/ -> repo root -> .github/release.config
 const CONFIG_PATH = resolve(dirname(fileURLToPath(import.meta.url)), '../../.github/release.config');

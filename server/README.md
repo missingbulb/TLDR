@@ -18,7 +18,7 @@ The extension authenticates with a Google **ID token** (a JWT) obtained via `chr
 
 1. Google Cloud Console → APIs & Services → Credentials → Create credentials → OAuth client ID → **Web application**.
 2. Under **Authorized redirect URIs** add: `https://<EXTENSION_ID>.chromiumapp.org/`
-   (the extension id is fixed by the `key` in `client/manifest.json`; see `client/README.md`).
+   (the extension id is fixed by the `key` in `client/manifest.json`; see `dev/docs/client.md`).
 3. Copy the **client id**. It is both the JWT authorizer `audience` (`GoogleClientId` param here) and the extension's `GOOGLE_CLIENT_ID` (`client/config.mjs`).
 
 ### 2. GitHub → AWS deploy role (OIDC, no stored keys)
@@ -155,7 +155,7 @@ API_BASE_URL_DEV="<dev stack ApiUrl output>" GOOGLE_CLIENT_ID="<web-client-id>" 
 ```
 `build:dev` prefers `*_DEV` env vars (`API_BASE_URL_DEV`, `GOOGLE_CLIENT_ID_DEV`,
 `EXTENSION_PUBLIC_KEY_DEV`), falling back to the committed default. Only the release pipeline injects
-prod (see `client/README.md`).
+prod (see `dev/docs/client.md`).
 
 **Seed** the dev table with sample comments (dev-only; it refuses to target the prod table):
 ```bash

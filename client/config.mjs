@@ -1,7 +1,7 @@
 // Configuration. The committed API_BASE_URL points at the DEV stack ON PURPOSE: any build NOT produced
 // by the release workflow talks to dev — never prod. PROD is reachable in exactly one way: the release
 // workflow (.github/workflows/release.yml) injects the prod CloudFront URL over this value at build
-// time (from the GitHub variable `API_BASE_URL`; see scripts/build-zip.mjs). That prod-pointed zip is
+// time (from the GitHub variable `API_BASE_URL`; see dev/build/tools/build-zip.mjs). That prod-pointed zip is
 // BOTH the GitHub Release artifact AND what gets uploaded to the Chrome Web Store — so a release
 // download is prod, while a local/unpacked/`build:dev` build keeps this dev default.
 //

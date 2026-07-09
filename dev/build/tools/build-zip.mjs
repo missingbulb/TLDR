@@ -15,10 +15,12 @@ import { mkdirSync, rmSync, cpSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const clientDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+// This build tool lives in dev/build/tools/; the extension source is client/ at
+// the repo root (dev/build/tools -> ../../../client).
+export const clientDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'client');
 
 // Exactly what ships. src/ and vendor/ contain only runtime files; tests live in client/test/,
-// dev scripts in client/scripts/ — neither is listed here, so neither is packaged.
+// package.json is the client's npm manifest — none is listed here, so none is packaged.
 export const SHIP = ['manifest.json', 'config.mjs', 'src', 'vendor', 'icons'];
 
 export const ZIP_NAME = 'tldr.zip';

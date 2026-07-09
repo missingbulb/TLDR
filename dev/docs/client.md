@@ -18,9 +18,12 @@ client/
 │   └── optimistic.mjs       # optimistic-render bookkeeping — tested
 ├── vendor/normalizeUrl.GENERATED.mjs  # byte-identical copy of shared/normalizeUrl.mjs (drift-guarded)
 ├── icons/                   # PLACEHOLDER icons (replace before a store submission)
-├── scripts/                 # build-zip + gen-icons (dev only; never shipped)
 └── test/                    # node --test unit tests
 ```
+
+The build tooling (`build-zip.mjs`, `gen-icons.mjs`) lives outside the extension folder, in
+[`dev/build/tools/`](../build/tools/) — `client/` holds only runtime-shipped files plus its
+`package.json` and `test/`.
 
 ## Configuration (injected at build time)
 The committed `config.mjs` `API_BASE_URL` points at the **dev** stack on purpose, so any build **not

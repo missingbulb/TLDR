@@ -1,13 +1,14 @@
 // Generates placeholder extension icons (a white "T" on the accent blue) at the four required sizes,
 // using only node's built-in zlib — no image dependency. Replace icons/ with real branding before
-// a Chrome Web Store submission. Re-run with `node scripts/gen-icons.mjs`.
+// a Chrome Web Store submission. Re-run with `node dev/build/tools/gen-icons.mjs`.
 
 import { deflateSync } from 'node:zlib';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const iconsDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'icons');
+// This tool lives in dev/build/tools/; the extension icons are client/icons/.
+const iconsDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'client', 'icons');
 const BG = [37, 99, 235, 255]; // accent blue
 const FG = [255, 255, 255, 255];
 
