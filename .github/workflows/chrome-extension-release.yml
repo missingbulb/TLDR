@@ -6,8 +6,10 @@ name: Release
 # apply here automatically). This file owns only the triggers and, because TLDR
 # is a monorepo whose client build bakes in release config, the one per-repo
 # thing the standard keeps in the stub: the build_env block below. Every other
-# repo-specific value is read from `.github/release.config` (client/ layout,
-# the two-level test gate, the client/dist zip path, the curated ship_paths).
+# repo-specific value is declared explicitly in the REQUIRED `.github/release.config`
+# (six keys, no defaults): the client/ manifest + package.json paths, the
+# two-level test gate, the client/dist zip path, and the curated ship_paths. The
+# zip asset name is derived from zip_path and the build is always `npm run build`.
 #
 # Three operations, one file:
 #   * push to main            → create-package (a clean no-op unless the manifest

@@ -25,7 +25,7 @@ client/
 ## Configuration (injected at build time)
 The committed `config.mjs` `API_BASE_URL` points at the **dev** stack on purpose, so any build **not
 produced by the release workflow** talks to dev — **never prod**. PROD is reachable in exactly one way:
-the release workflow (`.github/workflows/release.yml`) injects the prod URL from a GitHub repository
+the release workflow (`.github/workflows/chrome-extension-release.yml`) injects the prod URL from a GitHub repository
 variable at build time. That prod-pointed zip is **both** the GitHub Release artifact **and** what
 the **Release** workflow's publish job (mode `publish`) uploads to the store — so **downloading the release zip from GitHub is
 prod**, while a plain/local/unpacked/`build:dev` build keeps the committed dev default. (`GOOGLE_CLIENT_ID`
