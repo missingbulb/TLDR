@@ -18,16 +18,19 @@ client/
 │   └── optimistic.mjs       # optimistic-render bookkeeping — tested
 ├── vendor/normalizeUrl.GENERATED.mjs  # byte-identical copy of shared/normalizeUrl.mjs (drift-guarded)
 ├── icons/                   # PLACEHOLDER icons (replace before a store submission)
-├── scripts/                 # build-zip + gen-icons (dev only; never shipped)
 └── test/                    # node --test unit tests
 ```
+
+The build tooling (`build-zip.mjs`, `gen-icons.mjs`) lives outside the extension folder, in
+[`dev/build/tools/`](../build/tools/) — `client/` holds only runtime-shipped files plus its
+`package.json` and `test/`.
 
 ## Configuration (injected at build time)
 The committed `config.mjs` `API_BASE_URL` points at the **dev** stack on purpose, so any build **not
 produced by the release workflow** talks to dev — **never prod**. PROD is reachable in exactly one way:
-the release workflow (`.github/workflows/release.yml`) injects the prod URL from a GitHub repository
+the release workflow (`.github/workflows/chrome-extension-release.yml`) injects the prod URL from a GitHub repository
 variable at build time. That prod-pointed zip is **both** the GitHub Release artifact **and** what
-`publish-chrome-store.yml` uploads to the store — so **downloading the release zip from GitHub is
+the **Release** workflow's publish job (mode `publish`) uploads to the store — so **downloading the release zip from GitHub is
 prod**, while a plain/local/unpacked/`build:dev` build keeps the committed dev default. (`GOOGLE_CLIENT_ID`
 and the manifest `key` stay placeholders, injected the same way.)
 - **`API_BASE_URL`** — committed default = the **dev** app stack `ApiUrl`

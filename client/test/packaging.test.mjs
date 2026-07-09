@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { SHIP, clientDir } from '../scripts/build-zip.mjs';
+import { SHIP, clientDir } from '../../dev/build/tools/build-zip.mjs';
 
 const manifest = JSON.parse(readFileSync(resolve(clientDir, 'manifest.json'), 'utf8'));
 

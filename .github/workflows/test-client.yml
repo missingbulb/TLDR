@@ -1,12 +1,12 @@
-name: client
+name: "test: client"
 
 on:
   pull_request:
     branches: [main]
-    paths: ['client/**', 'shared/**', 'dev/build/**', '.github/workflows/client.yml']
+    paths: ['client/**', 'shared/**', 'dev/build/**', '.github/workflows/test-client.yml']
   push:
     branches: [main, 'claude/**']
-    paths: ['client/**', 'shared/**', 'dev/build/**', '.github/workflows/client.yml']
+    paths: ['client/**', 'shared/**', 'dev/build/**', '.github/workflows/test-client.yml']
 
 permissions:
   contents: read
@@ -45,5 +45,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: tldr
-          path: client/dist/tldr.zip
+          path: dist/tldr.zip
           if-no-files-found: error

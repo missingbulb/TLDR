@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, cpSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
-import { flavorEnv, injectConfig, clientDir } from '../scripts/build-zip.mjs';
+import { flavorEnv, injectConfig, clientDir } from '../../dev/build/tools/build-zip.mjs';
 
 function stage() {
   const dir = mkdtempSync(join(tmpdir(), 'tldr-flavor-'));

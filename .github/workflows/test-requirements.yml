@@ -1,4 +1,4 @@
-name: requirements
+name: "test: requirements"
 
 # The executable-requirements suite (dev/requirements/) — the cross-tier product spec. It renders the
 # real client UI under jsdom (dom/behavior/logic kinds) and runs the real server handler (server kind),
@@ -16,7 +16,7 @@ on:
       - 'client/config.mjs'
       - 'server/src/**'
       - 'shared/**'
-      - '.github/workflows/requirements.yml'
+      - '.github/workflows/test-requirements.yml'
   push:
     branches: [main, 'claude/**']
     paths:
@@ -28,7 +28,7 @@ on:
       - 'client/config.mjs'
       - 'server/src/**'
       - 'shared/**'
-      - '.github/workflows/requirements.yml'
+      - '.github/workflows/test-requirements.yml'
 
 permissions:
   contents: read
