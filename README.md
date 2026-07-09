@@ -34,7 +34,7 @@ needed).
 | [`dev/requirements/`](dev/requirements/README.md) | The executable-requirements suite (client UI + server), spanning both apps. |
 | [`dev/docs/`](dev/docs/architecture.md) | The as-built [architecture](dev/docs/architecture.md) + the portable [UI-testing guideline](dev/docs/ui-testing-guideline.md). |
 | [`dev/build/tools/`](dev/build/tools/sync-shared.mjs) | Build tooling: the shared-code sync + its drift guard (`dev/build/tools/test/`). |
-| `.github/workflows/` | CI (`server`, `client`, `requirements`), gated deploy (`deploy`), and the standard extension-release set (`release`, `publish-chrome-store`, `daily-release`, `deploy-privacy-page`, `report-failure`). |
+| `.github/workflows/` | CI (`server`, `client`, `requirements`), gated deploy (`deploy`), and the single extension-release stub (`release`) whose jobs call the Claudinite canon reusable workflows (create-package, publish, daily; privacy-page deploy and failure reporting live in the canon). |
 
 ## Architecture in one breath
 Public, CDN-cached reads; authenticated writes. The client fetches only while the side panel is open,
@@ -50,9 +50,9 @@ The code is complete; bringing it live needs five owner-specific inputs (none ca
 3. `cd server && sam build && sam deploy …`, then (prod) deploy the CDN stack. (`server/README.md` §3)
 4. Set the client config as repo **variables** (`API_BASE_URL`, `GOOGLE_CLIENT_ID`, `EXTENSION_PUBLIC_KEY`) — the
    release build injects them into the zip; committed source stays placeholder. (`client/README.md`)
-5. Release via **Release: Create Package** (bump the version on `main`) + **Release: Publish to
-   Chrome Web Store**; once live, the daily auto-release ships changes on its own. The zip is
-   built in CI.
+5. Release: bump the version on `main` (that runs the **create-package** job) + run the **Release**
+   workflow with **mode: publish**; once live, the daily auto-release ships changes on its own. The
+   zip is built in CI.
 
 Open product/config questions are tracked in [`dev/docs/architecture.md`](dev/docs/architecture.md) §11.
 
