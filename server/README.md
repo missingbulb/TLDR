@@ -18,8 +18,8 @@ The extension authenticates with a Google **ID token** (a JWT) obtained via `chr
 
 1. Google Cloud Console → APIs & Services → Credentials → Create credentials → OAuth client ID → **Web application**.
 2. Under **Authorized redirect URIs** add: `https://<EXTENSION_ID>.chromiumapp.org/`
-   (the extension id is fixed by the `key` in `client/manifest.json`; see `dev/docs/client.md`).
-3. Copy the **client id**. It is both the JWT authorizer `audience` (`GoogleClientId` param here) and the extension's `GOOGLE_CLIENT_ID` (`client/config.mjs`).
+   (the extension id is fixed by the `key` in `extension/manifest.json`; see `dev/docs/extension.md`).
+3. Copy the **client id**. It is both the JWT authorizer `audience` (`GoogleClientId` param here) and the extension's `GOOGLE_CLIENT_ID` (`extension/config.mjs`).
 
 ### 2. GitHub → AWS deploy role (OIDC, no stored keys)
 The deploy workflow assumes an IAM role via GitHub OIDC — no long-lived AWS keys anywhere.
@@ -146,16 +146,16 @@ sam deploy --config-env dev \
 ```
 The dev stack reuses the **prod** Google OAuth Web client (simplest; the locked decision in #27).
 
-**Build a dev extension.** The committed `client/config.mjs` already defaults to dev, so a plain
-`npm run build` (or loading `client/` unpacked) talks to dev — never prod. To point at a specific dev
+**Build a dev extension.** The committed `extension/config.mjs` already defaults to dev, so a plain
+`npm run build` (or loading `extension/` unpacked) talks to dev — never prod. To point at a specific dev
 API without editing the committed default:
 ```bash
-cd ../client
+cd ../extension
 API_BASE_URL_DEV="<dev stack ApiUrl output>" GOOGLE_CLIENT_ID="<web-client-id>" npm run build:dev
 ```
 `build:dev` prefers `*_DEV` env vars (`API_BASE_URL_DEV`, `GOOGLE_CLIENT_ID_DEV`,
 `EXTENSION_PUBLIC_KEY_DEV`), falling back to the committed default. Only the release pipeline injects
-prod (see `dev/docs/client.md`).
+prod (see `dev/docs/extension.md`).
 
 **Seed** the dev table with sample comments (dev-only; it refuses to target the prod table):
 ```bash

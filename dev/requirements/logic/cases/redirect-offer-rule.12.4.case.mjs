@@ -1,13 +1,13 @@
 // 12.4 — The offer rule (issue #58, the owner-chosen gate): a redirect earns the "show notes for the
 // cleaner URL" offer only when the source is same-site AND strictly cleaner AND a different page id.
-// Verified directly against the shipped, pure client/src/redirect-provenance.mjs (cleanerSourceOffer)
+// Verified directly against the shipped, pure extension/src/redirect-provenance.mjs (cleanerSourceOffer)
 // — no DOM, no chrome.*. The gallery show() renders the SAME checks' real answers as text.
 "use strict";
 
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "client");
+const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "extension");
 const rule = async () =>
   (await import(pathToFileURL(path.join(CLIENT, "src", "redirect-provenance.mjs")).href)).cleanerSourceOffer;
 

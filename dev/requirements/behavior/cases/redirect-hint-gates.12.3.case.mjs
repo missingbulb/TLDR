@@ -7,7 +7,7 @@
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "client");
+const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "extension");
 const { provenanceKeyFor } = await import(pathToFileURL(path.join(CLIENT, "src", "redirect-provenance.mjs")).href);
 
 const CLEAN = "https://example.com/article";

@@ -6,7 +6,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "client");
+const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "extension");
 
 export default {
   description: "the composer textarea caps at maxlength 8192 with a placeholder, and Post is a submit button",

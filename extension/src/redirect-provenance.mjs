@@ -4,7 +4,7 @@
 // fragmented away from the address people actually share. The service worker feeds webNavigation
 // events through the reducer below to keep a per-tab record of the pre-redirect URL; the side panel
 // asks `cleanerSourceOffer` whether that record earns the "this might not be the page's main address"
-// offer. Pure logic — no chrome.* — so it's unit tested (client/test/redirect-provenance.test.mjs).
+// offer. Pure logic — no chrome.* — so it's unit tested (extension-test/redirect-provenance.test.mjs).
 
 import { normalizePageUrl } from '../vendor/normalizeUrl.GENERATED.mjs';
 import { evaluatePage, hostMatches } from './denylist.mjs';

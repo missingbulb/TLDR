@@ -6,7 +6,7 @@ import {
   reconcileSuccess,
   markFailed,
   applyVoteToggle,
-} from '../src/optimistic.mjs';
+} from '../extension/src/optimistic.mjs';
 
 test('makeOptimisticComment marks the entry pending under its temp id and carries its category', () => {
   const c = makeOptimisticComment({ tempId: 'temp-1', body: 'hi', authorName: 'Ada', authorId: 'u1', createdAt: 5, category: 'tldr' });

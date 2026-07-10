@@ -30,7 +30,7 @@ import { JSDOM } from "jsdom";
 import { makeFakeChrome } from "./fake-chrome.mjs";
 import { REFERENCE_NOW_MS } from "../reference-time.mjs";
 
-const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "client");
+const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "extension");
 let loadCounter = 0; // makes each module load a fresh evaluation (its own module-level state)
 
 const SURFACES = {

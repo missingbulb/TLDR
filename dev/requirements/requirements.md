@@ -1,8 +1,8 @@
 # TLDR extension — UI requirements
 
 The **specific, testable UI requirements** for the extension's two user-facing surfaces — the
-**side panel** (`client/src/sidepanel.{html,css,mjs}`) and the **options page**
-(`client/src/options.{html,mjs}`): what they must render, how they must behave, and the exact copy,
+**side panel** (`extension/src/sidepanel.{html,css,mjs}`) and the **options page**
+(`extension/src/options.{html,mjs}`): what they must render, how they must behave, and the exact copy,
 structure, and accessibility semantics they must carry.
 
 This is the **executable** half of the spec: every leaf below carries a stable number and is claimed
@@ -428,20 +428,20 @@ approved artifact.
 
 ## 5. Note render model (covered by unit tests — no leaves here)
 
-The non-visual model the panel renders from is already covered by the existing `client/test/` unit
+The non-visual model the panel renders from is already covered by the existing `extension-test/` unit
 suites, so — like the reference project's events-model section — there are **no separate leaves
 here**, to avoid a parallel, drift-prone duplicate:
 
 - **The optimistic merge** (dedupe by id with the server winning, chronological order, the
-  pending→confirmed→failed transitions) — `client/test/optimistic.test.mjs`.
+  pending→confirmed→failed transitions) — `extension-test/optimistic.test.mjs`.
 - **The page commentability gate** (the two-layer denylist; host-suffix matching) —
-  `client/test/denylist.test.mjs`.
+  `extension-test/denylist.test.mjs`.
 - **The read/write API split** (public read, bearer write, the 401-refresh-retry) —
-  `client/test/api.test.mjs`.
-- **The Google ID-token helpers** (URL building, nonce/state, expiry) — `client/test/auth.test.mjs`.
+  `extension-test/api.test.mjs`.
+- **The Google ID-token helpers** (URL building, nonce/state, expiry) — `extension-test/auth.test.mjs`.
 - **The redirect-provenance model** (the per-tab navigation reducer the service worker feeds, its
   storage.session recording glue, and the same-site + strictly-cleaner offer rule) —
-  `client/test/redirect-provenance.test.mjs` + `client/test/service-worker.test.mjs`. The offer
+  `extension-test/redirect-provenance.test.mjs` + `extension-test/service-worker.test.mjs`. The offer
   rule's *product* contract is leaf `12.4`; the UI it drives is §12.
 
 The rendered §1–§4 requirements are the executable UI contract over that model.
@@ -449,7 +449,7 @@ The rendered §1–§4 requirements are the executable UI contract over that mod
 
 ## 6. Options page
 
-The denylist editor (`client/src/options.{html,mjs}`).
+The denylist editor (`extension/src/options.{html,mjs}`).
 
 <table>
 <tr>
@@ -503,7 +503,7 @@ reflected back into the textarea.
 ## 7. Manifest UI surfaces
 
 The user-facing entry points declared in the manifest (distinct from the packaging/least-privilege
-guards in `client/test/manifest.test.mjs`).
+guards in `extension-test/manifest.test.mjs`).
 
 <table>
 <tr>
@@ -544,7 +544,7 @@ the icon does.
 <tr>
 <td valign="top" width="340">
 
-⚠️ _Behavior leaf — **untested here** — covered today by `node --check of the chrome.* glue in .github/workflows/test-client.yml (a real-Chrome e2e is a tracked follow-up)`._ <!-- req-gallery:8.1 -->
+⚠️ _Behavior leaf — **untested here** — covered today by `node --check of the chrome.* glue in .github/workflows/test-extension.yml (a real-Chrome e2e is a tracked follow-up)`._ <!-- req-gallery:8.1 -->
 
 </td>
 <td valign="top">
@@ -667,7 +667,7 @@ phantom count.
 
 `9.6` On a refresh, the merge keeps the **server's `voteCount` authoritative** while **preserving the
 viewer's own `youVoted`** — the server can't know your vote (the public read is shared and cache-keyed
-without `Authorization`), so the client carries it. _(How: `mergeComments` in `client/src/optimistic.mjs`.)_
+without `Authorization`), so the client carries it. _(How: `mergeComments` in `extension/src/optimistic.mjs`.)_
 
 </td>
 </tr>
@@ -762,7 +762,7 @@ shows **only that category's notes**, wearing that category's **look & feel** (s
 its **pane title**, and its **composer copy** ("Post tl;dr"). The panel makes no other mention of the
 selection — no badge, no filter bar. Categories come from the growable curated allowlist in `shared/categories.mjs` (seed **TLDR
 · Spoiler · Chitchat**); each category's *design* lives in its own encapsulated folder
-(`client/src/categories/<id>/`, strictly presentation) so a restyle of one can't touch another, and the
+(`extension/src/categories/<id>/`, strictly presentation) so a restyle of one can't touch another, and the
 shared panel code behaves identically for every category. Filtering to the current category is
 client-side over the one CDN-cached read per page (no refetch on a switch), and the server still stores
 & validates the category (allowlist; default `chitchat` at read time). The per-category look is a `dom`
@@ -991,7 +991,7 @@ Follow-up to the categories/upvoting ranking deferral noted in §10: while brows
 **http(s) link** shows a small popup with the **leading (top-voted) comment** for that link's URL, in
 the reader's **currently selected category** — a TLDR for every link on the page, without opening the
 panel. This is the one feature that reaches **beyond the extension's own pages**: it runs as a
-DYNAMICALLY-registered content script (`client/src/link-hover.mjs`) on an arbitrary third-party page,
+DYNAMICALLY-registered content script (`extension/src/link-hover.mjs`) on an arbitrary third-party page,
 opted into per the options-page toggle (`11.10`), never declared statically in the manifest (`11.11`) —
 so the host-access it needs is requested, and can be revoked, only through that one gesture (§12,
 "optional permission, opt-in via toggle").
@@ -1239,7 +1239,7 @@ what granting access means (and that turning it off removes it again), and the t
 <tr>
 <td valign="top" width="340">
 
-⚠️ _Behavior leaf — **untested here** — covered today by `node --check of the chrome.* glue in .github/workflows/test-client.yml (a real-Chrome e2e is a tracked follow-up)`._ <!-- req-gallery:11.14 -->
+⚠️ _Behavior leaf — **untested here** — covered today by `node --check of the chrome.* glue in .github/workflows/test-extension.yml (a real-Chrome e2e is a tracked follow-up)`._ <!-- req-gallery:11.14 -->
 
 </td>
 <td valign="top">
@@ -1260,7 +1260,7 @@ same-site one (a locale path, session/variant params the tracker-stripper doesn'
 visitors on a fragmented page id — while the thread's natural shared address is the **pre-redirect**
 URL. The service worker records each tab's redirect provenance (`webNavigation` — a permission the
 manifest already held — into `chrome.storage.session`, so it survives worker recycles and dies with
-the browser session); the model is the pure `client/src/redirect-provenance.mjs` (§5). When the
+the browser session); the model is the pure `extension/src/redirect-provenance.mjs` (§5). When the
 landing page shows **no notes** and the arrival **earns the offer** — the source URL is commentable,
 **same-site** (host-suffix relation), a **different page id** (a tracking-only diff normalizes away),
 and **strictly cleaner** (the redirect *added* path/params; cross-site shorteners never prompt) — the

@@ -15,15 +15,15 @@ import { mkdirSync, rmSync, cpSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// This build tool lives in dev/build/tools/; the extension source is client/ at
-// the repo root (dev/build/tools -> ../../../client).
-export const clientDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'client');
+// This build tool lives in dev/build/tools/; the extension source is extension/ at
+// the repo root (dev/build/tools -> ../../../extension).
+export const extensionDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'extension');
 
-// Exactly what ships. src/ and vendor/ contain only runtime files; tests live in client/test/,
-// package.json is the client's npm manifest — none is listed here, so none is packaged.
+// Exactly what ships. src/ and vendor/ contain only runtime files; tests live in extension-test/,
+// package.json is the extension's npm manifest — none is listed here, so none is packaged.
 // Editing this list? Mirror it into `.github/release.config` `ship_paths` (each entry prefixed
-// `client/`): the canon daily-release decides "did a deployable file change?" by prefix-matching
-// that key, so the two must stay in lockstep — client/test/release-ship-paths.test.mjs guards it.
+// `extension/`): the canon daily-release decides "did a deployable file change?" by prefix-matching
+// that key, so the two must stay in lockstep — extension-test/release-ship-paths.test.mjs guards it.
 export const SHIP = ['manifest.json', 'config.mjs', 'src', 'vendor', 'icons'];
 
 export const ZIP_NAME = 'tldr.zip';
@@ -77,7 +77,7 @@ export function buildZip(env = process.env) {
   // The zip goes to the repo-root dist/ — the forced-uniform standard location
   // the chrome-extension-release standard derives (dist/<kebab repo>.zip), the
   // same place GCEC and CrosswordChat write, so no per-repo zip_path config.
-  const distDir = resolve(clientDir, '..', 'dist');
+  const distDir = resolve(extensionDir, '..', 'dist');
   const stageDir = resolve(distDir, 'staging');
   const zipPath = resolve(distDir, ZIP_NAME);
   mkdirSync(distDir, { recursive: true });
@@ -88,7 +88,7 @@ export function buildZip(env = process.env) {
   // Stage exactly the shippable files (preserving mtimes for byte-stable zips), then inject config
   // into the staged copies only — the committed source is never modified.
   for (const entry of SHIP) {
-    cpSync(resolve(clientDir, entry), resolve(stageDir, entry), { recursive: true, preserveTimestamps: true });
+    cpSync(resolve(extensionDir, entry), resolve(stageDir, entry), { recursive: true, preserveTimestamps: true });
   }
   injectConfig(stageDir, env);
 

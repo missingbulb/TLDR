@@ -7,9 +7,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
-const clientDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const manifest = JSON.parse(readFileSync(resolve(clientDir, 'manifest.json'), 'utf8'));
-const pkg = JSON.parse(readFileSync(resolve(clientDir, 'package.json'), 'utf8'));
+const extensionDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'extension');
+const manifest = JSON.parse(readFileSync(resolve(extensionDir, 'manifest.json'), 'utf8'));
+const pkg = JSON.parse(readFileSync(resolve(extensionDir, 'package.json'), 'utf8'));
 
 test('manifest is MV3 with a valid X.Y.Z version', () => {
   assert.equal(manifest.manifest_version, 3);

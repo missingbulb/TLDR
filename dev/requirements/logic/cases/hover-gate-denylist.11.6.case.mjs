@@ -1,13 +1,13 @@
 // 11.6 — A hovered link whose host is on the reader's per-site denylist is never a link-hover lookup
 // candidate — the SAME evaluatePage gate (and so the SAME synced denylist) the side panel applies to
-// the active tab (§4.2), reused verbatim via client/src/link-hover-gate.mjs's candidatePageId — never a
+// the active tab (§4.2), reused verbatim via extension/src/link-hover-gate.mjs's candidatePageId — never a
 // separate policy that could drift from it. The gallery show() renders the SAME checks' real results.
 "use strict";
 
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "client");
+const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "extension");
 const gate = async () =>
   (await import(pathToFileURL(path.join(CLIENT, "src", "link-hover-gate.mjs")).href)).candidatePageId;
 

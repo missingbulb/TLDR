@@ -1,6 +1,6 @@
 // 11.7 — Hovering a candidate link (http(s), not denylisted) with a leading comment in the current
 // category shows a popup — after the debounce — naming the category and the comment's body/author;
-// moving off the link removes it. Drives the REAL client/src/link-hover.mjs under the dedicated
+// moving off the link removes it. Drives the REAL extension/src/link-hover.mjs under the dedicated
 // link-hover harness (a synthetic third-party host page + a fake chrome, mirroring how harness.mjs
 // drives the real sidepanel.mjs/options.mjs). The gallery show() renders this same walk as text (the
 // outbound lookup + the popup's actual content); the popup's LOOK is pinned by the component leaf 11.12.

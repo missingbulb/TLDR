@@ -3,7 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { candidatePageId } from '../src/link-hover-gate.mjs';
+import { candidatePageId } from '../extension/src/link-hover-gate.mjs';
 
 test('candidatePageId resolves a plain http(s) link to its normalized pageId', () => {
   assert.equal(candidatePageId('https://example.com/x?utm_source=foo', []), 'https://example.com/x');

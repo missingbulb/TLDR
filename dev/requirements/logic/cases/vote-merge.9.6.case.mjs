@@ -7,7 +7,7 @@
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "client");
+const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "extension");
 
 export default {
   description: "mergeComments keeps the server voteCount authoritative while preserving the local youVoted",

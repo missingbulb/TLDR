@@ -7,7 +7,7 @@ import {
   isExpired,
   randomToken,
   getIdToken,
-} from '../src/auth.mjs';
+} from '../extension/src/auth.mjs';
 
 function b64url(obj) {
   return Buffer.from(JSON.stringify(obj)).toString('base64url');

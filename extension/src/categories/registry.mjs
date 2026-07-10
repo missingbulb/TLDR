@@ -1,4 +1,4 @@
-// Per-category DESIGN registry (issue #25). Each category owns a folder under client/src/categories/
+// Per-category DESIGN registry (issue #25). Each category owns a folder under extension/src/categories/
 // holding STRICTLY presentation: a scoped CSS file (categories/<id>/<id>.css — its colour tokens,
 // linked in sidepanel.html and biting only when that category is active) and a design descriptor
 // (categories/<id>/design.mjs — its copy). This registry maps a category id → its descriptor.

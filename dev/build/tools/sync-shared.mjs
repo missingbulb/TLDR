@@ -18,14 +18,14 @@ export const SHARED = [
     source: resolve(repoRoot, 'shared/normalizeUrl.mjs'),
     targets: [
       resolve(repoRoot, 'server/src/vendor/normalizeUrl.GENERATED.mjs'),
-      resolve(repoRoot, 'client/vendor/normalizeUrl.GENERATED.mjs'),
+      resolve(repoRoot, 'extension/vendor/normalizeUrl.GENERATED.mjs'),
     ],
   },
   {
     source: resolve(repoRoot, 'shared/categories.mjs'),
     targets: [
       resolve(repoRoot, 'server/src/vendor/categories.GENERATED.mjs'),
-      resolve(repoRoot, 'client/vendor/categories.GENERATED.mjs'),
+      resolve(repoRoot, 'extension/vendor/categories.GENERATED.mjs'),
     ],
   },
 ];

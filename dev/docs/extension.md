@@ -1,11 +1,11 @@
-# TLDR client (Chrome extension, MV3)
+# TLDR extension (Chrome extension, MV3)
 
 A side-panel extension that shows community tl;dr notes for the active page and lets a signed-in
 user post one. No bundler — Chrome loads the ES modules directly.
 
 ## Layout
 ```
-client/
+extension/
 ├── manifest.json            # MV3 manifest (least-privilege; no <all_urls>)
 ├── config.mjs               # API_BASE_URL + GOOGLE_CLIENT_ID (placeholders; injected at build time)
 ├── src/
@@ -17,13 +17,14 @@ client/
 │   ├── denylist.mjs         # two-layer page gate — tested
 │   └── optimistic.mjs       # optimistic-render bookkeeping — tested
 ├── vendor/normalizeUrl.GENERATED.mjs  # byte-identical copy of shared/normalizeUrl.mjs (drift-guarded)
-├── icons/                   # PLACEHOLDER icons (replace before a store submission)
-└── test/                    # node --test unit tests
+└── icons/                   # PLACEHOLDER icons (replace before a store submission)
+
+extension-test/               # node --test unit tests (sibling top-level directory, not nested)
 ```
 
 The build tooling (`build-zip.mjs`, `gen-icons.mjs`) lives outside the extension folder, in
-[`dev/build/tools/`](../build/tools/) — `client/` holds only runtime-shipped files plus its
-`package.json` and `test/`.
+[`dev/build/tools/`](../build/tools/) — `extension/` holds only runtime-shipped files plus its
+`package.json`; its tests live in the sibling top-level [`extension-test/`](../../extension-test/).
 
 ## Configuration (injected at build time)
 The committed `config.mjs` `API_BASE_URL` points at the **dev** stack on purpose, so any build **not
@@ -60,10 +61,10 @@ injecting the repo variables above into staged copies (the committed source is n
 build itself runs anywhere; with no env set it produces a **dev-pointed** zip from the committed
 defaults:
 ```bash
-cd client
+cd extension
 npm run build      # -> dist/tldr.zip (only the shippable files)
 ```
-Load unpacked for development: `chrome://extensions` → Developer mode → **Load unpacked** → select `client/`.
+Load unpacked for development: `chrome://extensions` → Developer mode → **Load unpacked** → select `extension/`.
 
 ## How it works
 - The side panel fetches comments **only while open** (the dominant cost lever) for the **active tab**,

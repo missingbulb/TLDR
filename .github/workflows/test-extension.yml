@@ -1,12 +1,12 @@
-name: "test: client"
+name: "test: extension"
 
 on:
   pull_request:
     branches: [main]
-    paths: ['client/**', 'shared/**', 'dev/build/**', '.github/workflows/test-client.yml']
+    paths: ['extension/**', 'shared/**', 'dev/build/**', '.github/workflows/test-extension.yml']
   push:
     branches: [main, 'claude/**']
-    paths: ['client/**', 'shared/**', 'dev/build/**', '.github/workflows/test-client.yml']
+    paths: ['extension/**', 'shared/**', 'dev/build/**', '.github/workflows/test-extension.yml']
 
 permissions:
   contents: read
@@ -26,20 +26,20 @@ jobs:
         run: npm test
 
       - name: Validate manifest.json is parseable
-        run: node -e "JSON.parse(require('fs').readFileSync('client/manifest.json'))"
+        run: node -e "JSON.parse(require('fs').readFileSync('extension/manifest.json'))"
 
-      # The client has no runtime/test dependencies (the UI requirements suite + its deps live in dev/).
-      - name: Client tests (logic + manifest/packaging guards)
-        working-directory: client
+      # The extension has no runtime/test dependencies (the UI requirements suite + its deps live in dev/).
+      - name: Extension tests (logic + manifest/packaging guards)
+        working-directory: extension
         run: npm test
 
       # The chrome.* glue can't run under node; syntax-check it so a typo can't ship.
       - name: Syntax-check extension modules
         run: |
-          for f in client/src/*.mjs client/config.mjs; do node --check "$f"; done
+          for f in extension/src/*.mjs extension/config.mjs; do node --check "$f"; done
 
       - name: Build the extension zip
-        working-directory: client
+        working-directory: extension
         run: npm run build
 
       - uses: actions/upload-artifact@v4

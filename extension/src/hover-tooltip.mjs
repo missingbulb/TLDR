@@ -26,7 +26,7 @@ export const MAX_BODY_CHARS = 90;
 
 // Crop an over-long note body to MAX_BODY_CHARS + an ellipsis (pure — no DOM). A non-string coerces to
 // "" so a malformed record renders an empty body rather than throwing. Exported so the crop rule is
-// unit-tested directly (client/test/hover-tooltip.test.mjs) without a DOM.
+// unit-tested directly (extension-test/hover-tooltip.test.mjs) without a DOM.
 export function truncateBody(text) {
   const s = String(text ?? '');
   return s.length > MAX_BODY_CHARS ? `${s.slice(0, MAX_BODY_CHARS - 1).trimEnd()}…` : s;

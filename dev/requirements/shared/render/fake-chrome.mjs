@@ -22,7 +22,7 @@ const NOOP_EVENT = { addListener() {} };
 // Read from source (not hard-coded) so it tracks a version bump automatically.
 const MANIFEST = JSON.parse(
   fs.readFileSync(
-    path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "client", "manifest.json"),
+    path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "extension", "manifest.json"),
     "utf8",
   ),
 );
@@ -153,7 +153,7 @@ export function makeFakeChrome({
       connect: () => ({ onMessage: NOOP_EVENT, onDisconnect: NOOP_EVENT, postMessage() {}, disconnect() {} }),
       // link-hover.mjs's content-script -> service-worker round trip (issue #26). This fakes the SW's
       // ANSWER directly (via the case-supplied onMessage), not the real service-worker.mjs message
-      // handler — that handler has its own dedicated unit test (client/test/service-worker.test.mjs).
+      // handler — that handler has its own dedicated unit test (extension-test/service-worker.test.mjs).
       // Faithful to the real API's error behavior when the extension side is unreachable: onMessage
       // itself throwing propagates as a rejected sendMessage, matching link-hover.mjs's catch/fail-silent.
       sendMessage: async (message) => {
