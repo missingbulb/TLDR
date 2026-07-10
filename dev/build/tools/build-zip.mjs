@@ -21,6 +21,9 @@ export const clientDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', 
 
 // Exactly what ships. src/ and vendor/ contain only runtime files; tests live in client/test/,
 // package.json is the client's npm manifest — none is listed here, so none is packaged.
+// Editing this list? Mirror it into `.github/release.config` `ship_paths` (each entry prefixed
+// `client/`): the canon daily-release decides "did a deployable file change?" by prefix-matching
+// that key, so the two must stay in lockstep — client/test/release-ship-paths.test.mjs guards it.
 export const SHIP = ['manifest.json', 'config.mjs', 'src', 'vendor', 'icons'];
 
 export const ZIP_NAME = 'tldr.zip';
