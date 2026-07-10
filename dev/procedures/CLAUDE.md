@@ -16,6 +16,6 @@ trigger fires; don't pre-load.
 
 ## Lessons — read the matching one before working in that area
 
-- [chrome-extension.md](chrome-extension.md) — **before touching `client/`.** The multi-account silent-refresh `login_hint`, the interactive-auth escalation guard, why the API is reached via the server's `*` CORS (not `host_permissions`), and opt-in real host access via `optional_host_permissions` + dynamic content-script registration.
+- [chrome-extension.md](chrome-extension.md) — **before touching `extension/`.** The multi-account silent-refresh `login_hint`, the interactive-auth escalation guard, why the API is reached via the server's `*` CORS (not `host_permissions`), and opt-in real host access via `optional_host_permissions` + dynamic content-script registration.
 - [aws-sam.md](aws-sam.md) — **before touching `server/` templates or the build.** The deploy role's IAM scope (the Serverless-transform + CloudFront grants); the new-account CloudFront-verification gate; and failed-`CREATE` cleanup (`ROLLBACK_COMPLETE` + orphaned `Retain` resources).
 - [ci-cd.md](ci-cd.md) — **before editing `.github/workflows/`, or when reading CI status to gate a merge.** The case-sensitive OIDC `sub` trust-policy match; reading run state via the MCP tools (not `curl`) plus a read-only status workflow; and why workflow/build changes only take effect once on the default branch.

@@ -7,8 +7,8 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// This tool lives in dev/build/tools/; the extension icons are client/icons/.
-const iconsDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'client', 'icons');
+// This tool lives in dev/build/tools/; the extension icons are extension/icons/.
+const iconsDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'extension', 'icons');
 const BG = [37, 99, 235, 255]; // accent blue
 const FG = [255, 255, 255, 255];
 

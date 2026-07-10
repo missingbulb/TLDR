@@ -1,6 +1,6 @@
 // Single source of truth for the link-hover content script's DYNAMIC registration (issue #26). The
 // script (src/link-hover.mjs) is NEVER declared statically in manifest.json — see manifest.json's
-// "scripting" permission + "optional_host_permissions", and client/test/manifest.test.mjs — it exists
+// "scripting" permission + "optional_host_permissions", and extension-test/manifest.test.mjs — it exists
 // only after the user opts in via the options-page toggle (options.mjs) and grants the optional host
 // permission. Shared by options.mjs (the toggle handler) and service-worker.mjs (startup
 // reconciliation, for when the permission was revoked outside the extension, e.g. via

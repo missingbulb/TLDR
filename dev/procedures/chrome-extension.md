@@ -1,6 +1,6 @@
 # Chrome extension (MV3) — lessons
 
-Notes for the TLDR extension under `client/`. These are largely portable; the distilled, project-stripped
+Notes for the TLDR extension under `extension/`. These are largely portable; the distilled, project-stripped
 versions are what would propagate to the corpus `technologies/chrome-extension.md`.
 
 - **`prompt=none` can't pick among multiple signed-in accounts — pass `login_hint`.** With several Google
@@ -9,7 +9,7 @@ versions are what would propagate to the corpus `technologies/chrome-extension.m
   not a credential) and pass it as `login_hint` on the silent mint (OIDC Core §3.1.2.1). Persist only the
   email to `storage.local`; the **ID token stays in `storage.session`** (in-memory) — never write a bearer
   credential to disk (extension storage is unencrypted), and don't adopt a refresh-token flow to "fix"
-  restarts (that puts a *longer-lived* credential at rest — worse). Worked example: `client/src/auth.mjs`
+  restarts (that puts a *longer-lived* credential at rest — worse). Worked example: `extension/src/auth.mjs`
   (`cacheToken` remembers the email; `loadLoginHint`/`buildAuthUrl` thread it through).
 
 - **Escalate to interactive auth only from a real user gesture, and only as a last resort.** Reads send no
@@ -17,8 +17,8 @@ versions are what would propagate to the corpus `technologies/chrome-extension.m
   silent-only token, and a *visible* Google prompt is permitted **only** on the 401 retry — which already
   runs inside the Post click. Encode it as a hard rule: `getIdToken` escalates to interactive **iff**
   `interactive && forceRefresh` (both default false), so no other caller can surface UI by accident. Worked
-  example: `client/src/auth.mjs` (`getIdToken` escalation guard) + `client/src/api.mjs` (`postComment`
-  silent-first, interactive-on-401). Unit-tested by stubbing `chrome.*` in `client/test/auth.test.mjs`.
+  example: `extension/src/auth.mjs` (`getIdToken` escalation guard) + `extension/src/api.mjs` (`postComment`
+  silent-first, interactive-on-401). Unit-tested by stubbing `chrome.*` in `extension-test/auth.test.mjs`.
 
 - **Reach the API via the server's CORS, not `host_permissions`.** Our backend returns
   `Access-Control-Allow-Origin: *` (API Gateway CORS — it's `*` because HTTP API v2 rejects the
@@ -43,6 +43,6 @@ versions are what would propagate to the corpus `technologies/chrome-extension.m
   `content_scripts`, or its `matches` would need to already be a granted permission, defeating the
   opt-in. Self-heal on every service-worker start (`chrome.permissions.contains` vs. your persisted
   enabled flag): the grant can be revoked from `chrome://extensions` directly, bypassing your toggle.
-  Worked example: `client/src/hover-registration.mjs` (register/unregister/reconcile) +
-  `client/src/options.mjs` (the toggle click handler calling `chrome.permissions.request` directly) +
-  `client/manifest.json` (`optional_host_permissions`, `scripting`, no static `content_scripts`).
+  Worked example: `extension/src/hover-registration.mjs` (register/unregister/reconcile) +
+  `extension/src/options.mjs` (the toggle click handler calling `chrome.permissions.request` directly) +
+  `extension/manifest.json` (`optional_host_permissions`, `scripting`, no static `content_scripts`).

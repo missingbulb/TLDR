@@ -7,12 +7,12 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, cpSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
-import { flavorEnv, injectConfig, clientDir } from '../../dev/build/tools/build-zip.mjs';
+import { flavorEnv, injectConfig, extensionDir } from '../dev/build/tools/build-zip.mjs';
 
 function stage() {
   const dir = mkdtempSync(join(tmpdir(), 'tldr-flavor-'));
-  cpSync(resolve(clientDir, 'config.mjs'), resolve(dir, 'config.mjs'));
-  cpSync(resolve(clientDir, 'manifest.json'), resolve(dir, 'manifest.json'));
+  cpSync(resolve(extensionDir, 'config.mjs'), resolve(dir, 'config.mjs'));
+  cpSync(resolve(extensionDir, 'manifest.json'), resolve(dir, 'manifest.json'));
   return dir;
 }
 

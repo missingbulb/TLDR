@@ -9,7 +9,7 @@ import {
   reconcileHoverRegistration,
   HOVER_ORIGINS,
   HOVER_ENABLED_KEY,
-} from '../src/hover-registration.mjs';
+} from '../extension/src/hover-registration.mjs';
 
 function stubChrome({ registered = [], enabled = undefined, granted = false } = {}) {
   const calls = { register: [], unregister: [], syncSet: [] };

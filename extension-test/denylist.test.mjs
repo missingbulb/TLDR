@@ -5,7 +5,7 @@ import {
   hostMatches,
   DEFAULT_USER_DENYLIST,
   CODE_BLOCKED_HOSTS,
-} from '../src/denylist.mjs';
+} from '../extension/src/denylist.mjs';
 
 test('hostMatches does suffix matching, not substring matching', () => {
   assert.ok(hostMatches('example.com', 'example.com'));

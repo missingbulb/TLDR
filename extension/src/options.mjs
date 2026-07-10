@@ -39,7 +39,7 @@ form.addEventListener('submit', async (event) => {
 });
 
 // --- link-hover preview opt-in toggle (issue #26) ----------------------------
-// Off by default (client/manifest.json requests it only as an OPTIONAL host permission — issue #30
+// Off by default (extension/manifest.json requests it only as an OPTIONAL host permission — issue #30
 // kept the install-time permission ask at zero). Checking this box is the one place that host access
 // is ever requested, and it must happen HERE, synchronously inside this click handler: Chrome only
 // honors chrome.permissions.request() during a live user gesture, so it can't be deferred to the

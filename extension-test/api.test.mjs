@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { getComments, postComment, castVote, removeVote, getTopComment } from '../src/api.mjs';
+import { getComments, postComment, castVote, removeVote, getTopComment } from '../extension/src/api.mjs';
 
 function jsonResponse(status, body) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };

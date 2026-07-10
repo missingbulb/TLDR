@@ -2,7 +2,7 @@ name: "test: requirements"
 
 # The executable-requirements suite (dev/requirements/) — the cross-tier product spec. It renders the
 # real client UI under jsdom (dom/behavior/logic kinds) and runs the real server handler (server kind),
-# so it triggers on the spec, the dev deps, and the client/server sources it exercises.
+# so it triggers on the spec, the dev deps, and the extension/server sources it exercises.
 
 on:
   pull_request:
@@ -11,9 +11,9 @@ on:
       - 'dev/requirements/**'
       - 'dev/package.json'
       - 'dev/package-lock.json'
-      - 'client/src/**'
-      - 'client/manifest.json'
-      - 'client/config.mjs'
+      - 'extension/src/**'
+      - 'extension/manifest.json'
+      - 'extension/config.mjs'
       - 'server/src/**'
       - 'shared/**'
       - '.github/workflows/test-requirements.yml'
@@ -23,9 +23,9 @@ on:
       - 'dev/requirements/**'
       - 'dev/package.json'
       - 'dev/package-lock.json'
-      - 'client/src/**'
-      - 'client/manifest.json'
-      - 'client/config.mjs'
+      - 'extension/src/**'
+      - 'extension/manifest.json'
+      - 'extension/config.mjs'
       - 'server/src/**'
       - 'shared/**'
       - '.github/workflows/test-requirements.yml'

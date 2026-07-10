@@ -9,7 +9,7 @@ import {
   commitNavigation,
   cleanerSourceOffer,
   provenanceKeyFor,
-} from '../src/redirect-provenance.mjs';
+} from '../extension/src/redirect-provenance.mjs';
 
 test('provenanceKeyFor derives a per-tab storage key', () => {
   assert.equal(provenanceKeyFor(7), 'redirectProvenance:7');

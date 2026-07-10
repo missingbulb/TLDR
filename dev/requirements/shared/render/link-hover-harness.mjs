@@ -2,9 +2,9 @@
 // content-script analogue of harness.mjs (which drives the extension's OWN pages: sidepanel/options/
 // menu). This one is deliberately separate rather than folded into harness.mjs's SURFACES map: a
 // content script has no HTML shell of its own — it's injected into an ARBITRARY third-party page — so
-// this harness builds a minimal synthetic host-page fixture instead of loading one of client/src/*.html.
+// this harness builds a minimal synthetic host-page fixture instead of loading one of extension/src/*.html.
 //
-// Same discipline as harness.mjs: the REAL, unmodified client/src/link-hover.mjs runs; only its inputs
+// Same discipline as harness.mjs: the REAL, unmodified extension/src/link-hover.mjs runs; only its inputs
 // (document, chrome, timers) are faked. Timers are CAPTURED (not run), so a case advances the hover
 // debounce explicitly via flushTimers() instead of racing a real clock — same reasoning as harness.mjs's
 // options "Saved." auto-clear handling.
@@ -15,7 +15,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { JSDOM } from "jsdom";
 import { makeFakeChrome } from "./fake-chrome.mjs";
 
-const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "client");
+const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "extension");
 const MODULE_PATH = path.join(CLIENT, "src", "link-hover.mjs");
 let loadCounter = 0;
 

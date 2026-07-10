@@ -9,7 +9,7 @@
 // This file is the canonical copy. It is vendored verbatim into the places that cannot import across
 // the repo at runtime:
 //   - server/src/vendor/categories.GENERATED.mjs  (so SAM/esbuild bundling is path-robust)
-//   - client/vendor/categories.GENERATED.mjs       (so the extension ships a self-contained copy)
+//   - extension/vendor/categories.GENERATED.mjs       (so the extension ships a self-contained copy)
 // Run `npm run sync-shared` after editing this file; CI fails on byte drift (test/shared-drift.test.mjs).
 //
 // GROWABLE CURATED LIST (owner decision, issue #25): the set is NOT closed but users can't invent

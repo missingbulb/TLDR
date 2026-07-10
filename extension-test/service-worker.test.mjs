@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'service-worker.mjs');
+const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'extension', 'src', 'service-worker.mjs');
 let loadCounter = 0;
 
 function stubChrome({ fetchImpl } = {}) {

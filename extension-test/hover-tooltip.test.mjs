@@ -1,12 +1,12 @@
 // positionTooltip is pure geometry (offsetWidth/offsetHeight + a settable .style, not a real DOM
 // element), so it's unit-tested directly here with plain stub objects. buildTooltipElement calls
 // document.createElement and is exercised as a jsdom-rendered `component` snapshot instead (issue #26,
-// dev/requirements/requirements.md leaf 11.10) — client/test/ has no DOM library, by project convention
-// (see client/package.json: no jsdom dependency; DOM-touching code is covered under dev/requirements/).
+// dev/requirements/requirements.md leaf 11.10) — extension-test/ has no DOM library, by project convention
+// (see extension/package.json: no jsdom dependency; DOM-touching code is covered under dev/requirements/).
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { positionTooltip, TOOLTIP_CLASS, truncateBody, MAX_BODY_CHARS } from '../src/hover-tooltip.mjs';
+import { positionTooltip, TOOLTIP_CLASS, truncateBody, MAX_BODY_CHARS } from '../extension/src/hover-tooltip.mjs';
 
 function stubTooltip({ offsetWidth = 280, offsetHeight = 60 } = {}) {
   return { offsetWidth, offsetHeight, style: {} };

@@ -1,5 +1,5 @@
 // 11.5 — A hovered link is a link-hover lookup candidate ONLY if its href is http(s). Verified
-// directly against the shipped, pure client/src/link-hover-gate.mjs (candidatePageId) — no DOM, no
+// directly against the shipped, pure extension/src/link-hover-gate.mjs (candidatePageId) — no DOM, no
 // chrome.*, so no jsdom/harness is needed for this leaf. The gallery show() renders the SAME checks'
 // real results as text, so the doc shows what the gate actually answered, not a "trust the runner" note.
 "use strict";
@@ -7,7 +7,7 @@
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "client");
+const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "extension");
 const gate = async () =>
   (await import(pathToFileURL(path.join(CLIENT, "src", "link-hover-gate.mjs")).href)).candidatePageId;
 

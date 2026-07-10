@@ -6,12 +6,12 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, cpSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
-import { injectConfig, clientDir } from '../../dev/build/tools/build-zip.mjs';
+import { injectConfig, extensionDir } from '../dev/build/tools/build-zip.mjs';
 
 function stage() {
   const dir = mkdtempSync(join(tmpdir(), 'tldr-inject-'));
-  cpSync(resolve(clientDir, 'config.mjs'), resolve(dir, 'config.mjs'));
-  cpSync(resolve(clientDir, 'manifest.json'), resolve(dir, 'manifest.json'));
+  cpSync(resolve(extensionDir, 'config.mjs'), resolve(dir, 'config.mjs'));
+  cpSync(resolve(extensionDir, 'manifest.json'), resolve(dir, 'manifest.json'));
   return dir;
 }
 
@@ -39,7 +39,7 @@ test('injectConfig writes env values into staged config.mjs and manifest.json', 
 test('the committed default points at dev (never prod)', () => {
   // "Dev as the committed default": any build that isn't the release pipeline talks to dev, never prod.
   // PROD is only ever the release-injected value, so the committed default must NOT be a prod URL.
-  const config = readFileSync(resolve(clientDir, 'config.mjs'), 'utf8');
+  const config = readFileSync(resolve(extensionDir, 'config.mjs'), 'utf8');
   const apiBaseUrl = config.match(/export const API_BASE_URL = '([^']*)'/)?.[1];
   assert.ok(apiBaseUrl, 'config.mjs must export API_BASE_URL');
   // A prod build is the CloudFront domain; the committed default must never be that.
