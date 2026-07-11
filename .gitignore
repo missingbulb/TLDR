@@ -1,6 +1,6 @@
-# Claudinite mount (synced contents ignored; only the .gitkeep signal marker tracked)
+# Claudinite mount (synced contents ignored; only the tracked sync hook signals the mount)
 /.claudinite/*
-!/.claudinite/.gitkeep
+!/.claudinite/sync-claudinite.sh
 /.claudinite.new/
 
 # Dependencies
