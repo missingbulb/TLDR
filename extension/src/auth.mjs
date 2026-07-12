@@ -8,7 +8,9 @@
 // only touches chrome.* inside functions, so importing this module under node never references chrome).
 
 import { GOOGLE_CLIENT_ID } from '../config.mjs';
+import { createLogger } from './log.mjs';
 
+const log = createLogger('auth');
 const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_CACHE_KEY = 'tldr_id_token';
 // The signed-in account's email. NON-SECRET (not a credential) — persisted to storage.local purely so a
@@ -80,6 +82,7 @@ async function loadValidCachedToken() {
   try {
     if (isExpired(decodeJwtPayload(entry.idToken))) return null;
   } catch {
+    log.debug('discarding an undecodable cached token'); // corrupt/tampered cache entry — re-mint
     return null;
   }
   return entry.idToken;
@@ -162,7 +165,7 @@ export async function getIdToken({ forceRefresh = false, interactive = false } =
     // datapoint a re-prompt recurrence (#24) needs. Console-only; never log the token or the account
     // email (the hint stays on-device). hadHint distinguishes "couldn't pick an account" from a true
     // re-consent without revealing which account.
-    console.warn('[tldr auth] silent token refresh failed', {
+    log.warn('silent token refresh failed', {
       reason: err?.message ?? String(err),
       interactive,
       forceRefresh,

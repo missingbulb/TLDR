@@ -12,6 +12,9 @@ import { cleanerSourceOffer, provenanceKeyFor } from './redirect-provenance.mjs'
 import { getComments, postComment, castVote, removeVote } from './api.mjs';
 import { getIdToken } from './auth.mjs';
 import { makeOptimisticComment, mergeComments, reconcileSuccess, markFailed, applyVoteToggle } from './optimistic.mjs';
+import { createLogger } from './log.mjs';
+
+const log = createLogger('sidepanel');
 
 const DENYLIST_STORAGE_KEY = 'userDenylist';
 // The viewer's own votes, persisted to chrome.storage.local so `youVoted` survives a panel reopen.
@@ -284,7 +287,7 @@ async function refresh({ useCache = false } = {}) {
     syncView(pageId);
     render();
   } catch (err) {
-    console.warn('read failed', err);
+    log.warn('read failed', { pageId, reason: err?.message ?? String(err) });
     if (state.pageId === pageId && state.serverComments.length === 0) {
       els.status.textContent = "Couldn't load notes.";
       els.status.hidden = false;
@@ -362,7 +365,7 @@ async function onSubmit(event) {
     const { comment } = await postComment(pageId, body, getIdToken, { clientVersion: CLIENT_VERSION, category });
     bucket.localComments = reconcileSuccess(bucket.localComments, tempId, comment);
   } catch (err) {
-    console.warn('post failed', err);
+    log.warn('post failed', { pageId, reason: err?.message ?? String(err) });
     bucket.localComments = markFailed(bucket.localComments, tempId);
     els.error.textContent = 'Could not post — try again.';
   } finally {
@@ -393,7 +396,7 @@ async function onVote(commentId) {
   try {
     await (voted ? castVote : removeVote)(pageId, commentId, getIdToken, { clientVersion: CLIENT_VERSION });
   } catch (err) {
-    console.warn('vote failed', err);
+    log.warn('vote failed', { commentId, voted, reason: err?.message ?? String(err) });
     applyVoteLocally(bucket, commentId, !voted); // restore the prior state (count + affordance)
     syncView(pageId);
     render();

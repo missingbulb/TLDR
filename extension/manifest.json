@@ -21,6 +21,7 @@
     {
       "resources": [
         "src/link-hover.mjs",
+        "src/log.mjs",
         "src/link-hover-gate.mjs",
         "src/hover-tooltip.mjs",
         "src/denylist.mjs",
