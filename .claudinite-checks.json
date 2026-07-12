@@ -1,5 +1,6 @@
 {
   "packs": [
+    "basics",
     "chrome-extension",
     "chrome-extension-release",
     "executable-requirements",
@@ -8,5 +9,8 @@
     "spec-driven-product"
   ],
   "rules": {},
-  "accept": []
+  "accept": [],
+  "maintenance": {
+    "delivery": "push"
+  }
 }
