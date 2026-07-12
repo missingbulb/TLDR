@@ -46,3 +46,26 @@ versions are what would propagate to the corpus `technologies/chrome-extension.m
   Worked example: `extension/src/hover-registration.mjs` (register/unregister/reconcile) +
   `extension/src/options.mjs` (the toggle click handler calling `chrome.permissions.request` directly) +
   `extension/manifest.json` (`optional_host_permissions`, `scripting`, no static `content_scripts`).
+
+- **A registered/declarative content script is a CLASSIC script — it can't be an ES module, so top-level
+  `import`s throw *in the host page*, silently.** `chrome.scripting.registerContentScripts` (and static
+  `content_scripts`) inject their `js` files as classic scripts; there is no module mode
+  (`RegisteredContentScript` has no `type: 'module'`, unlike a page's `<script type="module">`). Point one
+  at a file that starts with `import { … } from './x.mjs'` and Chrome throws `Uncaught SyntaxError: Cannot
+  use import statement outside a module` — but in the **third-party page's** console, not the extension's
+  service-worker/side-panel devtools, so the feature looks like a total no-op with a clean extension
+  console. This bit the link-hover preview: `link-hover.mjs` was modeled on `sidepanel.mjs` (which is fine
+  as a module — `sidepanel.html` loads it via `<script type="module">`) and registered directly, so the
+  toggle worked, the permission was granted, and nothing ever rendered. Fix WITHOUT a bundler (this repo
+  ships raw modules): register a tiny **classic loader** whose only statement is a *dynamic*
+  `import(chrome.runtime.getURL('src/link-hover.mjs'))` — dynamic `import()` is legal in a classic script,
+  and the module it pulls in runs in the same content-script isolated world with the content-script
+  `chrome.*` surface (storage, `runtime.sendMessage`) intact. The dynamically-imported module **and its
+  whole transitive import graph** must be listed in `web_accessible_resources` (gated to the feature's
+  origins) or the fetch is blocked; a unit test walks that graph from the entry module so a newly-added
+  import can't silently fall out of the list. Worked example: `extension/src/link-hover-loader.mjs` (the
+  injected classic loader) + `extension/manifest.json` (`web_accessible_resources`) +
+  `extension-test/manifest.test.mjs` (the graph-coverage + classic-loader guards). NB the jsdom harness
+  (`dev/requirements/shared/render/link-hover-harness.mjs`) `import()`s `link-hover.mjs` directly, so it
+  proves the module's *logic* but never Chrome's classic-injection contract — exactly the seam this bug
+  lived in (the `11.14` real-Chrome e2e is the tracked gap).
