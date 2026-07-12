@@ -45,11 +45,14 @@ function stubChrome({ registered = [], enabled = undefined, granted = false } = 
   return { calls, registered, store };
 }
 
-test('registerHoverContentScript registers exactly the link-hover script over HOVER_ORIGINS', async () => {
+test('registerHoverContentScript registers exactly the classic link-hover loader over HOVER_ORIGINS', async () => {
   const { calls, registered } = stubChrome();
   await registerHoverContentScript();
   assert.equal(calls.register.length, 1);
-  assert.deepEqual(calls.register[0], [{ id: 'link-hover', js: ['src/link-hover.mjs'], matches: HOVER_ORIGINS, runAt: 'document_idle' }]);
+  // The injected file is the classic loader, NOT the ES module link-hover.mjs: a registered content
+  // script is a classic script (no module mode), so a file with top-level imports would throw in the
+  // host page. The loader dynamic-imports the real module. See extension/src/link-hover-loader.mjs.
+  assert.deepEqual(calls.register[0], [{ id: 'link-hover', js: ['src/link-hover-loader.mjs'], matches: HOVER_ORIGINS, runAt: 'document_idle' }]);
   assert.equal(registered.length, 1);
 });
 

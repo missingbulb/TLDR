@@ -1,10 +1,14 @@
 // The link-hover preview content script (issue #26). Registered DYNAMICALLY — see hover-registration.mjs
 // — never statically in manifest.json, so it only ever runs on a page after the user has opted in via
-// the options-page toggle and granted the optional host permission. Once running, it behaves exactly
-// like sidepanel.mjs: top-level state + a bottom-of-file init() call reading the ambient `document` /
-// `chrome` globals (no dependency injection) — the same shape a test seeds by swapping those globals
-// before a fresh dynamic import (dev/requirements/shared/render/link-hover-harness.mjs), consistent
-// with how harness.mjs already drives the real sidepanel.mjs/options.mjs.
+// the options-page toggle and granted the optional host permission. It is an ES MODULE with top-level
+// `import`s, which a registered content script CANNOT be (Chrome injects those as classic scripts, with
+// no module mode) — so it is never injected directly: link-hover-loader.mjs is the classic file Chrome
+// injects, and it dynamic-imports THIS module (declared web-accessible in manifest.json). Loaded that
+// way it still runs in the content-script isolated world with the content-script `chrome.*` surface.
+// Once running, its shape mirrors sidepanel.mjs: top-level state + a bottom-of-file init() call reading
+// the ambient `document` / `chrome` globals (no dependency injection) — the same shape a test seeds by
+// swapping those globals before a fresh dynamic import (dev/requirements/shared/render/link-hover-harness.mjs),
+// consistent with how harness.mjs already drives the real sidepanel.mjs/options.mjs.
 //
 // Flow per hover: debounce -> gate (http(s) + not on the per-site denylist, via link-hover-gate.mjs's
 // candidatePageId — the SAME evaluatePage gate the side panel applies to the active tab, fed the SAME

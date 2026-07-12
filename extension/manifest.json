@@ -16,6 +16,26 @@
     "http://*/*",
     "https://*/*"
   ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/link-hover.mjs",
+        "src/link-hover-gate.mjs",
+        "src/hover-tooltip.mjs",
+        "src/denylist.mjs",
+        "src/categories/registry.mjs",
+        "src/categories/tldr/design.mjs",
+        "src/categories/spoiler/design.mjs",
+        "src/categories/chitchat/design.mjs",
+        "vendor/normalizeUrl.GENERATED.mjs",
+        "vendor/categories.GENERATED.mjs"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
+    }
+  ],
   "background": {
     "service_worker": "src/service-worker.mjs",
     "type": "module"
