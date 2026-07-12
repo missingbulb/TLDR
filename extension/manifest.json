@@ -5,6 +5,7 @@
   "description": "Read and post community tl;dr notes attached to any web page.",
   "minimum_chrome_version": "116",
   "permissions": [
+    "contextMenus",
     "identity",
     "scripting",
     "sidePanel",
@@ -15,6 +16,27 @@
   "optional_host_permissions": [
     "http://*/*",
     "https://*/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/link-hover.mjs",
+        "src/log.mjs",
+        "src/link-hover-gate.mjs",
+        "src/hover-tooltip.mjs",
+        "src/denylist.mjs",
+        "src/categories/registry.mjs",
+        "src/categories/tldr/design.mjs",
+        "src/categories/spoiler/design.mjs",
+        "src/categories/chitchat/design.mjs",
+        "vendor/normalizeUrl.GENERATED.mjs",
+        "vendor/categories.GENERATED.mjs"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
+    }
   ],
   "background": {
     "service_worker": "src/service-worker.mjs",
@@ -31,24 +53,6 @@
     "page": "src/options.html",
     "open_in_tab": false
   },
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "src/link-hover.mjs",
-        "src/log.mjs",
-        "src/denylist.mjs",
-        "src/link-hover-gate.mjs",
-        "src/hover-tooltip.mjs",
-        "src/categories/registry.mjs",
-        "src/categories/tldr/design.mjs",
-        "src/categories/spoiler/design.mjs",
-        "src/categories/chitchat/design.mjs",
-        "vendor/categories.GENERATED.mjs",
-        "vendor/normalizeUrl.GENERATED.mjs"
-      ],
-      "matches": ["http://*/*", "https://*/*"]
-    }
-  ],
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",

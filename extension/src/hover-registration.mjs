@@ -16,6 +16,11 @@ const log = createLogger('hover-reg');
 export const HOVER_ORIGINS = ['http://*/*', 'https://*/*'];
 export const HOVER_ENABLED_KEY = 'hoverPreviewEnabled';
 const CONTENT_SCRIPT_ID = 'link-hover';
+// The injected file is the CLASSIC loader (src/link-hover-loader.mjs), NOT the real module
+// (src/link-hover.mjs). Chrome injects a registered content script as a classic script — no module mode
+// exists for one — so a file with top-level `import`s throws in the host page. The loader dynamic-imports
+// the real ES module (declared web-accessible in manifest.json) instead. See link-hover-loader.mjs.
+const CONTENT_SCRIPT_FILE = 'src/link-hover-loader.mjs';
 
 // Idempotent: registerContentScripts throws on a duplicate id, so check first rather than try/catch —
 // a second call (e.g. reconcileHoverRegistration running after the toggle already registered it) is a
@@ -23,11 +28,8 @@ const CONTENT_SCRIPT_ID = 'link-hover';
 export async function registerHoverContentScript() {
   const existing = await chrome.scripting.getRegisteredContentScripts({ ids: [CONTENT_SCRIPT_ID] });
   if (existing.length) return;
-  // Register the CLASSIC boot shim (link-hover-boot.mjs), not link-hover.mjs itself: a content script
-  // is injected as a classic script and can't use ES `import`, so the shim dynamic-imports the real
-  // module. See link-hover-boot.mjs and manifest web_accessible_resources.
   await chrome.scripting.registerContentScripts([
-    { id: CONTENT_SCRIPT_ID, js: ['src/link-hover-boot.mjs'], matches: HOVER_ORIGINS, runAt: 'document_idle' },
+    { id: CONTENT_SCRIPT_ID, js: [CONTENT_SCRIPT_FILE], matches: HOVER_ORIGINS, runAt: 'document_idle' },
   ]);
   log.info('registered the link-hover content script');
 }
