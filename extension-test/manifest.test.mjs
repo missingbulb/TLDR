@@ -30,7 +30,7 @@ test('manifest declares the side panel, an ESM service worker, and icons', () =>
 });
 
 test('permissions are least-privilege', () => {
-  const expected = ['identity', 'scripting', 'sidePanel', 'storage', 'tabs', 'webNavigation'];
+  const expected = ['contextMenus', 'identity', 'scripting', 'sidePanel', 'storage', 'tabs', 'webNavigation'];
   assert.deepEqual([...manifest.permissions].sort(), [...expected].sort());
   // No DEFAULT host access: the extension reaches the API via the server's '*' CORS (API Gateway v2
   // rejects the chrome-extension:// origin, so CORS is '*'), and launchWebAuthFlow uses a
@@ -38,6 +38,7 @@ test('permissions are least-privilege', () => {
   // content_scripts are declared statically. "scripting" itself carries no install-time warning.
   assert.ok(!('host_permissions' in manifest), 'should request no ALWAYS-ON host_permissions');
   assert.ok(!('content_scripts' in manifest), 'the link-hover script is registered dynamically, never statically');
+  // "contextMenus" (the toolbar icon's right-click category switcher) carries no install-time warning either.
 });
 
 test('the link-hover preview host access is OPTIONAL (issue #26) — opt-in only, never granted at install', () => {

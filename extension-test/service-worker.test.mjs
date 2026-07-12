@@ -17,6 +17,13 @@ function stubChrome({ fetchImpl } = {}) {
   const listener = (key) => ({ addListener: (fn) => { reg[key] = fn; } });
   // In-memory chrome.storage.session, inspectable by the redirect-provenance tests below.
   const sessionStore = {};
+  // In-memory chrome.storage.local, emitting onChanged like the real API so the SW's first-run popup
+  // reconciliation fires; localStore is inspectable by the context-menu test below.
+  const localStore = {};
+  const changeListeners = [];
+  const setPopupCalls = [];
+  const contextMenuCreated = [];
+  const calls = { sidePanelOpen: [] };
   const chrome = {
     runtime: {
       onConnect: listener('connect'),
@@ -25,7 +32,13 @@ function stubChrome({ fetchImpl } = {}) {
       onMessage: listener('message'),
       getManifest: () => ({ version: '9.9.9-test' }),
     },
-    action: { onClicked: listener('clicked'), setPopup: async () => {} },
+    action: { onClicked: listener('clicked'), setPopup: async ({ popup }) => setPopupCalls.push(popup) },
+    contextMenus: {
+      onClicked: listener('contextClicked'),
+      removeAll: async () => { contextMenuCreated.length = 0; },
+      create: (item) => contextMenuCreated.push(item),
+    },
+    sidePanel: { open: async ({ tabId }) => calls.sidePanelOpen.push(tabId) },
     storage: {
       sync: { get: async () => ({}), set: async () => {} },
       session: {
@@ -35,8 +48,23 @@ function stubChrome({ fetchImpl } = {}) {
           delete sessionStore[key];
         },
       },
+      local: {
+        get: async (key) => (key in localStore ? { [key]: localStore[key] } : {}),
+        set: async (obj) => {
+          const changes = {};
+          for (const [k, v] of Object.entries(obj)) {
+            changes[k] = { oldValue: localStore[k], newValue: v };
+            localStore[k] = v;
+          }
+          for (const fn of changeListeners) fn(changes, 'local');
+        },
+      },
+      onChanged: { addListener: (fn) => changeListeners.push(fn) },
     },
-    tabs: { onRemoved: listener('tabRemoved') },
+    tabs: {
+      onRemoved: listener('tabRemoved'),
+      query: async () => [{ id: 7, active: true }],
+    },
     webNavigation: { onBeforeNavigate: listener('beforeNavigate'), onCommitted: listener('committed') },
     permissions: { contains: async () => false },
     scripting: {
@@ -45,7 +73,7 @@ function stubChrome({ fetchImpl } = {}) {
       unregisterContentScripts: async () => {},
     },
   };
-  return { chrome, reg, sessionStore };
+  return { chrome, reg, sessionStore, localStore, setPopupCalls, contextMenuCreated, calls };
 }
 
 async function load(chrome) {
@@ -105,6 +133,102 @@ test('onMessage forwards an API failure as { error } instead of leaving the send
       reg.message({ type: 'link-hover:getTopComment', pageUrl: 'https://example.com/x', category: 'tldr' }, {}, resolve);
     });
     assert.match(responded.error, /top-comment read failed: 500/);
+  } finally {
+    restore();
+  }
+});
+
+// --- toolbar icon open/close + right-click category switch (issue #25) ---------------------------
+
+const settleMenus = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+test('first run (no category chosen) shows the category-menu popup; choosing one clears it', async () => {
+  const { chrome, reg, setPopupCalls, localStore } = stubChrome();
+  const restore = await load(chrome);
+  try {
+    await reg.installed();
+    await settleMenus();
+    assert.equal(
+      setPopupCalls[setPopupCalls.length - 1],
+      'src/category-menu.html',
+      'with no category chosen and no pane, the icon opens the first-run category menu',
+    );
+
+    // A category gets chosen (via the popup or the context menu): the first-run popup gives way.
+    await chrome.storage.local.set({ currentCategory: 'tldr' });
+    await settleMenus();
+    assert.equal(localStore.currentCategory, 'tldr');
+    assert.equal(setPopupCalls[setPopupCalls.length - 1], '', 'once a category is known the popup is cleared');
+  } finally {
+    restore();
+  }
+});
+
+test('a plain click with a category known and no pane open opens the side panel (no re-ask)', async () => {
+  const { chrome, reg, calls } = stubChrome();
+  const restore = await load(chrome);
+  try {
+    await chrome.storage.local.set({ currentCategory: 'tldr' });
+    await settleMenus();
+    await reg.clicked({ id: 42 });
+    assert.deepEqual(calls.sidePanelOpen, [42], 'the click opens the pane for the clicked tab');
+  } finally {
+    restore();
+  }
+});
+
+test('a plain click while a pane is open closes it (and does not open another)', async () => {
+  const { chrome, reg, calls } = stubChrome();
+  const restore = await load(chrome);
+  try {
+    const messages = [];
+    const port = { name: 'panel', postMessage: (m) => messages.push(m), onDisconnect: { addListener() {} } };
+    reg.connect(port);
+    await settleMenus();
+    await reg.clicked({ id: 42 });
+    assert.deepEqual(messages, [{ type: 'close' }], 'clicking with a pane open asks it to close');
+    assert.deepEqual(calls.sidePanelOpen, [], 'it does not also open the pane');
+  } finally {
+    restore();
+  }
+});
+
+test('onInstalled builds one action context-menu item per category', async () => {
+  const { chrome, reg, contextMenuCreated } = stubChrome();
+  const restore = await load(chrome);
+  try {
+    await reg.installed();
+    assert.deepEqual(
+      contextMenuCreated.map((m) => m.id),
+      ['tldr-category:tldr', 'tldr-category:spoiler', 'tldr-category:chitchat'],
+    );
+    for (const item of contextMenuCreated) assert.deepEqual(item.contexts, ['action']);
+  } finally {
+    restore();
+  }
+});
+
+test('picking a category from the right-click menu records it and opens the pane', async () => {
+  const { chrome, reg, localStore, calls } = stubChrome();
+  const restore = await load(chrome);
+  try {
+    await reg.contextClicked({ menuItemId: 'tldr-category:spoiler' }, { id: 9 });
+    await settleMenus();
+    assert.equal(localStore.currentCategory, 'spoiler', 'the picked category becomes the current category');
+    assert.deepEqual(calls.sidePanelOpen, [9], 'picking a category opens/switches the pane');
+  } finally {
+    restore();
+  }
+});
+
+test('a context-menu click for an unrelated item is ignored', async () => {
+  const { chrome, reg, localStore, calls } = stubChrome();
+  const restore = await load(chrome);
+  try {
+    await reg.contextClicked({ menuItemId: 'some-other-menu' }, { id: 9 });
+    await settleMenus();
+    assert.equal('currentCategory' in localStore, false, 'no category recorded for a foreign menu item');
+    assert.deepEqual(calls.sidePanelOpen, [], 'no pane opened for a foreign menu item');
   } finally {
     restore();
   }

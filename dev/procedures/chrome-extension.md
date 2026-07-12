@@ -29,6 +29,21 @@ versions are what would propagate to the corpus `technologies/chrome-extension.m
   server returned no usable CORS header.) Worked example: `CorsConfiguration` in `server/template.yaml`
   (allow `*`; `authorization`/`content-type` headers; `GET`/`POST`/`OPTIONS`).
 
+- **A toolbar action can't left-click-OPEN and left-click-CLOSE from one static manifest, and a popup
+  suppresses `onClicked` entirely — so gate the popup, don't make it permanent.** MV3 has no
+  is-open/close API and a `default_popup` swallows every click before `onClicked` fires. To make a plain
+  click just open (pane closed) or close (pane open) the side panel — without a category picker popping
+  up each time — track pane-open via the panel's `Port` and keep the popup **cleared** (`setPopup({popup:''})`)
+  except on genuine first run: no category chosen yet AND no pane open. The first-run popup then gives way
+  the instant a category lands in `storage.local`, reconciled from a `storage.onChanged` listener (not
+  just the panel's Port connect), so it clears whether the category was picked from the popup or the
+  right-click menu. Move the "which category" choice to the icon's **right-click** menu:
+  `chrome.contextMenus.create({contexts:['action'], …})` puts items on the toolbar icon itself, and
+  `contextMenus` carries **no** install-time warning. Recreate the items with `removeAll()` first on
+  install/startup so they self-heal instead of throwing on duplicate ids. Worked example:
+  `extension/src/service-worker.mjs` (`reflectPopup`/`hasChosenCategory`, the `onClicked` open-or-close,
+  `setupCategoryContextMenu` + its `onClicked`, and the `storage.onChanged` first-run reconcile).
+
 - **A feature that needs REAL host access (not just reaching your own CORS-open API) can still avoid an
   install-time warning: `optional_host_permissions` + a user-gesture-bound `chrome.permissions.request()`
   + dynamic `chrome.scripting.registerContentScripts()`.** A content script that must run on arbitrary
