@@ -1,9 +1,11 @@
-// 10.11 — The toolbar icon TOGGLES the pane (issue #25, owner behaviour): pane CLOSED → the icon's
-// popup is the category menu (pick a category → open); pane OPEN → the icon closes the pane. Drives the
-// REAL service-worker.mjs against a fake chrome, capturing the action-popup swaps + the close message:
-// no pane → menu popup; a pane's Port connect → popup cleared (so a click toggles closed); a click →
-// asks the pane to close; the Port disconnect → menu popup restored; and a click with no pane self-heals
-// back to the menu. (The open/close round-trip in a real browser is the e2e follow-up, §8.1.)
+// 10.11 — The toolbar icon OPENS and CLOSES the pane on a plain click (issue #25, owner behaviour):
+// pane CLOSED → the icon opens the pane (to the current category, no re-ask); pane OPEN → the icon
+// closes it. The category-menu popup shows ONLY on first run — before any category has been chosen.
+// Drives the REAL service-worker.mjs against a fake chrome, capturing the action-popup swaps, the
+// sidePanel.open calls, and the close message: first run (no category) → menu popup; a category chosen
+// → popup cleared (a click now opens directly); a click with no pane → the side panel opens; a Port
+// connect → popup cleared; a click with a pane open → asks the pane to close. (The open/close
+// round-trip in a real browser is the e2e follow-up, §8.1.)
 "use strict";
 
 import path from "node:path";
@@ -13,12 +15,16 @@ const CLIENT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..
 const MENU = "src/category-menu.html";
 
 export default {
-  description: "the toolbar icon shows the category menu when the pane is closed and closes the pane when it's open",
+  description: "the toolbar icon opens/closes the pane on a click, showing the category menu only on first run",
   verify: async () => {
     const assert = (await import("node:assert/strict")).default;
 
-    // Capture the listeners the SW registers at import, and every action.setPopup value.
+    // Capture the listeners the SW registers at import, every action.setPopup value, and each
+    // sidePanel.open. A functional storage.local (emitting onChanged) drives the first-run reconcile.
     const setPopupCalls = [];
+    const sidePanelOpens = [];
+    const localStore = {};
+    const changeListeners = [];
     const reg = {};
     const listener = (key) => ({ addListener: (fn) => { reg[key] = fn; } });
     const fakeChrome = {
@@ -30,18 +36,34 @@ export default {
         getManifest: () => ({ version: "0.0.0-test" }),
       },
       action: { onClicked: listener("clicked"), setPopup: async ({ popup }) => setPopupCalls.push(popup) },
+      // The right-click category switcher (10.14) is set up on install — inert plumbing for this case.
+      contextMenus: { onClicked: listener("contextClicked"), removeAll: async () => {}, create: () => {} },
+      sidePanel: { open: async ({ tabId }) => sidePanelOpens.push(tabId) },
       storage: {
         sync: { get: async () => ({}), set: async () => {} },
         // The redirect-provenance recorder (issue #58) reads/writes storage.session — inert here.
         session: { get: async () => ({}), set: async () => {}, remove: async () => {} },
+        // The current-category key: its presence flips the icon from first-run menu to plain open/close.
+        local: {
+          get: async (key) => (key in localStore ? { [key]: localStore[key] } : {}),
+          set: async (obj) => {
+            const changes = {};
+            for (const [k, v] of Object.entries(obj)) {
+              changes[k] = { oldValue: localStore[k], newValue: v };
+              localStore[k] = v;
+            }
+            for (const fn of changeListeners) fn(changes, "local");
+          },
+        },
+        onChanged: { addListener: (fn) => changeListeners.push(fn) },
       },
+      tabs: { onRemoved: listener("tabRemoved"), query: async () => [{ id: 1, active: true }] },
       // The redirect-provenance recorder (issue #58) registers webNavigation/tab listeners at import;
-      // this toggle case never navigates, so registration succeeding is all it needs.
+      // this case never navigates, so registration succeeding is all it needs.
       webNavigation: { onBeforeNavigate: listener("beforeNavigate"), onCommitted: listener("committed") },
-      tabs: { onRemoved: listener("tabRemoved") },
-      // reconcileHoverRegistration (issue #26) now runs on every onInstalled/onStartup — stub its
-      // dependencies so this pre-existing toggle case, which never touches hover-preview itself, still
-      // loads the real service-worker.mjs cleanly (an "always-off, always-ungranted" environment).
+      // reconcileHoverRegistration (issue #26) runs on every onInstalled/onStartup — stub its
+      // dependencies so this case, which never touches hover-preview, loads the real service-worker.mjs
+      // cleanly (an "always-off, always-ungranted" environment).
       permissions: { contains: async () => false },
       scripting: {
         getRegisteredContentScripts: async () => [],
@@ -57,34 +79,33 @@ export default {
     try {
       await import(pathToFileURL(path.join(CLIENT, "src", "service-worker.mjs")).href + "?swtoggle");
 
-      // Pane CLOSED (default): the icon's popup is the category menu.
+      // FIRST RUN (no category chosen, no pane): the icon opens the category menu.
       await reg.installed();
       await tick();
-      assert.equal(last(), MENU, "with no pane open, the icon opens the category menu");
+      assert.equal(last(), MENU, "on first run, with no category chosen, the icon opens the category menu");
 
-      // Pane OPENS (the panel announces its Port): clear the popup so a click toggles the pane closed.
+      // A category gets chosen (the popup or the right-click menu would set this): the popup gives way.
+      await fakeChrome.storage.local.set({ currentCategory: "tldr" });
+      await tick();
+      assert.equal(last(), "", "once a category is known, the popup is cleared so a click opens the pane directly");
+
+      // A plain click with a category known and NO pane open → open the side panel (no re-ask).
+      await reg.clicked({ id: 1 });
+      await tick();
+      assert.deepEqual(sidePanelOpens, [1], "clicking with the pane closed opens the side panel to the active tab");
+
+      // Pane OPENS (the panel announces its Port): the popup stays cleared (a click will close it).
       const messages = [];
       const port = { name: "panel", postMessage: (m) => messages.push(m), onDisconnect: listener("disconnect") };
       reg.connect(port);
       await tick();
-      assert.equal(last(), "", "while a pane is open, the icon's popup is cleared (a click toggles it closed)");
+      assert.equal(last(), "", "while a pane is open, the icon's popup is cleared (a click closes it)");
 
-      // A click while open asks the pane to close itself (there is no close API).
-      await reg.clicked();
+      // A click while open asks the pane to close itself (there is no close API) and opens nothing new.
+      await reg.clicked({ id: 1 });
       await tick();
       assert.deepEqual(messages, [{ type: "close" }], "clicking the icon with a pane open asks it to close");
-
-      // Pane CLOSES (its Port disconnects): the category-menu popup is restored.
-      reg.disconnect();
-      await tick();
-      assert.equal(last(), MENU, "once the pane closes, the icon opens the category menu again");
-
-      // Desync self-heal: a click with no live port restores the menu instead of a stuck no-op.
-      const before = setPopupCalls.length;
-      await reg.clicked();
-      await tick();
-      assert.equal(last(), MENU, "a click with no open pane restores the menu popup (self-heal)");
-      assert.ok(setPopupCalls.length > before, "the self-heal re-asserted the popup");
+      assert.deepEqual(sidePanelOpens, [1], "closing the pane does not also open a new one");
     } finally {
       global.chrome = savedChrome;
     }

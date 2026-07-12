@@ -756,9 +756,10 @@ count is shared, but who voted is not.
 
 ## 10. Categories
 
-A note's **category** is a **top-level mode**, not a per-note tag in the UI. The reader chooses the
-current category from the **toolbar icon** (a small menu; it also toggles the pane), and the panel then
-shows **only that category's notes**, wearing that category's **look & feel** (separator colour, accent),
+A note's **category** is a **top-level mode**, not a per-note tag in the UI. The reader switches the
+current category from the **toolbar icon's right-click menu** (a plain left-click just opens/closes the
+pane; only the very first run, before any category is chosen, does the left-click ask), and the panel
+then shows **only that category's notes**, wearing that category's **look & feel** (separator colour, accent),
 its **pane title**, and its **composer copy** ("Post tl;dr"). The panel makes no other mention of the
 selection — no badge, no filter bar. Categories come from the growable curated allowlist in `shared/categories.mjs` (seed **TLDR
 · Spoiler · Chitchat**); each category's *design* lives in its own encapsulated folder
@@ -942,9 +943,11 @@ category** it stores the **default** (Chitchat) — the growable allowlist, not 
 </td>
 <td valign="top">
 
-`10.11` The **toolbar icon toggles** the pane: with the pane **closed** the icon opens the **category
-menu** (pick → open); with the pane **open** the icon **closes** it. _(The open/close round-trip in a
-real browser is the e2e follow-up `8.1`.)_
+`10.11` The **toolbar icon opens and closes** the pane on a plain click: with the pane **closed** the
+icon **opens** it (to the current category — no re-ask); with the pane **open** the icon **closes** it.
+The **category-menu popup** appears **only on first run**, before any category has been chosen ("when it
+doesn't know what to open"); after that the icon opens directly and category switching is the
+right-click menu (`10.14`). _(The open/close round-trip in a real browser is the e2e follow-up `8.1`.)_
 
 </td>
 </tr>
@@ -976,9 +979,26 @@ conveyed only by look & copy).
 </td>
 <td valign="top">
 
-`10.13` The **toolbar-icon menu popup** renders a **"Show"** heading and **one button per category**
-(TLDR / Spoiler / Chitchat), built from the shared list — the visual for the popup the icon opens.
-_(Its click behaviour is `10.7`.)_
+`10.13` The **first-run toolbar-icon menu popup** renders a **"Show"** heading and **one button per
+category** (TLDR / Spoiler / Chitchat), built from the shared list — the visual for the popup the icon
+opens before any category has been chosen. _(Its click behaviour is `10.7`.)_
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td valign="top" width="340">
+
+🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:10.14 -->
+
+</td>
+<td valign="top">
+
+`10.14` **Right-clicking** the toolbar icon lists the categories (one item per category, built from the
+shared list); picking one **records it as the current category** and **opens/switches the pane** to it —
+the way to change category once a plain click just opens the pane (`10.11`).
 
 </td>
 </tr>

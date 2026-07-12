@@ -5,6 +5,7 @@
   "description": "Read and post community tl;dr notes attached to any web page.",
   "minimum_chrome_version": "116",
   "permissions": [
+    "contextMenus",
     "identity",
     "scripting",
     "sidePanel",
