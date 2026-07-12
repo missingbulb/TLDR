@@ -1,5 +1,7 @@
-.claudinite/
-.claudinite.new/
+# Claudinite mount (synced contents ignored; only the tracked sync hook signals the mount)
+/.claudinite/*
+!/.claudinite/sync-claudinite.sh
+/.claudinite.new/
 
 # Dependencies
 node_modules/
@@ -10,7 +12,7 @@ dist/
 *.zip
 
 # Local, owner-specific config (never committed)
-client/config.local.json
+extension/config.local.json
 
 # Executable-requirements snapshot debugging artifacts (the rendered "actual" written on a golden
 # mismatch; regenerated on failure, never committed — the committed goldens beside the cases are the truth)

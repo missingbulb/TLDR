@@ -24,7 +24,7 @@ import { Resvg } from "@resvg/resvg-js";
 import { openForSnapshot } from "./harness.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const CLIENT = path.join(HERE, "..", "..", "..", "..", "client");
+const CLIENT = path.join(HERE, "..", "..", "..", "..", "extension");
 const FONT_DIR = path.join(HERE, "fonts");
 
 const FONT_FAMILY = "Liberation Sans"; // a deterministic, metric-stable stand-in for the panel's sans-serif stack
@@ -146,7 +146,7 @@ function resolveVars(value, vars) {
   );
 }
 
-// Per-category design tokens (issue #25): each client/src/categories/<id>/<id>.css scopes its colour
+// Per-category design tokens (issue #25): each extension/src/categories/<id>/<id>.css scopes its colour
 // tokens to `body[data-category="<id>"] { --separator: …; --accent: … }`. satori has no CSS engine and
 // resolves vars only from :root, so read those per-category token blocks here and, at render time,
 // overlay the ACTIVE category's tokens (from body[data-category]) onto the base vars — so a snapshot

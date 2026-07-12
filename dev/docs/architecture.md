@@ -19,7 +19,7 @@ that changed the design carry a **🔧 Decision** callout; the full list and rat
   (🔧 resolved — see §11/§12), which is what lets the CDN actually offload the origin.
 - **Read-dominated, write-rare.** The design optimizes for cheap, cacheable reads.
 - **Infrastructure-as-code from the first resource.** Nothing durable is created by hand in the console.
-- **Repo layout:** a monorepo — `server/` (everything AWS), `client/` (the extension), plus a small
+- **Repo layout:** a monorepo — `server/` (everything AWS), `extension/` (the extension), plus a small
   `shared/` (the single-source URL normalizer) and `docs/`. See §8.
 
 ---
@@ -48,7 +48,7 @@ reduces server traffic (§4). CloudFront sits in front so most reads never reach
 🔧 **Decision (auth token):** the client obtains a Google **ID token** (an RS256-signed JWT) via
 `chrome.identity.launchWebAuthFlow` with `response_type=id_token` — **not** `chrome.identity.getAuthToken`,
 which returns an opaque *access* token the JWT authorizer cannot validate. This requires a Google Cloud
-OAuth client of type **"Web application."** (See §12-A1, `client/src/auth.mjs`, `server/README.md`.)
+OAuth client of type **"Web application."** (See §12-A1, `extension/src/auth.mjs`, `server/README.md`.)
 
 **Lambda-less variant (noted, not chosen):** API Gateway → DynamoDB via VTL removes the Lambda but makes
 URL normalization, body validation, and the per-author rate limit awkward. The table and CDN are unchanged
@@ -110,7 +110,7 @@ structural prefix) plus a small explicit set of non-utm trackers in `shared/norm
 
 🔧 **Decision (single source):** rather than the brief's "copied constant," the rules live once in
 `shared/normalizeUrl.mjs` (WHATWG `URL`, runs in Node and the browser), vendored **byte-identically** into
-`server/` and `client/` with a CI **drift guard** (`test/shared-drift.test.mjs`). Divergent copies would make
+`server/` and `extension/` with a CI **drift guard** (`test/shared-drift.test.mjs`). Divergent copies would make
 the client write under `pageId` A and a read look under `pageId` B — a silent data loss (§12-A6).
 
 > ⚠️ **Remaining limitation:** dropping the fragment still collapses hash-routed SPAs (`example.com/#/a` vs
@@ -122,7 +122,7 @@ panel is closed). **A plain tab switch back to an already-fetched page renders f
 call;** the panel only fetches on initial load and on a *real* navigation/reload of the active tab
 (`onUpdated` URL-change or `status: 'complete'`, and SPA `onHistoryStateUpdated`). So tab 1 → tab 2 → tab 1
 costs one fetch, not two. Bounded at `MAX_CACHE_PAGES` (oldest-evicted) so a long session can't grow it
-unbounded. Worked example: `client/src/sidepanel.mjs` (`bucketFor`/`syncView`, the `useCache` flag on `refresh`).
+unbounded. Worked example: `extension/src/sidepanel.mjs` (`bucketFor`/`syncView`, the `useCache` flag on `refresh`).
 
 🔧 **Decision (owner-chosen — cache until close, don't revalidate):** the primary use case is **not** a live
 thread — comments arrive sparsely and far apart — so the value of showing freshly-fetched comments every time
@@ -145,7 +145,7 @@ tab closes; `client_redirect` commits chain multi-hop journeys back to the URL t
 When the landing page shows **no notes** and the arrival qualifies, the panel offers the pre-redirect page's
 notes; accepting switches the panel to that page id end to end (reads *and* writes), consolidating the
 thread under the shareable address — the same key the §9.4 link-hover preview looks up. The model is the
-pure `client/src/redirect-provenance.mjs`; the UI contract is requirements §12.
+pure `extension/src/redirect-provenance.mjs`; the UI contract is requirements §12.
 
 🔧 **Decision (owner-chosen — same-site + cleaner only):** the offer fires only when the redirect source is
 same-site (host-suffix relation) **and** strictly cleaner (its normalized URL is shorter — the redirect
@@ -304,21 +304,22 @@ repo-root/
 │   ├── samconfig.toml
 │   ├── src/handler.mjs              # the only logic; + src/vendor/normalizeUrl.GENERATED.mjs
 │   └── test/handler.test.mjs
-├── client/                          # the MV3 Chrome extension (no bundler)
+├── extension/                          # the MV3 Chrome extension (no bundler)
 │   ├── manifest.json, config.mjs
 │   ├── src/… (service worker, side panel, options, auth, api, denylist, optimistic)
 │   ├── vendor/normalizeUrl.GENERATED.mjs
-│   ├── icons/  scripts/  test/
+│   ├── icons/  scripts/
+├── extension-test/                  # node --test unit tests for extension/ (top-level, not nested)
 ├── dev/                             # repo dev tooling (not shipped)
 │   ├── requirements/                # the executable-requirements suite (client UI + server)
 │   ├── docs/                        # architecture.md (this file) + ui-testing-guideline.md
 │   └── build/tools/                 # sync-shared.mjs + test/shared-drift.test.mjs (the drift guard)
-└── .github/workflows/               # server.yml, client.yml, requirements.yml, deploy.yml, release.yml, publish-chrome-store.yml
+└── .github/workflows/               # test-server.yml, test-extension.yml, test-requirements.yml, deploy.yml, chrome-extension-release.yml (+ aws-status.yml)
 ```
 
 ### 8.2 Build artifacts and checks from one repo (CI)
-🔧 Path-filtered **`server.yml`** and **`client.yml`** run build+test independently (each also runs the
-repo-level normalizer corpus + drift guard, since both depend on `shared/`); **`requirements.yml`** runs the
+🔧 Path-filtered **`test-server.yml`** and **`test-extension.yml`** run build+test independently (each also runs the
+repo-level normalizer corpus + drift guard, since both depend on `shared/`); **`test-requirements.yml`** runs the
 cross-tier executable-requirements suite. A pure change to one folder does not run the others. (This replaces
 a single combined pipeline; deploy/release are separate, below.)
 
@@ -424,9 +425,9 @@ deliberate constraint (no GSI, frozen key schema, one CDN-cached read per page):
 
 - **Single source of truth (taxonomy) + per-category design (presentation).** The *taxonomy* lives once
   in `shared/categories.mjs` (the ordered ids + the read-time default + validation/label helpers),
-  vendored byte-identically into `server/` and `client/` with the same drift guard as the URL normalizer
+  vendored byte-identically into `server/` and `extension/` with the same drift guard as the URL normalizer
   (`test/shared-drift.test.mjs`); the server validates against it and the client's menu/view read it.
-  Each category's *design* is a self-contained folder `client/src/categories/<id>/`: a **scoped
+  Each category's *design* is a self-contained folder `extension/src/categories/<id>/`: a **scoped
   stylesheet** (`<id>.css`, its colour tokens under `body[data-category="<id>"]`, so it bites only when
   active and a restyle can't touch another) + a **copy descriptor** (`design.mjs` — the "Post tl;dr"
   label, the placeholder). Strictly presentation — no behavior; the panel drives every category
@@ -468,7 +469,7 @@ for that link's URL, in the reader's **current category** — without opening th
   page. Same public/CDN-cached shape as `GET /comments` (§9); `category` joins `pageUrl`/`nextToken` in
   the CDN cache-key whitelist (§6.3).
 - **Content script, not the panel — the one feature reaching beyond the extension's own pages.**
-  `client/src/link-hover.mjs` runs on an arbitrary third-party page, registered **dynamically**
+  `extension/src/link-hover.mjs` runs on an arbitrary third-party page, registered **dynamically**
   (`chrome.scripting.registerContentScripts`) rather than declared in the manifest, so it only exists
   after the reader opts in.
 - **🔧 Optional permission, opt-in via toggle (owner decision — supersedes #30's "zero host access" only
@@ -508,7 +509,7 @@ contract by *adding*, never by *reshaping*:
   routes, the client paths, and reset the CloudFront cache key for no present gain).
 
 **Client version signaling (`X-Client-Version`).** The side panel reads `chrome.runtime.getManifest().version`
-once and attaches it to every API request (`client/src/api.mjs`); the server logs it per request
+once and attaches it to every API request (`extension/src/api.mjs`); the server logs it per request
 (`server/src/handler.mjs`). It rides in a **request header** on purpose:
 - **Cache-neutral.** The CloudFront cache policy keys on `pageUrl` + `Origin` and **excludes headers**
   (§6.3), so the version never fragments the public-read cache.
@@ -563,7 +564,7 @@ The brief's "assumptions to confirm" are **resolved** below; only the genuinely 
 
 ### Still open — needs the owner (cannot be safely defaulted)
 1. **Google OAuth "Web application" client** — the owner must create it and provide the **client id** (= JWT
-   authorizer audience = `client/config.mjs` `GOOGLE_CLIENT_ID`).
+   authorizer audience = `extension/config.mjs` `GOOGLE_CLIENT_ID`).
 2. **Extension id / signing `key`** — fixes the `chromiumapp.org` redirect URI (it does **not** lock the CORS
    origin: `AllowedExtensionOrigin` is `*` because API Gateway v2 rejects the `chrome-extension://` scheme —
    §6.3/§12-A9). Confirm the production id (or approve a fixed manifest `key`); a dev id too if dev/prod differ.
@@ -619,6 +620,7 @@ Choices made and noted (not detrimental):
 - **Two stacks** (app + CDN) split at the change-frequency line, over a single stack with an `EnableCdn` toggle —
   removes the 15-20 min CloudFront propagation from app iteration and the toggle footgun.
 - **No bundler for the client** — Chrome loads ES modules directly; the normalizer is vendored + drift-guarded.
-- **CI split into `server.yml`/`client.yml` + separate `deploy.yml`/`release.yml`/`publish-chrome-store.yml`**,
-  each CI job also running the cross-cutting tests because `shared/` is a real cross-folder dependency.
+- **CI split into `test-server.yml`/`test-extension.yml` + separate `deploy.yml` and the single `chrome-extension-release.yml`**
+  (the extension-release stub calling the Claudinite canon reusable workflows), each CI job also
+  running the cross-cutting tests because `shared/` is a real cross-folder dependency.
 - **Placeholder icons** generated by a built-in PNG encoder — replace before a store submission.

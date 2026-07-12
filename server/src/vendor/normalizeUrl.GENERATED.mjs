@@ -7,7 +7,7 @@
 // This file is the canonical copy. It is vendored verbatim into the places that cannot
 // import across the repo at runtime:
 //   - server/src/vendor/normalizeUrl.GENERATED.mjs  (so SAM/esbuild bundling is path-robust)
-//   - client/vendor/normalizeUrl.GENERATED.mjs       (so the extension ships a self-contained copy)
+//   - extension/vendor/normalizeUrl.GENERATED.mjs       (so the extension ships a self-contained copy)
 // Run `npm run sync-shared` after editing this file; CI fails on byte drift (test/shared-drift.test.mjs).
 //
 // Implemented with the WHATWG `URL` API, which exists identically in Node 18+ and every browser,

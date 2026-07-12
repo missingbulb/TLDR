@@ -199,7 +199,7 @@ Owner, after Phase B:
   a follow-up `workflow_dispatch environment: dev` updated it). `ApiUrl` =
   `https://x9yiwjm735.execute-api.il-central-1.amazonaws.com`; smoke test `GET /comments?pageUrl=…` → `200 {"comments":[]}`.*
 - [x] **E.3** Point the dev extension build (`npm run build:dev`) at the new dev `ApiUrl`.
-  *Done: the committed default `API_BASE_URL` in `client/config.mjs` (what `build:dev`/unpacked builds use
+  *Done: the committed default `API_BASE_URL` in `extension/config.mjs` (what `build:dev`/unpacked builds use
   when no `API_BASE_URL_DEV`/`API_BASE_URL` env is set) now carries this `ApiUrl`.*
 
 ---

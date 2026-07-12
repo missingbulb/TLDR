@@ -1,0 +1,16 @@
+{
+  "packs": [
+    "basics",
+    "chrome-extension",
+    "chrome-extension-release",
+    "executable-requirements",
+    "github-actions",
+    "node",
+    "spec-driven-product"
+  ],
+  "rules": {},
+  "accept": [],
+  "maintenance": {
+    "delivery": "push"
+  }
+}

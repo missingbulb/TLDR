@@ -1,0 +1,49 @@
+name: "test: extension"
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ['extension/**', 'shared/**', 'dev/build/**', '.github/workflows/test-extension.yml']
+  push:
+    branches: [main, 'claude/**']
+    paths: ['extension/**', 'shared/**', 'dev/build/**', '.github/workflows/test-extension.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      # Repo-level checks: the URL-normalizer corpus + the shared drift guard (root, no deps).
+      - name: Repo-level tests
+        run: npm test
+
+      - name: Validate manifest.json is parseable
+        run: node -e "JSON.parse(require('fs').readFileSync('extension/manifest.json'))"
+
+      # The extension has no runtime/test dependencies (the UI requirements suite + its deps live in dev/).
+      - name: Extension tests (logic + manifest/packaging guards)
+        working-directory: extension
+        run: npm test
+
+      # The chrome.* glue can't run under node; syntax-check it so a typo can't ship.
+      - name: Syntax-check extension modules
+        run: |
+          for f in extension/src/*.mjs extension/config.mjs; do node --check "$f"; done
+
+      - name: Build the extension zip
+        working-directory: extension
+        run: npm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tldr
+          path: dist/tldr.zip
+          if-no-files-found: error

@@ -11,7 +11,7 @@ The shape here — a numbered spec, a strict leaf⇄case bijection, kinds as a p
 owner-owned expecteds, snapshots driven through the real code — is the reusable pattern. It is
 adapted from [`missingbulb/GoogleCalendarEventCreator` `dev/requirements/`](https://github.com/missingbulb/GoogleCalendarEventCreator/tree/main/dev/requirements);
 the portable, project-agnostic write-up of *why* and *how* lives in
-[`docs/ui-testing-guideline.md`](../docs/ui-testing-guideline.md).
+[`dev/docs/ui-testing-guideline.md`](../docs/ui-testing-guideline.md).
 
 ## The five invariants
 

@@ -1,0 +1,14 @@
+{
+  "name": "tldr-extension",
+  "version": "0.2.3",
+  "private": true,
+  "type": "module",
+  "description": "TLDR Chrome extension (MV3) — side-panel-gated community notes for any web page.",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test \"../extension-test/**/*.test.mjs\"",
+    "build": "node ../dev/build/tools/build-zip.mjs",
+    "build:dev": "node ../dev/build/tools/build-zip.mjs dev",
+    "build:prod": "node ../dev/build/tools/build-zip.mjs prod"
+  }
+}
