@@ -72,6 +72,22 @@ test('CORS allows the client version header (X-Client-Version)', () => {
   assert.match(template, /AllowHeaders:[\s\S]*?- x-client-version/);
 });
 
+// CORS AllowMethods must list every HTTP method the routes actually use. The write path hits API
+// Gateway directly (not via CloudFront), so its preflight is answered by this CorsConfiguration — and
+// a method missing here means the browser's preflight gets no Access-Control-Allow-Origin and the call
+// fails with a CORS error IN A REAL BROWSER ONLY (never in a unit test). DELETE (the vote toggle-off,
+// issue #22) is the one that regressed; guard the whole set so the next added method can't slip.
+test('CORS AllowMethods covers every method the routes use (incl. DELETE for the vote toggle-off)', () => {
+  // Grab the block between AllowMethods: and the next key (AllowHeaders:), then read the list items —
+  // matching per-line so interleaved `#` comments are skipped rather than truncating the list.
+  const allowBlock = template.match(/AllowMethods:\s*\n([\s\S]*?)\n\s*AllowHeaders:/);
+  assert.ok(allowBlock, 'template must declare CORS AllowMethods');
+  const allowed = new Set([...allowBlock[1].matchAll(/^\s*-\s*(\w+)/gm)].map((m) => m[1]));
+  for (const method of ['GET', 'POST', 'DELETE', 'OPTIONS']) {
+    assert.ok(allowed.has(method), `CORS AllowMethods must include ${method}`);
+  }
+});
+
 // The vote routes are attributed writes, so — like POST /comments — they MUST opt into the Google
 // JWT authorizer (issue #22). A route missing the Authorizer is invisible to the unit/requirements
 // handler tests (which feed claims directly), so this template guard stands in for that missing

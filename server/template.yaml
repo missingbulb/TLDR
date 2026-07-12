@@ -135,6 +135,11 @@ Resources:
         AllowMethods:
           - GET
           - POST
+          # DELETE is the vote toggle-off (RemoveVote, issue #22). Without it here the browser's
+          # preflight for a DELETE gets no Access-Control-Allow-Origin and un-voting fails with a CORS
+          # error ("No 'Access-Control-Allow-Origin' header… / Failed to fetch") — visible only in a
+          # real browser, never in a unit test.
+          - DELETE
           - OPTIONS
         AllowHeaders:
           - authorization

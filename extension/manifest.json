@@ -31,6 +31,24 @@
     "page": "src/options.html",
     "open_in_tab": false
   },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/link-hover.mjs",
+        "src/log.mjs",
+        "src/denylist.mjs",
+        "src/link-hover-gate.mjs",
+        "src/hover-tooltip.mjs",
+        "src/categories/registry.mjs",
+        "src/categories/tldr/design.mjs",
+        "src/categories/spoiler/design.mjs",
+        "src/categories/chitchat/design.mjs",
+        "vendor/categories.GENERATED.mjs",
+        "vendor/normalizeUrl.GENERATED.mjs"
+      ],
+      "matches": ["http://*/*", "https://*/*"]
+    }
+  ],
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",

@@ -49,7 +49,7 @@ test('registerHoverContentScript registers exactly the link-hover script over HO
   const { calls, registered } = stubChrome();
   await registerHoverContentScript();
   assert.equal(calls.register.length, 1);
-  assert.deepEqual(calls.register[0], [{ id: 'link-hover', js: ['src/link-hover.mjs'], matches: HOVER_ORIGINS, runAt: 'document_idle' }]);
+  assert.deepEqual(calls.register[0], [{ id: 'link-hover', js: ['src/link-hover-boot.mjs'], matches: HOVER_ORIGINS, runAt: 'document_idle' }]);
   assert.equal(registered.length, 1);
 });
 

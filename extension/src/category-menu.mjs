@@ -8,7 +8,9 @@
 // the pane closed instead (service-worker.mjs swaps the action popup on the pane's open/close).
 
 import { CATEGORIES } from '../vendor/categories.GENERATED.mjs';
+import { createLogger } from './log.mjs';
 
+const log = createLogger('menu');
 const CURRENT_CATEGORY_STORAGE_KEY = 'currentCategory';
 const menu = document.getElementById('menu');
 
@@ -19,7 +21,7 @@ async function choose(id) {
     const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     if (tab) await chrome.sidePanel.open({ tabId: tab.id });
   } catch (err) {
-    console.warn('sidePanel.open failed', err);
+    log.warn('sidePanel.open failed', { category: id, reason: err?.message ?? String(err) });
   }
   window.close(); // dismiss the popup
 }

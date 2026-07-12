@@ -1,6 +1,10 @@
 // The link-hover preview content script (issue #26). Registered DYNAMICALLY — see hover-registration.mjs
 // — never statically in manifest.json, so it only ever runs on a page after the user has opted in via
-// the options-page toggle and granted the optional host permission. Once running, it behaves exactly
+// the options-page toggle and granted the optional host permission. It's loaded via a classic boot
+// shim (link-hover-boot.mjs) that dynamic-imports THIS module — a content script can't be an ES module
+// itself, so a static `import` here would throw "Cannot use import statement outside a module" if it
+// were registered directly; the shim + manifest web_accessible_resources are what make these imports
+// resolve. Once running, it behaves exactly
 // like sidepanel.mjs: top-level state + a bottom-of-file init() call reading the ambient `document` /
 // `chrome` globals (no dependency injection) — the same shape a test seeds by swapping those globals
 // before a fresh dynamic import (dev/requirements/shared/render/link-hover-harness.mjs), consistent
@@ -20,7 +24,9 @@ import { DEFAULT_USER_DENYLIST } from './denylist.mjs';
 import { candidatePageId } from './link-hover-gate.mjs';
 import { DEFAULT_CATEGORY } from '../vendor/categories.GENERATED.mjs';
 import { buildTooltipElement, positionTooltip } from './hover-tooltip.mjs';
+import { createLogger } from './log.mjs';
 
+const log = createLogger('link-hover');
 const HOVER_DEBOUNCE_MS = 400;
 // Mirrors sidepanel.mjs's CURRENT_CATEGORY_STORAGE_KEY (issue #25) and DENYLIST_STORAGE_KEY — both
 // duplicated here as literals, like the rest of this codebase's storage keys, rather than introducing a
@@ -63,9 +69,14 @@ async function showTooltipFor(anchor) {
   let response;
   try {
     response = await chrome.runtime.sendMessage({ type: 'link-hover:getTopComment', pageUrl: pageId, category });
-  } catch {
-    return; // the SW is unreachable (e.g. it was recycled mid-flight) — fail silent, not an error popup
+  } catch (err) {
+    // The SW is unreachable (e.g. it was recycled mid-flight) — fail silent (no error popup), but log
+    // it: a hover that shows nothing is otherwise indistinguishable from the genuine empty state.
+    log.debug('SW unreachable for hover lookup', { pageId, reason: err?.message ?? String(err) });
+    return;
   }
+  // The SW puts a fetch failure on `response.error` (it fails silent on our side too) — surface it.
+  if (response?.error) log.debug('hover lookup returned an error', { pageId, error: response.error });
   if (hoveredAnchor !== anchor) return; // the pointer moved on before the response landed
   const comment = response?.comment;
   if (!comment) return; // empty-state decision (issue #26): no leading comment => show nothing
@@ -96,6 +107,7 @@ function onMouseOut(event) {
 function init() {
   document.addEventListener('mouseover', onMouseOver);
   document.addEventListener('mouseout', onMouseOut);
+  log.debug('content script active on', document.location?.href);
 }
 
 init();

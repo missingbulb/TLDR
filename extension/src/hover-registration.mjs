@@ -10,6 +10,9 @@
 // triggered it (a live user gesture; Chrome refuses it otherwise), so options.mjs calls it directly and
 // only calls into this module after a grant succeeds.
 
+import { createLogger } from './log.mjs';
+
+const log = createLogger('hover-reg');
 export const HOVER_ORIGINS = ['http://*/*', 'https://*/*'];
 export const HOVER_ENABLED_KEY = 'hoverPreviewEnabled';
 const CONTENT_SCRIPT_ID = 'link-hover';
@@ -20,9 +23,13 @@ const CONTENT_SCRIPT_ID = 'link-hover';
 export async function registerHoverContentScript() {
   const existing = await chrome.scripting.getRegisteredContentScripts({ ids: [CONTENT_SCRIPT_ID] });
   if (existing.length) return;
+  // Register the CLASSIC boot shim (link-hover-boot.mjs), not link-hover.mjs itself: a content script
+  // is injected as a classic script and can't use ES `import`, so the shim dynamic-imports the real
+  // module. See link-hover-boot.mjs and manifest web_accessible_resources.
   await chrome.scripting.registerContentScripts([
-    { id: CONTENT_SCRIPT_ID, js: ['src/link-hover.mjs'], matches: HOVER_ORIGINS, runAt: 'document_idle' },
+    { id: CONTENT_SCRIPT_ID, js: ['src/link-hover-boot.mjs'], matches: HOVER_ORIGINS, runAt: 'document_idle' },
   ]);
+  log.info('registered the link-hover content script');
 }
 
 // Idempotent: unregistering an id that isn't registered rejects, so the failure is swallowed —
@@ -49,6 +56,9 @@ export async function reconcileHoverRegistration() {
     await registerHoverContentScript();
     return;
   }
-  if (enabled && !granted) await chrome.storage.sync.set({ [HOVER_ENABLED_KEY]: false });
+  if (enabled && !granted) {
+    log.warn('hover flag was enabled but the host permission is gone — self-healing the flag off');
+    await chrome.storage.sync.set({ [HOVER_ENABLED_KEY]: false });
+  }
   await unregisterHoverContentScript();
 }

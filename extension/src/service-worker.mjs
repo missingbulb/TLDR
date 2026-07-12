@@ -15,7 +15,9 @@ import { DEFAULT_USER_DENYLIST } from './denylist.mjs';
 import { getTopComment } from './api.mjs';
 import { reconcileHoverRegistration } from './hover-registration.mjs';
 import { beginNavigation, commitNavigation, provenanceKeyFor } from './redirect-provenance.mjs';
+import { createLogger } from './log.mjs';
 
+const log = createLogger('sw');
 export const DENYLIST_STORAGE_KEY = 'userDenylist';
 const CATEGORY_MENU_POPUP = 'src/category-menu.html';
 const PANEL_PORT = 'panel';
@@ -30,7 +32,7 @@ async function reflectPopup() {
   try {
     await chrome.action.setPopup({ popup: panelPorts.size ? '' : CATEGORY_MENU_POPUP });
   } catch (err) {
-    console.warn('action.setPopup failed', err);
+    log.warn('action.setPopup failed', err);
   }
 }
 
@@ -78,7 +80,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== 'link-hover:getTopComment') return; // not ours — let another listener handle it
   getTopComment(message.pageUrl, message.category, { clientVersion: CLIENT_VERSION })
     .then((result) => sendResponse(result))
-    .catch((err) => sendResponse({ error: String(err?.message ?? err) }));
+    .catch((err) => {
+      // The content script fails silent on the far side (no popup), so this is the ONLY place the
+      // reason a hover produced nothing (a network error, a 4xx/5xx) is visible — log it here.
+      log.warn('link-hover top-comment fetch failed', {
+        pageUrl: message.pageUrl,
+        category: message.category ?? null,
+        reason: err?.message ?? String(err),
+      });
+      sendResponse({ error: String(err?.message ?? err) });
+    });
   return true; // keep the message channel open for the async sendResponse above
 });
 
@@ -102,7 +113,7 @@ function updateTabProvenance(tabId, mutate) {
       if (nextState == null) await chrome.storage.session.remove(key);
       else await chrome.storage.session.set({ [key]: nextState });
     })
-    .catch((err) => console.warn('redirect-provenance update failed', err))
+    .catch((err) => log.warn('redirect-provenance update failed', { tabId, reason: err?.message ?? String(err) }))
     .finally(() => {
       if (provenanceQueues.get(tabId) === next) provenanceQueues.delete(tabId);
     });

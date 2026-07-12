@@ -13,6 +13,9 @@
 // since a custom header makes the read a non-simple request that triggers a preflight.
 
 import { API_BASE_URL } from '../config.mjs';
+import { createLogger } from './log.mjs';
+
+const log = createLogger('api');
 
 // The version header, or nothing when no version was supplied (e.g. an injection-free unit call) —
 // spread into a headers object so an absent version simply adds no header.
@@ -23,11 +26,15 @@ function clientVersionHeader(clientVersion) {
 export async function getComments(pageUrl, { fetchImpl = fetch, nextToken, clientVersion } = {}) {
   const params = new URLSearchParams({ pageUrl });
   if (nextToken) params.set('nextToken', nextToken);
+  log.debug('GET /comments', { pageUrl, nextToken: nextToken ?? null });
   const res = await fetchImpl(`${API_BASE_URL}/comments?${params.toString()}`, {
     method: 'GET',
     headers: clientVersionHeader(clientVersion),
   });
-  if (!res.ok) throw new Error(`read failed: ${res.status}`);
+  if (!res.ok) {
+    log.warn('GET /comments failed', { status: res.status, pageUrl });
+    throw new Error(`read failed: ${res.status}`);
+  }
   return res.json();
 }
 
@@ -39,11 +46,15 @@ export async function getComments(pageUrl, { fetchImpl = fetch, nextToken, clien
 export async function getTopComment(pageUrl, category, { fetchImpl = fetch, clientVersion } = {}) {
   const params = new URLSearchParams({ pageUrl });
   if (category) params.set('category', category);
+  log.debug('GET /comments/top', { pageUrl, category: category ?? null });
   const res = await fetchImpl(`${API_BASE_URL}/comments/top?${params.toString()}`, {
     method: 'GET',
     headers: clientVersionHeader(clientVersion),
   });
-  if (!res.ok) throw new Error(`top-comment read failed: ${res.status}`);
+  if (!res.ok) {
+    log.warn('GET /comments/top failed', { status: res.status, pageUrl, category: category ?? null });
+    throw new Error(`top-comment read failed: ${res.status}`);
+  }
   return res.json();
 }
 
@@ -76,8 +87,12 @@ export async function postComment(pageUrl, body, getIdToken, { fetchImpl = fetch
       body: JSON.stringify(category ? { pageUrl, body, category } : { pageUrl, body }),
     });
 
+  log.debug('POST /comments', { pageUrl, category: category ?? null });
   const res = await authedWrite(send, getIdToken);
-  if (!res.ok) throw new Error(`post failed: ${res.status}`);
+  if (!res.ok) {
+    log.warn('POST /comments failed', { status: res.status, pageUrl });
+    throw new Error(`post failed: ${res.status}`);
+  }
   return res.json();
 }
 
@@ -98,8 +113,12 @@ function voteRequest(method, pageUrl, commentId, getIdToken, { fetchImpl = fetch
       body: JSON.stringify({ pageUrl }),
     });
 
+  log.debug(`${method} /comments/{commentId}/vote`, { commentId, pageUrl });
   return authedWrite(send, getIdToken).then((res) => {
-    if (!res.ok) throw new Error(`vote failed: ${res.status}`);
+    if (!res.ok) {
+      log.warn(`${method} vote failed`, { status: res.status, commentId, pageUrl });
+      throw new Error(`vote failed: ${res.status}`);
+    }
     return res.json();
   });
 }
