@@ -1,6 +1,7 @@
 {
   "packs": [
     "basics",
+    "barriers",
     "chrome-extension",
     "chrome-extension-release",
     "executable-requirements",
@@ -9,7 +10,29 @@
     "spec-driven-product"
   ],
   "rules": {},
-  "accept": [],
+  "accept": [
+    {
+      "rule": "barrier",
+      "path": "server/README.md",
+      "reason": "the server's deploy/OAuth guide documents how the two halves relate (the extension manifest key, config.mjs client id, `cd ../extension` build) — cross-cutting setup docs, not a code coupling; the server ships no import of extension code"
+    },
+    {
+      "rule": "barrier",
+      "path": "extension/src/api.mjs",
+      "reason": "a comment notes the server must allow X-Client-Version in CORS (template.yaml AllowHeaders) — documentation of the HTTP contract, not a code reference into server/"
+    }
+  ],
+  "packConfig": {
+    "barriers": {
+      "rules": [
+        {
+          "between": ["server", "extension"],
+          "allow": ["shared"],
+          "reason": "the extension and its server integrate only through shared/ (the vendored single-source of categories/normalizeUrl) and the HTTP contract — never by referencing each other's code"
+        }
+      ]
+    }
+  },
   "maintenance": {
     "delivery": "push"
   }
