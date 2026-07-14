@@ -1,7 +1,18 @@
 {
   "packs": [
     "basics",
-    "barriers",
+    {
+      "id": "barriers",
+      "config": {
+        "rules": [
+          {
+            "between": ["server", "extension"],
+            "allow": ["shared"],
+            "reason": "the extension and its server integrate only through shared/ (the vendored single-source of categories/normalizeUrl) and the HTTP contract — never by referencing each other's code"
+          }
+        ]
+      }
+    },
     "chrome-extension",
     "chrome-extension-release",
     "executable-requirements",
@@ -22,17 +33,6 @@
       "reason": "a comment notes the server must allow X-Client-Version in CORS (template.yaml AllowHeaders) — documentation of the HTTP contract, not a code reference into server/"
     }
   ],
-  "packConfig": {
-    "barriers": {
-      "rules": [
-        {
-          "between": ["server", "extension"],
-          "allow": ["shared"],
-          "reason": "the extension and its server integrate only through shared/ (the vendored single-source of categories/normalizeUrl) and the HTTP contract — never by referencing each other's code"
-        }
-      ]
-    }
-  },
   "maintenance": {
     "delivery": "push"
   }
