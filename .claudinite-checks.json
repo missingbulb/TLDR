@@ -18,7 +18,9 @@
     "executable-requirements",
     "github-actions",
     "node",
-    "spec-driven-product"
+    "spec-driven-product",
+    "tidy-repo",
+    "grow_with_claudinite"
   ],
   "rules": {},
   "accept": [
