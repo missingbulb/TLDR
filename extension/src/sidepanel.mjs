@@ -339,6 +339,17 @@ const debouncedRefreshForce = debounce(() => refresh({ useCache: false }), REFRE
 
 // --- post (write path) ------------------------------------------------------
 
+// ⌘+Enter (mac) / Ctrl+Enter (win/linux) in the note box posts it, so you don't have to leave the
+// keyboard for the Post button. A bare Enter still inserts a newline (notes are multi-line).
+// requestSubmit() runs the composer through the same submit event as the button — validation, the
+// optimistic insert, everything — rather than duplicating onSubmit's logic here.
+function onComposerKeydown(event) {
+  if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+    event.preventDefault();
+    els.composer.requestSubmit();
+  }
+}
+
 async function onSubmit(event) {
   event.preventDefault();
   els.error.textContent = '';
@@ -462,6 +473,7 @@ async function init() {
   connectToWorker(); // let the toolbar icon toggle this pane closed (issue #25)
 
   els.composer.addEventListener('submit', onSubmit);
+  els.body.addEventListener('keydown', onComposerKeydown); // ⌘/Ctrl+Enter posts without reaching for the button
   els.redirectShow.addEventListener('click', onShowCleanerNotes); // accept the redirect offer (issue #58)
 
   // A plain tab switch reuses the cache (no refetch); a reload/navigation refetches.
