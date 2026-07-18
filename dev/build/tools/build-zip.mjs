@@ -7,8 +7,10 @@
 // Build-time config injection: the committed source points at the DEV stack (API_BASE_URL), with the
 // client id and `key` left as placeholders. The PROD URL lives only in a GitHub variable (it's public,
 // but kept out of the repo) and is injected here into STAGED copies of the files (never the committed
-// source) — so only the release workflow ever produces a prod-pointed build, and a plain build stays
-// on dev. With no env set, the build produces a dev-pointed zip from the committed defaults.
+// source). With no API_BASE_URL in the env, the build keeps the committed dev default — so a plain
+// build, and the release's headline tldr.zip (which the workflow builds with API_BASE_URL cleared),
+// both stay on dev. The release workflow's OTHER build passes the prod URL to produce tldr-prod.zip,
+// the only prod-pointed build and the sole thing uploaded to the store.
 
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync, cpSync, readFileSync, writeFileSync } from 'node:fs';

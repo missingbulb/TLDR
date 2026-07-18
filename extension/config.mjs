@@ -1,9 +1,9 @@
-// Configuration. The committed API_BASE_URL points at the DEV stack ON PURPOSE: any build NOT produced
-// by the release workflow talks to dev — never prod. PROD is reachable in exactly one way: the release
-// workflow (.github/workflows/release.yml) injects the prod CloudFront URL over this value at build
-// time (from the GitHub variable `API_BASE_URL`; see dev/build/tools/build-zip.mjs). That prod-pointed zip is
-// BOTH the GitHub Release artifact AND what gets uploaded to the Chrome Web Store — so a release
-// download is prod, while a local/unpacked/`build:dev` build keeps this dev default.
+// Configuration. The committed API_BASE_URL points at the DEV stack ON PURPOSE: any build NOT bound for
+// the store talks to dev — never prod. PROD is reachable in exactly one way: the Chrome Web Store
+// submission. At release time the workflow builds the tree twice (see dev/build/tools/build-zip.mjs):
+// tldr-prod.zip gets the prod CloudFront URL injected over this value (from the GitHub variable
+// `API_BASE_URL`) and is the ONLY prod-pointed build — it is what's uploaded to the store; tldr.zip (the
+// GitHub Release headline download, and every local/unpacked/`build:dev` build) keeps this dev default.
 //
 // API_BASE_URL  — committed default = the dev app stack's ApiUrl output
 //                 (https://<id>.execute-api.<region>.amazonaws.com), i.e. `tldr-app-dev` in the
