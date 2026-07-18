@@ -42,12 +42,14 @@ cuts a release it builds the tested tree **twice**, differing only in the inject
 (`GOOGLE_CLIENT_ID` and the manifest `key` are injected into **both** zips — a stable id and working
 OAuth in the dev download too; the committed `config.mjs` defaults stay placeholders.)
 - **`API_BASE_URL`** — committed default = the **dev** app stack `ApiUrl`
-  (`https://<id>.execute-api.<region>.amazonaws.com`); the release build overrides it with prod
-  (`https://<cloudfront-domain>`) → `config.mjs` `API_BASE_URL`. The extension reaches the API via the
-  server's `*` CORS, so **no** `manifest.json` `host_permissions` is injected. A test guards that the
-  committed default is never a prod (CloudFront) URL. The committed value is the `ApiUrl` of
-  `tldr-app-dev` in the **dev AWS account** — re-set it if the dev stack is ever torn down and recreated
-  (API Gateway ids are random, so a recreate mints a new URL).
+  (`https://<id>.execute-api.<region>.amazonaws.com`); the release build overrides it with the **prod**
+  app stack's `ApiUrl` → `config.mjs` `API_BASE_URL`. That prod value is **also a raw API Gateway URL
+  for now** — CloudFront isn't in front of prod yet; once the CDN stack is live, point the
+  `API_BASE_URL` repository variable at the CloudFront domain instead (nothing else changes). The
+  extension reaches the API via the server's `*` CORS, so **no** `manifest.json` `host_permissions` is
+  injected. A test guards that the committed default is a direct API Gateway URL, never a CDN domain.
+  The committed value is the `ApiUrl` of `tldr-app-dev` in the **dev AWS account** — re-set it if the
+  dev stack is ever torn down and recreated (API Gateway ids are random, so a recreate mints a new URL).
 - **`GOOGLE_CLIENT_ID`** (the Google "Web application" client id — see `server/README.md`) →
   `config.mjs`.
 
