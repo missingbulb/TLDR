@@ -252,6 +252,23 @@ email isn't verified.
 </tr>
 </table>
 
+<table>
+<tr>
+<td valign="top" width="340">
+
+🚩 _Behavior leaf — verified by `behavior/behavior.test.mjs` (a gesture a static snapshot can't show)._ <!-- req-gallery:2.8 -->
+
+</td>
+<td valign="top">
+
+`2.8` In the note box, **⌘+Enter** (mac) / **Ctrl+Enter** (win/linux) **posts** the note — the
+keyboard shortcut for **Post** — while a **bare Enter** still inserts a **newline** (notes are
+multi-line).
+
+</td>
+</tr>
+</table>
+
 
 ## 3. Safety, limits & accessibility
 
