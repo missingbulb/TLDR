@@ -28,19 +28,28 @@ The build tooling (`build-zip.mjs`, `gen-icons.mjs`) lives outside the extension
 
 ## Configuration (injected at build time)
 The committed `config.mjs` `API_BASE_URL` points at the **dev** stack on purpose, so any build **not
-produced by the release workflow** talks to dev — **never prod**. PROD is reachable in exactly one way:
-the release workflow (`.github/workflows/chrome-extension-release.yml`) injects the prod URL from a GitHub repository
-variable at build time. That prod-pointed zip is **both** the GitHub Release artifact **and** what
-the **Release** workflow's publish job (mode `publish`) uploads to the store — so **downloading the release zip from GitHub is
-prod**, while a plain/local/unpacked/`build:dev` build keeps the committed dev default. (`GOOGLE_CLIENT_ID`
-and the manifest `key` stay placeholders, injected the same way.)
+bound for the store** talks to dev — **never prod**. PROD is reachable in exactly one way: the
+**store submission**. When the release workflow (`.github/workflows/chrome-extension-release.yml`)
+cuts a release it builds the tested tree **twice**, differing only in the injected `API_BASE_URL`:
+- **`tldr.zip`** — the release's headline asset and the permanent
+  `…/releases/latest/download/tldr.zip` URL. Built with `API_BASE_URL` **cleared**, so it keeps the
+  committed **dev** default. This is what a human downloads and loads unpacked — so **the downloadable
+  release zip is dev**, exactly like a plain checkout or `build:dev`.
+- **`tldr-prod.zip`** — the prod URL injected from the GitHub repository variable. The publish job
+  (mode `publish`) downloads **this** asset and uploads it to the store; it is never the headline
+  download. So **only the store build is prod-pointed**.
+
+(`GOOGLE_CLIENT_ID` and the manifest `key` are injected into **both** zips — a stable id and working
+OAuth in the dev download too; the committed `config.mjs` defaults stay placeholders.)
 - **`API_BASE_URL`** — committed default = the **dev** app stack `ApiUrl`
-  (`https://<id>.execute-api.<region>.amazonaws.com`); the release build overrides it with prod
-  (`https://<cloudfront-domain>`) → `config.mjs` `API_BASE_URL`. The extension reaches the API via the
-  server's `*` CORS, so **no** `manifest.json` `host_permissions` is injected. A test guards that the
-  committed default is never a prod (CloudFront) URL. The committed value is the `ApiUrl` of
-  `tldr-app-dev` in the **dev AWS account** — re-set it if the dev stack is ever torn down and recreated
-  (API Gateway ids are random, so a recreate mints a new URL).
+  (`https://<id>.execute-api.<region>.amazonaws.com`); the release build overrides it with the **prod**
+  app stack's `ApiUrl` → `config.mjs` `API_BASE_URL`. That prod value is **also a raw API Gateway URL
+  for now** — CloudFront isn't in front of prod yet; once the CDN stack is live, point the
+  `API_BASE_URL` repository variable at the CloudFront domain instead (nothing else changes). The
+  extension reaches the API via the server's `*` CORS, so **no** `manifest.json` `host_permissions` is
+  injected. A test guards that the committed default is a direct API Gateway URL, never a CDN domain.
+  The committed value is the `ApiUrl` of `tldr-app-dev` in the **dev AWS account** — re-set it if the
+  dev stack is ever torn down and recreated (API Gateway ids are random, so a recreate mints a new URL).
 - **`GOOGLE_CLIENT_ID`** (the Google "Web application" client id — see `server/README.md`) →
   `config.mjs`.
 
@@ -56,10 +65,11 @@ so the id matters for the redirect URI, not for API access):
   from the `EXTENSION_PUBLIC_KEY` repository variable.
 
 ## Build
-The shippable zip is produced by CI — the **Release: Create Package** workflow runs `npm run build`,
-injecting the repo variables above into staged copies (the committed source is never touched). The
-build itself runs anywhere; with no env set it produces a **dev-pointed** zip from the committed
-defaults:
+The shippable zips are produced by CI — the **Release: Create Package** workflow runs `npm run build`
+twice, injecting the repo variables above into staged copies (the committed source is never touched):
+once with the full env → `dist/tldr-prod.zip` (the store artifact), and once with `API_BASE_URL`
+cleared → `dist/tldr.zip` (the dev headline download; see **Configuration** above). The build itself
+runs anywhere; with no env set it produces a **dev-pointed** zip from the committed defaults:
 ```bash
 cd extension
 npm run build      # -> dist/tldr.zip (only the shippable files)

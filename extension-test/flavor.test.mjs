@@ -16,9 +16,10 @@ function stage() {
   return dir;
 }
 
-// A repo env where dev and prod point at physically distinct APIs.
+// A repo env where dev and prod point at physically distinct APIs. Prod is the prod app stack's
+// API Gateway URL (CloudFront isn't in front of prod yet); dev is the dev stack's — distinct ids.
 const ENV = {
-  API_BASE_URL: 'https://d123.cloudfront.net',
+  API_BASE_URL: 'https://prod123.execute-api.il-central-1.amazonaws.com',
   API_BASE_URL_DEV: 'https://abc123.execute-api.il-central-1.amazonaws.com',
   GOOGLE_CLIENT_ID: '111.apps.googleusercontent.com',
 };
@@ -47,12 +48,12 @@ test('build:dev injects the dev API into staged config.mjs', () => {
   }
 });
 
-test('build:prod injects the prod (CloudFront) API — distinct from dev', () => {
+test('build:prod injects the prod API — distinct from dev', () => {
   const dir = stage();
   try {
     injectConfig(dir, flavorEnv('prod', ENV));
     const config = readFileSync(resolve(dir, 'config.mjs'), 'utf8');
-    assert.match(config, /export const API_BASE_URL = 'https:\/\/d123\.cloudfront\.net';/);
+    assert.match(config, /export const API_BASE_URL = 'https:\/\/prod123\.execute-api\.il-central-1\.amazonaws\.com';/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

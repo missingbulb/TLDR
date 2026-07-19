@@ -13,8 +13,9 @@ URL-normalization rule.
 Or load the latest development build:
 
 1. Download [the latest release zip](https://github.com/missingbulb/TLDR/releases/latest/download/tldr.zip)
-   and extract it — it unpacks to a folder with `manifest.json` at its top. (Release zips are
-   prod-pointed; a plain checkout is dev-pointed — see [`dev/docs/extension.md`](dev/docs/extension.md).)
+   and extract it — it unpacks to a folder with `manifest.json` at its top. (This download is
+   dev-pointed, like a plain checkout; only the Chrome Web Store build is prod-pointed — see
+   [`dev/docs/extension.md`](dev/docs/extension.md).)
 2. Open `chrome://extensions`, enable **Developer mode** (top right), click
    **Load unpacked**, and select that folder.
 
