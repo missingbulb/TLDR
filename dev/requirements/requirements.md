@@ -579,9 +579,9 @@ in CI catches a typo in the `chrome.*` glue); a real-Chrome e2e is a tracked fol
 
 Endorsing a note. Each saved comment carries a **vote rail on its left** — the upvote button above the
 count (a larger font) — and a signed-in user can cast one vote per comment and toggle it off. The
-**count rides the shared, CDN-cached public read** (so it's stale up to the ~60s TTL and identical for
-every viewer — an accepted trade-off, issue #22); the **viewer's own vote can't** ride that read (the
-cache key excludes `Authorization`), so it's shown optimistically and persisted client-side
+**count rides the shared public read** (so it's identical for
+every viewer — an accepted trade-off, issue #22); the **viewer's own vote can't** ride that read (it's
+not part of the shared read), so it's shown optimistically and persisted client-side
 (`chrome.storage.local`). One user can't upvote twice: the vote is a single keyed item cast under an
 `attribute_not_exists` condition, so a repeat is an idempotent no-op (leaf `9.7`). The voted/un-voted
 look is a `dom` image; the optimistic toggle + rollback are `behavior` gestures; the merge rule is a
@@ -782,7 +782,7 @@ selection — no badge, no filter bar. Categories come from the growable curated
 · Spoiler · Chitchat**); each category's *design* lives in its own encapsulated folder
 (`extension/src/categories/<id>/`, strictly presentation) so a restyle of one can't touch another, and the
 shared panel code behaves identically for every category. Filtering to the current category is
-client-side over the one CDN-cached read per page (no refetch on a switch), and the server still stores
+client-side over the one read per page (no refetch on a switch), and the server still stores
 & validates the category (allowlist; default `chitchat` at read time). The per-category look is a `dom`
 snapshot; the current-category view / switch / post are `behavior` leaves; the composer copy and the
 design-encapsulation contract are `logic` leaves; the server guarantees sit alongside as `server` leaves.

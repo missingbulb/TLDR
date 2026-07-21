@@ -1,13 +1,12 @@
 # TLDR server
 
-Everything AWS. Two CloudFormation stacks:
+Everything AWS. One CloudFormation stack:
 
 | Stack | Template | What it holds | Churn |
 |-------|----------|---------------|-------|
 | **app** | `template.yaml` (SAM) | HTTP API v2 + Google JWT authorizer, one Lambda, DynamoDB table | high — deploy often |
-| **cdn** | `cdn-template.yaml` (plain CFN) | CloudFront distribution + cache policy | low — ~15–20 min/deploy |
 
-They're split so CloudFront's slow propagation never blocks Lambda iteration. The DynamoDB table lives in the app stack, protected by `Retain` + PITR.
+The DynamoDB table lives in the app stack, protected by `Retain` + PITR.
 
 The only code is `src/handler.mjs` (submit + read). It re-normalizes the URL with the vendored copy of the canonical `shared/normalizeUrl.mjs`, validates the body, reads verified JWT claims, and talks to DynamoDB.
 
@@ -51,14 +50,13 @@ The deploy workflow assumes an IAM role via GitHub OIDC — no long-lived AWS ke
    }
    ```
 
-3. Attach this permissions policy — scoped to this stack's resources, **not** `AdministratorAccess`. `cloudformation` and `cloudfront` are granted at the service level (`Resource: "*"`) on purpose: change-set creation also authorizes against the SAM **transform** macro ARN (`…:aws:transform/Serverless-2016-10-31`) and the SAM-managed bucket stack, and CloudFront's policy/distribution ARNs aren't region-scoped. The data-plane resources stay tightly scoped — and because CloudFormation creates resources *using this same role*, those scopes still bound exactly what can be made:
+3. Attach this permissions policy — scoped to this stack's resources, **not** `AdministratorAccess`. `cloudformation` is granted at the service level (`Resource: "*"`) on purpose: change-set creation also authorizes against the SAM **transform** macro ARN (`…:aws:transform/Serverless-2016-10-31`) and the SAM-managed bucket stack. The data-plane resources stay tightly scoped — and because CloudFormation creates resources *using this same role*, those scopes still bound exactly what can be made:
 
    ```json
    {
      "Version": "2012-10-17",
      "Statement": [
        { "Sid": "CloudFormation", "Effect": "Allow", "Action": "cloudformation:*", "Resource": "*" },
-       { "Sid": "CloudFront", "Effect": "Allow", "Action": "cloudfront:*", "Resource": "*" },
        { "Sid": "Sts", "Effect": "Allow", "Action": "sts:GetCallerIdentity", "Resource": "*" },
        { "Sid": "SamBucket", "Effect": "Allow", "Action": "s3:*", "Resource": [
          "arn:aws:s3:::aws-sam-cli-managed-default*", "arn:aws:s3:::aws-sam-cli-managed-default*/*" ] },
@@ -92,7 +90,7 @@ sam deploy --parameter-overrides "GoogleClientId=<web-client-id> AllowedExtensio
 
 `EmailHashSalt` (a `NoEcho` parameter) salts the stored one-way email hash used for moderation — set a long
 random string. The CI deploy passes it from the secret `EMAIL_HASH_SALT` if present (see `deploy.yml`).
-Note the `ApiUrl` / `ApiDomain` outputs.
+Note the `ApiUrl` output.
 
 > **CORS / `AllowedExtensionOrigin` must be `*`.** API Gateway HTTP API (v2) **rejects** the
 > `chrome-extension://` scheme in its CORS `AllowOrigins` (`BadRequestException: "Invalid format for origin …"`),
@@ -100,13 +98,6 @@ Note the `ApiUrl` / `ApiDomain` outputs.
 > gated by the Google JWT authorizer (POST only), and reads are public by design. The `*` is also what lets the
 > extension reach the API under standard browser CORS, so it needs no `host_permissions`; the security boundary
 > is the JWT authorizer, never browser CORS. (See `dev/docs/architecture.md` §6.3 / §12-A9 / §12-A10.)
-
-**CDN (prod):**
-```bash
-sam deploy --config-env cdn --template cdn-template.yaml \
-  --parameter-overrides "ApiDomain=<ApiDomain output> PriceClass=PriceClass_200"
-```
-Point the extension's `API_BASE_URL` at `https://<DistributionDomainName>`. (Skip this stack while iterating; in dev the extension can hit `ApiUrl` directly.)
 
 ### 4. Post-deploy hardening
 Stack termination protection isn't expressible in the template body, so the **deploy workflow sets it
@@ -127,7 +118,7 @@ critically, a distinct DynamoDB table (`tldr-app-dev-comments`), so a dev write 
 **The environment is derived from the stack name, not a parameter:** the canonical `tldr-app` stack is
 prod and its table is pinned in the template to `tldr-comments`; any other stack name (`tldr-app-dev`,
 or an ad-hoc `tldr-app-<x>`) gets a stack-scoped table (`<stack>-comments`). Prod takes no environment
-input, so nothing at deploy time can repoint it. There is **no dev CDN** — point the dev extension
+input, so nothing at deploy time can repoint it. Point the dev extension
 build straight at the dev stack's `ApiUrl`.
 
 **Promotion model.** A push to `main` with server changes **auto-deploys dev** (the always-current
@@ -172,7 +163,7 @@ TABLE_NAME=tldr-app-dev-comments AWS_REGION=il-central-1 node scripts/seed-dev.m
 
 ## Deploy discipline
 - **Review every changeset** (`confirm_changeset = true` in `samconfig.toml`). `Replacement: True` on `CommentsTable` is a **hard stop** — replacement makes a new empty table and the data does not follow. The frozen attributes are `KeySchema` and `AttributeDefinitions`.
-- Stateless resources (API, authorizer, Lambda, CloudFront) are disposable; the table is the one stateful resource.
+- Stateless resources (API, authorizer, Lambda) are disposable; the table is the one stateful resource.
 
 ## Abuse controls (v1)
 - **Per-author rate limit**: a TTL'd DynamoDB counter caps comments/author/minute (`RateLimitPerMinute`, default 10) — the real per-user control.

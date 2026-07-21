@@ -30,7 +30,7 @@ needed).
 | Path | What |
 |------|------|
 | [`shared/`](shared/normalizeUrl.mjs) | The single source of truth for URL → `pageId` normalization (vendored into both sides, drift-guarded); `shared/test/` holds its corpus test. |
-| [`server/`](server/README.md) | Everything AWS: HTTP API + Google JWT authorizer, one Lambda, DynamoDB, CloudFront. Two CloudFormation stacks. |
+| [`server/`](server/README.md) | Everything AWS: HTTP API + Google JWT authorizer, one Lambda, DynamoDB. One CloudFormation stack. |
 | [`extension/`](dev/docs/extension.md) | The MV3 Chrome extension (side panel, no bundler). |
 | [`dev/requirements/`](dev/requirements/README.md) | The executable-requirements suite (client UI + server), spanning both apps. |
 | [`dev/docs/`](dev/docs/architecture.md) | The as-built [architecture](dev/docs/architecture.md) + the portable [UI-testing guideline](dev/docs/ui-testing-guideline.md). |
@@ -38,17 +38,17 @@ needed).
 | `.github/workflows/` | CI (`server`, `extension`, `requirements`), gated deploy (`deploy`), and the single extension-release stub (`release`) whose jobs call the Claudinite canon reusable workflows (create-package, publish, daily; privacy-page deploy and failure reporting live in the canon). |
 
 ## Architecture in one breath
-Public, CDN-cached reads; authenticated writes. The client fetches only while the side panel is open,
+Public reads; authenticated writes. The client fetches only while the side panel is open,
 for the active tab, and only on commentable pages. A comment is one DynamoDB item keyed by
-`(pageId, ULID)`, so "all comments for a page" is a single-partition query that's usually a single
-CloudFront edge lookup. See [`dev/docs/architecture.md`](dev/docs/architecture.md).
+`(pageId, ULID)`, so "all comments for a page" is a single-partition query. See
+[`dev/docs/architecture.md`](dev/docs/architecture.md).
 
 ## Quickstart (owner setup)
 The code is complete; bringing it live needs five owner-specific inputs (none can be defaulted):
 
 1. **Google OAuth "Web application" client** → its client id. (`server/README.md` §1)
 2. **AWS deploy role via GitHub OIDC** → set repo variable `AWS_DEPLOY_ROLE_ARN` (+ `GOOGLE_CLIENT_ID`). (`server/README.md` §2)
-3. `cd server && sam build && sam deploy …`, then (prod) deploy the CDN stack. (`server/README.md` §3)
+3. `cd server && sam build && sam deploy …`. (`server/README.md` §3)
 4. Set the client config as repo **variables** (`API_BASE_URL`, `GOOGLE_CLIENT_ID`, `EXTENSION_PUBLIC_KEY`) — the
    release build injects them into the zip; committed source stays placeholder. (`dev/docs/extension.md`)
 5. Release: bump the version on `main` (that runs the **create-package** job) + run the **Release**

@@ -17,7 +17,7 @@ function stage() {
 }
 
 // A repo env where dev and prod point at physically distinct APIs. Prod is the prod app stack's
-// API Gateway URL (CloudFront isn't in front of prod yet); dev is the dev stack's — distinct ids.
+// API Gateway URL; dev is the dev stack's — distinct ids.
 const ENV = {
   API_BASE_URL: 'https://prod123.execute-api.il-central-1.amazonaws.com',
   API_BASE_URL_DEV: 'https://abc123.execute-api.il-central-1.amazonaws.com',

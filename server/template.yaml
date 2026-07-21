@@ -2,8 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   TLDR backend (app stack) — HTTP API v2 + Google JWT authorizer, one Lambda, DynamoDB single table.
-  The CDN (CloudFront) lives in a SEPARATE stack (cdn-template.yaml) so its ~15-20 min propagation
-  never slows this fast-iterating stack.
 
 Parameters:
   GoogleClientId:
@@ -157,8 +155,8 @@ Resources:
               issuer: https://accounts.google.com
               audience:
                 - !Ref GoogleClientId
-        # No DefaultAuthorizer: routes opt in. GET /comments stays PUBLIC so CloudFront cache hits
-        # (which bypass the origin/authorizer entirely) are never "authenticated" only on a miss.
+        # No DefaultAuthorizer: routes opt in. GET /comments stays PUBLIC — reads are public by
+        # design (a community-notes product; every viewer sees the same list). Writes are gated.
 
   CommentsFunction:
     Type: AWS::Serverless::Function
@@ -247,10 +245,7 @@ Resources:
 
 Outputs:
   ApiUrl:
-    Description: Base URL for the API (dev/no-CDN). Clients POST/GET <ApiUrl>/comments.
+    Description: Base URL for the API. Clients POST/GET <ApiUrl>/comments.
     Value: !Sub https://${CommentsApi}.execute-api.${AWS::Region}.amazonaws.com
-  ApiDomain:
-    Description: API host only (no scheme) — pass this as ApiDomain to the CDN stack (cdn-template.yaml).
-    Value: !Sub ${CommentsApi}.execute-api.${AWS::Region}.amazonaws.com
   CommentsTableName:
     Value: !Ref CommentsTable
