@@ -1,15 +1,14 @@
 // Thin API client. The fetch implementation is injectable so the logic (URL building, the
 // public-vs-authenticated split, the 401-refresh-retry) is unit tested without a network.
 //
-// Reads are PUBLIC and sent WITHOUT an Authorization header — keeping reads cache-friendly at
-// CloudFront (the cache key excludes Authorization). Only writes carry the bearer token.
+// Reads are PUBLIC and sent WITHOUT an Authorization header (every viewer sees the same list).
+// Only writes carry the bearer token.
 //
 // Every request also carries X-Client-Version (the extension's manifest version, injected by the
 // caller). It's the version-telemetry the server logs so we can tell when no old client is still
 // calling and an old behavior is safe to retire (dev/docs/architecture.md §9.1). It rides in a
 // REQUEST HEADER on purpose: it stays out of the body (additive — it never reshapes the wire
-// contract) and out of the CloudFront cache key (which keys on pageUrl + Origin, not headers), so
-// public reads stay cache-friendly. The server must allow it in CORS (template.yaml AllowHeaders),
+// contract). The server must allow it in CORS (template.yaml AllowHeaders),
 // since a custom header makes the read a non-simple request that triggers a preflight.
 
 import { API_BASE_URL } from '../config.mjs';

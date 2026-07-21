@@ -43,11 +43,10 @@ cuts a release it builds the tested tree **twice**, differing only in the inject
 OAuth in the dev download too; the committed `config.mjs` defaults stay placeholders.)
 - **`API_BASE_URL`** — committed default = the **dev** app stack `ApiUrl`
   (`https://<id>.execute-api.<region>.amazonaws.com`); the release build overrides it with the **prod**
-  app stack's `ApiUrl` → `config.mjs` `API_BASE_URL`. That prod value is **also a raw API Gateway URL
-  for now** — CloudFront isn't in front of prod yet; once the CDN stack is live, point the
-  `API_BASE_URL` repository variable at the CloudFront domain instead (nothing else changes). The
+  app stack's `ApiUrl` → `config.mjs` `API_BASE_URL`. That prod value is **also a raw API Gateway
+  URL**. The
   extension reaches the API via the server's `*` CORS, so **no** `manifest.json` `host_permissions` is
-  injected. A test guards that the committed default is a direct API Gateway URL, never a CDN domain.
+  injected. A test guards that the committed default is a direct API Gateway URL.
   The committed value is the `ApiUrl` of `tldr-app-dev` in the **dev AWS account** — re-set it if the
   dev stack is ever torn down and recreated (API Gateway ids are random, so a recreate mints a new URL).
 - **`GOOGLE_CLIENT_ID`** (the Google "Web application" client id — see `server/README.md`) →
@@ -81,9 +80,9 @@ Load unpacked for development: `chrome://extensions` → Developer mode → **Lo
   refetching (debounced) on tab/URL/SPA-history changes.
 - A page is skipped if it fails the two-layer denylist (Layer 1 code constant: non-http(s) + the Web
   Store; Layer 2: the user denylist in `chrome.storage.sync`, seeded with `localhost`/`127.0.0.1`).
-- **Reads are public** and sent without an Authorization header (cache-friendly). **Posting** mints a
+- **Reads are public** and sent without an Authorization header. **Posting** mints a
   Google **ID token** via `chrome.identity.launchWebAuthFlow` (nonce/state verified), attaches it as a
-  bearer token, and renders the new note optimistically before the CDN TTL lets others see it.
+  bearer token, and renders the new note optimistically before a later read returns it to everyone.
 
 ## Tests
 `npm test` — pure logic (denylist, auth helpers, api, optimistic) + manifest/packaging guards.

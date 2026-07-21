@@ -1,7 +1,7 @@
-# AWS SAM + CloudFront — lessons
+# AWS SAM — lessons
 
-Notes for the `server/` backend: the SAM app stack (`template.yaml`) and the CloudFront CDN stack
-(`cdn-template.yaml`). Portable subsets would propagate to the corpus separately.
+Notes for the `server/` backend: the SAM app stack (`template.yaml`). Portable subsets would propagate
+to the corpus separately.
 
 - **To talk to AWS from a session, use the AWS CLI (or a boto3 script) — there is no Claude/MCP tool for AWS.**
   The only connected MCP server is GitHub; a tool search for AWS turns up nothing. So checking a stack's real
@@ -10,7 +10,7 @@ Notes for the `server/` backend: the SAM app stack (`template.yaml`) and the Clo
   live in separate accounts — see `dev/docs/dev-account-runbook.md` for the account/role details). This is the
   authoritative live status — the last-green
   `deploy.yml` run only tells you the last *deploy*, not the current stack state. The `.github/workflows/aws-status.yml`
-  workflow is a read-only alternative but describes only `tldr-app`/`tldr-cdn` by name, so it won't target
+  workflow is a read-only alternative but describes only `tldr-app` by name, so it won't target
   `tldr-app-dev` directly. Portable subset for the corpus (`claudinite-lesson` handoff): *AWS access is CLI/boto3,
   not an MCP tool.*
 

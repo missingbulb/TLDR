@@ -2,7 +2,7 @@
 //
 // One Lambda behind an HTTP API (payload format 2.0) serves two routes:
 //   POST /comments  — authenticated (JWT authorizer attached at the API). Writes one comment.
-//   GET  /comments  — PUBLIC (no authorizer). Reads all comments for a page. CloudFront-cached.
+//   GET  /comments  — PUBLIC (no authorizer). Reads all comments for a page.
 //
 // The authorizer has already verified the Google ID token's signature/issuer/audience/expiry
 // before we run, so for POST we trust event.requestContext.authorizer.jwt.claims.
@@ -289,7 +289,7 @@ async function handleVote(event, method) {
 // --- read path --------------------------------------------------------------
 
 // Allowlist projection (NOT a denylist): only these fields are ever returned, so a new internal
-// attribute can never leak through the public, CDN-cached read path by accident.
+// attribute can never leak through the public read path by accident.
 function toPublicComment(item) {
   return {
     commentId: item.commentId,
@@ -303,8 +303,8 @@ function toPublicComment(item) {
     category: item.category ?? DEFAULT_CATEGORY,
     // The endorsement count, maintained atomically with each vote item (handleVote). Default 0 so a
     // never-voted comment still carries the field (the UI always renders the affordance). The
-    // viewer's OWN vote (`youVoted`) is deliberately NOT here: it can't ride the shared, CDN-cached
-    // read (the cache key excludes Authorization), so the client tracks it locally (issue #22).
+    // viewer's OWN vote (`youVoted`) is deliberately NOT here: it isn't part of the shared, public
+    // read (identical for every viewer), so the client tracks it locally (issue #22).
     voteCount: item.voteCount ?? 0,
   };
 }
@@ -341,7 +341,7 @@ async function handleGet(event) {
       KeyConditionExpression: 'pageId = :pageId AND commentId < :voteSentinel',
       ExpressionAttributeValues: { ':pageId': pageId, ':voteSentinel': VOTE_SK_PREFIX },
       // Eventually-consistent on purpose: ~half the read cost, and a sub-second stale read is
-      // irrelevant behind a 30–60s CDN TTL. Do NOT "upgrade" this to ConsistentRead.
+      // irrelevant for this read-dominated, sparsely-written workload. Do NOT "upgrade" this to ConsistentRead.
       ScanIndexForward: true, // ULID sort key => chronological order
       Limit: QUERY_LIMIT,
       ExclusiveStartKey: decodeNextToken(params.nextToken),
@@ -355,8 +355,8 @@ async function handleGet(event) {
 }
 
 // The leading (top-voted) comment for a page+category (issue #26, the link-hover preview). PUBLIC,
-// same as GET /comments — CloudFront caches it keyed on pageUrl+category (cdn-template.yaml). Queries
-// the CategoryRankIndex GSI (see template.yaml) for the single highest-voteCount item; `{ comment: null
+// same as GET /comments. Queries the CategoryRankIndex GSI (see template.yaml) for the single
+// highest-voteCount item; `{ comment: null
 // }` (a 200, not a 404) is the correct, expected shape for "nothing posted in this category yet" — an
 // absent leader isn't an error.
 async function handleGetTop(event) {
@@ -397,8 +397,7 @@ export const handler = async (event) => {
   // Version telemetry (issue #29): log the calling client's version on EVERY request — both routes,
   // and `null` when absent, since a client too old to send the header is exactly the cohort we need
   // to count before retiring an old behavior. HTTP API v2 lowercases header keys. This is just a
-  // CloudWatch line (queryable via Logs Insights); it never affects the response. Note GET is
-  // CloudFront-cached, so read telemetry lands only on cache misses; POST always reaches the origin.
+  // CloudWatch line (queryable via Logs Insights); it never affects the response.
   const clientVersion = event.headers?.['x-client-version'] ?? null;
   console.log('request', { route, clientVersion });
   try {

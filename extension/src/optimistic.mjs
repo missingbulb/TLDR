@@ -1,13 +1,13 @@
 // Optimistic-render bookkeeping for the side panel. Pure logic — unit tested.
 //
-// The author sees their own comment immediately (before the ~30-60s CDN TTL lets others see it).
+// The author sees their own comment immediately (before a later GET returns it to everyone).
 // We keep a small list of "local" comments (optimistic + just-confirmed) alongside the server list,
 // and merge them deduped by commentId. Once a later GET includes the real commentId, the server
 // record replaces the local one (dropping the pending flag).
 
 export function makeOptimisticComment({ tempId, body, authorName, authorId, createdAt, category }) {
-  // Carry the composer-selected category so the note's badge shows immediately, before the ~30–60s
-  // CDN TTL lets a later GET return the authoritative record (which reconcileSuccess swaps in). (issue #25)
+  // Carry the composer-selected category so the note's badge shows immediately, before a later GET
+  // returns the authoritative record (which reconcileSuccess swaps in). (issue #25)
   return { commentId: tempId, body, authorName, authorId, createdAt, category, pending: true };
 }
 
@@ -18,7 +18,7 @@ export function mergeComments(serverComments = [], localComments = []) {
   for (const c of serverComments) {
     const prev = byId.get(c.commentId);
     // The server record is authoritative (incl. voteCount), but it can't know YOUR vote — the public
-    // read is shared and CDN-cached, with the cache key excluding Authorization — so a refresh keeps
+    // read is shared and identical for every viewer — so a refresh keeps
     // the server's count while preserving the locally-known `youVoted` (issue #22).
     byId.set(c.commentId, { ...c, youVoted: c.youVoted ?? prev?.youVoted });
   }

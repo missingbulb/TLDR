@@ -1,6 +1,6 @@
 // 9.2 — The same rail in the voted-by-me state: a FILLED accent button + an accent count (already
-// including your vote), so it's clear you've voted. The viewer's own vote can't ride the shared,
-// CDN-cached public read (the cache key excludes Authorization), so it's seeded from
+// including your vote), so it's clear you've voted. The viewer's own vote can't ride the shared
+// public read (it's not part of the shared read), so it's seeded from
 // chrome.storage.local (`myVotes`) exactly as the panel persists it — the panel overlays youVoted from
 // that set on load (issue #22).
 "use strict";

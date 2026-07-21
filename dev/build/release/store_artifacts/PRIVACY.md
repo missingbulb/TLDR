@@ -52,7 +52,7 @@ Notes persist until removed for moderation. You can request removal of notes you
 
 ## Hosting
 
-Notes are stored on Amazon Web Services (DynamoDB) and served via Amazon CloudFront. Data is processed in the
+Notes are stored on and served from Amazon Web Services (DynamoDB behind an HTTP API). Data is processed in the
 AWS `il-central-1` (Tel Aviv) region.
 
 ## Permissions

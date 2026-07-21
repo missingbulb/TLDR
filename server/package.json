@@ -8,7 +8,7 @@
   "scripts": {
     "test": "node --test \"test/**/*.test.mjs\"",
     "build": "sam build",
-    "validate": "sam validate --lint && sam validate --template cdn-template.yaml --lint"
+    "validate": "sam validate --lint"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.700.0",

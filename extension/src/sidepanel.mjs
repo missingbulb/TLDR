@@ -18,7 +18,7 @@ const log = createLogger('sidepanel');
 
 const DENYLIST_STORAGE_KEY = 'userDenylist';
 // The viewer's own votes, persisted to chrome.storage.local so `youVoted` survives a panel reopen.
-// It can't ride the shared, CDN-cached public read (the cache key excludes Authorization), so the
+// It isn't part of the shared public read (identical for every viewer), so the
 // client owns it (issue #22). A flat array of commentIds (a Set on the wire would not serialize).
 const MY_VOTES_STORAGE_KEY = 'myVotes';
 const REFRESH_DEBOUNCE_MS = 300;
@@ -56,7 +56,7 @@ const els = {
 const state = {
   pageId: null, // normalized URL currently shown; also the dedupe key for refreshes
   serverComments: [], // live mirror of the active page's bucket (what render() draws)
-  localComments: [], // optimistic + just-confirmed, not yet guaranteed in the CDN-cached read
+  localComments: [], // optimistic + just-confirmed, not yet guaranteed in the server read
   currentCategory: DEFAULT_VIEW_CATEGORY, // the active top-level category (the only notes shown)
   userDenylist: DEFAULT_USER_DENYLIST,
   myVotes: new Set(), // commentIds the viewer has upvoted (the durable source of `youVoted`)
@@ -136,7 +136,7 @@ function timeAgo(createdAt) {
 
 function render() {
   // Show ONLY the current category's notes — a pure client-side filter over the already-fetched notes
-  // (no refetch, so the single CDN-cached read per page is preserved). An untagged/legacy note counts
+  // (no refetch, so the single read per page is preserved). An untagged/legacy note counts
   // under DEFAULT_CATEGORY. The panel makes no other mention of the selection (issue #25). (§4.4)
   const comments = mergeComments(state.serverComments, state.localComments).filter(
     (c) => (c.category ?? DEFAULT_CATEGORY) === state.currentCategory,

@@ -1,6 +1,6 @@
 // SINGLE SOURCE OF TRUTH for URL normalization, shared by the server (Lambda) and the
 // client (Chrome extension). Both sides MUST normalize identically: the normalized URL is
-// the DynamoDB partition key (`pageId`) and the CloudFront cache key. If the two sides ever
+// the DynamoDB partition key (`pageId`). If the two sides ever
 // disagree, the client writes a comment under pageId A while a read looks under pageId B and
 // the comment silently vanishes.
 //
@@ -47,8 +47,7 @@ function isTrackingParam(key) {
 }
 
 /**
- * Normalize a page URL into the canonical `pageId` used as the DynamoDB partition key and
- * CloudFront cache key.
+ * Normalize a page URL into the canonical `pageId` used as the DynamoDB partition key.
  * @param {string} input a full URL
  * @returns {string} e.g. "https://example.com/articles/42"
  * @throws {InvalidPageUrlError} if the input is not a valid http(s) URL

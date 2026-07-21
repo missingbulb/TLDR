@@ -36,19 +36,17 @@ test('injectConfig writes env values into staged config.mjs and manifest.json', 
   }
 });
 
-test('the committed default is the dev API Gateway URL (a direct endpoint, never a CDN domain)', () => {
+test('the committed default is the dev API Gateway URL (a direct execute-api endpoint)', () => {
   // "Dev as the committed default": any build that isn't the release pipeline talks to dev, never prod.
   // PROD is only ever the release-injected value (the GitHub API_BASE_URL variable), kept out of the
-  // repo. Prod is currently a raw API Gateway URL too (CloudFront isn't in front of prod yet), so it is
-  // structurally indistinguishable from this dev default — the "it's dev, not prod" guarantee rests on
-  // the release variable, not a shape check. What we CAN assert cheaply: the committed default is a
-  // direct API Gateway (execute-api) endpoint and never an accidentally-pasted CDN domain.
+  // repo. Prod is a raw API Gateway URL too, so it is structurally indistinguishable from this dev
+  // default — the "it's dev, not prod" guarantee rests on the release variable, not a shape check.
+  // What we CAN assert cheaply: the committed default is a direct API Gateway (execute-api) endpoint.
   const config = readFileSync(resolve(extensionDir, 'config.mjs'), 'utf8');
   const apiBaseUrl = config.match(/export const API_BASE_URL = '([^']*)'/)?.[1];
   assert.ok(apiBaseUrl, 'config.mjs must export API_BASE_URL');
   assert.match(apiBaseUrl, /^https:\/\/[^.]+\.execute-api\.[^.]+\.amazonaws\.com$/,
     'committed default must be a direct API Gateway URL (the dev stack ApiUrl)');
-  assert.doesNotMatch(apiBaseUrl, /cloudfront\.net/, 'committed default must never be a CDN domain');
 });
 
 test('injectConfig leaves committed placeholders untouched when env is empty', () => {

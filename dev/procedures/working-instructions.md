@@ -16,10 +16,10 @@ attached to a page, keyed by its normalized URL. It is a **monorepo** composing 
 artifacts joined by one shared rule:
 
 - **`extension/`** — an MV3 Chrome extension (side panel, no bundler; Chrome loads the ES modules directly). UI-facing. Its unit tests live in the sibling `extension-test/`.
-- **`server/`** — an AWS serverless backend (SAM: HTTP API v2 + Google-JWT authorizer, one Lambda, DynamoDB) fronted by a CloudFront CDN. Two CloudFormation stacks (app + cdn).
+- **`server/`** — an AWS serverless backend (SAM: HTTP API v2 + Google-JWT authorizer, one Lambda, DynamoDB). One CloudFormation stack (app).
 - **`shared/`** — the single source of truth for URL→`pageId` normalization and category constants, vendored byte-identically into both sides and drift-guarded.
 
-Trust boundary: **public, CDN-cached reads; authenticated writes** (Google ID token → JWT authorizer, POST only). The as-built design and every decision's rationale live in [`dev/docs/architecture.md`](../docs/architecture.md); the top-level map is the [README](../../README.md).
+Trust boundary: **public reads; authenticated writes** (Google ID token → JWT authorizer, POST only). The as-built design and every decision's rationale live in [`dev/docs/architecture.md`](../docs/architecture.md); the top-level map is the [README](../../README.md).
 
 ## Set up from a clean clone
 

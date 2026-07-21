@@ -72,8 +72,8 @@ test('CORS allows the client version header (X-Client-Version)', () => {
   assert.match(template, /AllowHeaders:[\s\S]*?- x-client-version/);
 });
 
-// CORS AllowMethods must list every HTTP method the routes actually use. The write path hits API
-// Gateway directly (not via CloudFront), so its preflight is answered by this CorsConfiguration — and
+// CORS AllowMethods must list every HTTP method the routes actually use. Requests hit API Gateway
+// directly, so a preflight is answered by this CorsConfiguration — and
 // a method missing here means the browser's preflight gets no Access-Control-Allow-Origin and the call
 // fails with a CORS error IN A REAL BROWSER ONLY (never in a unit test). DELETE (the vote toggle-off,
 // issue #22) is the one that regressed; guard the whole set so the next added method can't slip.

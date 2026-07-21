@@ -115,7 +115,6 @@ assumes this role directly for dev — no cross-account role chaining.
     ]
   }
   ```
-  > No `cloudfront:*` — dev has no CDN.
 - [ ] **B.4** Copy the role ARN → **`<AWS_DEV_DEPLOY_ROLE_ARN>`** (used in Phase E).
 
 ---
@@ -154,7 +153,7 @@ management account. A sensible starter — region-lock + block org/account tampe
       "Effect": "Deny",
       "NotAction": [
         "iam:*", "sts:*", "organizations:*", "account:*", "support:*", "budgets:*",
-        "cloudfront:*", "route53:*", "waf:*", "wafv2:*", "shield:*", "globalaccelerator:*"
+        "route53:*", "waf:*", "wafv2:*", "shield:*", "globalaccelerator:*"
       ],
       "Resource": "*",
       "Condition": { "StringNotEquals": { "aws:RequestedRegion": "il-central-1" } }
@@ -173,7 +172,7 @@ management account. A sensible starter — region-lock + block org/account tampe
   ]
 }
 ```
-- The `NotAction` list allowlists **global** services (IAM, STS, CloudFront, Route 53, …) so the region lock
+- The `NotAction` list allowlists **global** services (IAM, STS, Route 53, …) so the region lock
   doesn't break them — they operate in `us-east-1`/`aws-global`. IAM/STS staying allowed is what lets the OIDC
   deploy and the exec-role management work.
 - Tune as you like (e.g. also deny expensive services you'll never use in dev). Attach to `Workloads/NonProd`.

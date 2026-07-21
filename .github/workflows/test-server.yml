@@ -35,10 +35,10 @@ jobs:
         working-directory: server
         run: npm test
 
-      - name: Lint CloudFormation templates
+      - name: Lint CloudFormation template
         run: |
           pipx install cfn-lint
-          cfn-lint server/template.yaml server/cdn-template.yaml
+          cfn-lint server/template.yaml
 
       - uses: aws-actions/setup-sam@v3
         with:

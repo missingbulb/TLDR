@@ -8,8 +8,7 @@
 // API_BASE_URL  — committed default = the dev app stack's ApiUrl output
 //                 (https://<id>.execute-api.<region>.amazonaws.com), i.e. `tldr-app-dev` in the
 //                 dev AWS account. The release build overrides it with the PROD app stack's ApiUrl —
-//                 also a raw API Gateway URL for now; it becomes the CloudFront domain once the CDN
-//                 stack is live (CloudFront isn't in front of prod yet). No trailing slash. (The
+//                 also a raw API Gateway URL. No trailing slash. (The
 //                 extension reaches the API via the server's '*' CORS, so there's no manifest
 //                 host_permissions to keep in sync.)
 // GOOGLE_CLIENT_ID — the Google Cloud OAuth "Web application" client id (same value the server's JWT
