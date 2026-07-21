@@ -1,6 +1,6 @@
 # TLDR — Privacy Policy
 
-_Last updated: 2026-06-29_
+_Last updated: 2026-07-21_
 
 TLDR ("the extension") lets signed-in users read and post short community notes ("tl;dr notes")
 attached to the web page they are viewing. This policy explains exactly what the extension collects,
@@ -61,6 +61,7 @@ The extension requests only the permissions its features need; each is used sole
 
 | Permission | Why it is needed |
 |---|---|
+| `contextMenus` | Adds a right-click menu on the extension's toolbar icon to switch which category the side panel shows — no page content is read. |
 | `identity` | Google sign-in via `launchWebAuthFlow` to obtain a verified ID token — only when you choose to post a note. |
 | `sidePanel` | The whole UI is a side panel that lists notes for the current page and lets you post one. |
 | `storage` | Your per-site on/off list (`chrome.storage.sync`) and a short-lived sign-in token cache (`chrome.storage.session`). No browsing data. |
