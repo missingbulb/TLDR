@@ -3,7 +3,7 @@
 The single entry-point for getting productive in this repo: set it up, change it, verify a change, and
 ship it, without reverse-engineering the tree first. This is the **project-specific** layer — the
 general working discipline (problem-first, the issue→branch→PR lifecycle, warnings-are-errors) is
-auto-injected from the Claudinite corpus at session start (see [`.claudinite/CLAUDE.md`](../../.claudinite/CLAUDE.md));
+auto-injected from the Claudinite corpus at session start (vendored at [`.claudinite/shared/`](../../.claudinite/shared/));
 this doc restates none of it and instead links where a rule already lives.
 
 Routing index, not a payload: read the linked doc when its trigger fires. For the lessons that layer on
@@ -35,9 +35,9 @@ npm --prefix dev ci && npm --prefix dev test         # the executable-requiremen
 
 `npm run test:all` (from the root) chains all four in order — that is the single command that must be green (see [Verify a change](#verify-a-change)).
 
-> **The `.claudinite/` mount.** The Claudinite corpus is gitignored and hydrated at session start by
-> `.claude/hooks/sync-claudinite.sh` (it downloads `missingbulb/Claudinite`). Never commit `.claudinite/`;
-> if it's missing, the SessionStart hook (or `CLAUDINITE_REF=<ref>` to pin) repopulates it.
+> **The Claudinite mount.** The Claudinite corpus is **vendored** — tracked files under the shared
+> mount, refreshed by the fleet's nightly maintenance (provenance stamped in
+> `.claudinite-checks.json`). Nothing is fetched at session start; treat the vendored corpus as read-only.
 
 ## Run it / see it work
 
@@ -69,6 +69,6 @@ npm --prefix dev ci && npm --prefix dev test         # the executable-requiremen
 What a fresh session needs to resume — and what must and must not be committed:
 
 - **Commit:** source, tests, requirement cases + their owner-approved goldens, and the regenerated `shared/*` → `*.GENERATED.mjs` vendored copies (they are checked in and drift-guarded, not build output).
-- **Never commit:** `.claudinite/` (hydrated per session), `extension/config.local.json` (owner-only), `node_modules/`, `dist/`/`.aws-sam/`/`*.zip` build output, and the `dev/requirements/shared/.artifacts/` mismatch debris (the committed goldens are the truth). The `.gitignore` already lists these.
+- **Never commit:** `extension/config.local.json` (owner-only), `node_modules/`, `dist/`/`.aws-sam/`/`*.zip` build output, and the `dev/requirements/shared/.artifacts/` mismatch debris (the committed goldens are the truth). The `.gitignore` already lists these. (The vendored Claudinite corpus IS tracked — but it's read-only here; it changes only via the fleet's nightly refresh.)
 - **Config is injected, never committed:** prod URLs, `GOOGLE_CLIENT_ID`, and the extension `key` live as GitHub repository **variables** and are injected into the zip only by the release workflow; committed source stays placeholder/dev-pointed. See [`dev/docs/extension.md`](../docs/extension.md).
 - **Open product/config questions** the owner still owns are tracked in [architecture](../docs/architecture.md) §11.

@@ -6,9 +6,14 @@
       "config": {
         "rules": [
           {
-            "between": ["server", "extension"],
-            "allow": ["shared"],
-            "reason": "the extension and its server integrate only through shared/ (the vendored single-source of categories/normalizeUrl) and the HTTP contract — never by referencing each other's code"
+            "between": [
+              "server",
+              "extension"
+            ],
+            "allow": [
+              "shared"
+            ],
+            "reason": "the extension and its server integrate only through shared/ (the vendored single-source of categories/normalizeUrl) and the HTTP contract \u2014 never by referencing each other's code"
           }
         ]
       }
@@ -22,20 +27,23 @@
     "tidy-repo",
     "grow_with_claudinite"
   ],
-  "rules": {},
   "accept": [
     {
       "rule": "barrier",
       "path": "server/README.md",
-      "reason": "the server's deploy/OAuth guide documents how the two halves relate (the extension manifest key, config.mjs client id, `cd ../extension` build) — cross-cutting setup docs, not a code coupling; the server ships no import of extension code"
+      "reason": "the server's deploy/OAuth guide documents how the two halves relate (the extension manifest key, config.mjs client id, `cd ../extension` build) \u2014 cross-cutting setup docs, not a code coupling; the server ships no import of extension code"
     },
     {
       "rule": "barrier",
       "path": "extension/src/api.mjs",
-      "reason": "a comment notes the server must allow X-Client-Version in CORS (template.yaml AllowHeaders) — documentation of the HTTP contract, not a code reference into server/"
+      "reason": "a comment notes the server must allow X-Client-Version in CORS (template.yaml AllowHeaders) \u2014 documentation of the HTTP contract, not a code reference into server/"
     }
   ],
   "maintenance": {
-    "delivery": "push"
+    "delivery": "auto-merge"
+  },
+  "claudinite": {
+    "updated": "2026-07-21T22:51:41.654Z",
+    "ref": "d6bca9351cd0396cf068ea1199c6475993623a5d"
   }
 }

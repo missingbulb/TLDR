@@ -1,7 +1,7 @@
 # TLDR — local project guidance
 
 Project-specific guidance and lessons learned **in this repo**, layered on top of the shared Claudinite
-corpus (`.claudinite/`). Where a local rule refines a corpus rule, the local one wins — it carries this
+corpus (vendored into the repo). Where a local rule refines a corpus rule, the local one wins — it carries this
 project's concrete files and gotchas. Routing index, not a payload: read the matching doc when its
 trigger fires; don't pre-load.
 
