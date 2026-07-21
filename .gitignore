@@ -1,10 +1,4 @@
-# Claudinite mount (synced contents ignored; only the tracked sync hook signals the mount)
-/.claudinite/*
-!/.claudinite/mount/
-/.claudinite/mount/*
-!/.claudinite/mount/sync-claudinite.sh
-!/.claudinite/local_packs/
-/.claudinite.new/
+# Claudinite hook logs (the only untracked Claudinite artifacts — the mount is tracked)
 /.claudinite-hooks.log
 /.claudinite-hooks.log.tmp
 
