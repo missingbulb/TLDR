@@ -7,8 +7,8 @@ First read the member's `.claudinite-checks.json` — the `claudinite` stamp say
 vendored mount is in place ([vendoring/DESIGN.md](../../../vendoring/DESIGN.md)):
 
 - **Vendored member** (`"claudinite": { "updated": … }` present) — perform the **transactional
-  refresh**. First **verify the checkout**: the canon checkout this session runs in must be at the canon's **remote**
-  default-branch head (one MCP read of the head sha vs `git rev-parse
+  refresh**. First **verify the checkout**: the canon checkout this session runs in must be at
+  the canon's **remote** default-branch head (one MCP read of the head sha vs `git rev-parse
   HEAD`) — a lagging checkout would silently rewind the member's whole corpus, so it is this
   unit's failure, never a tree to converge from (#328). Then:
   1. **Apply the pending migration notes** — every `migrations/active_migrations/` record in the

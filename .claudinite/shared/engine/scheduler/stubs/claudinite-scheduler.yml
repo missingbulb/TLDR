@@ -2,11 +2,11 @@
 # (per-project-scheduling DESIGN §3). A thin shim: all logic lives in the
 # vendored engine, so this file changes rarely (schema and behavior changes ride
 # the vendor refresh, not edits here). It runs hourly on a repo-hashed minute
-# constrained to :10–50 — spreading the fleet, dodging GitHub's :00 stampede,
+# constrained to :10–:50 — spreading the fleet, dodging GitHub's :00 stampede,
 # and staying clear of the hour boundary the slot math anchors on.
 #
 # The minute below is a placeholder; bootstrap/vendoring rewrites it to this
-# repo's stable hashed minute in :10–50 (scheduler-workflow-shape enforces the
+# repo's stable hashed minute in :10–:50 (scheduler-workflow-shape enforces the
 # range). `workflow_dispatch` allows a manual run; the concurrency group
 # serializes runs so a slow run and its successor never overlap.
 name: Claudinite scheduler
