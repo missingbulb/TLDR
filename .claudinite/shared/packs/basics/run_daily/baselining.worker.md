@@ -48,8 +48,8 @@ vendored mount is in place ([vendoring/DESIGN.md](../../../vendoring/DESIGN.md))
 Then, for a covered member:
 
 - **Declaration normalization** — a local pack's canonical declaration token is namespaced:
-  `local_packs/<name>` ([engine/pack_loader/pack-registry.mjs](../../../engine/pack_loader/pack-registry.mjs) `declTokenFor`).
-  Rewrite any **bare** local-pack declaration in the member's `.claudinite-checks.json` to that form: a declared id (string
+  `local_packs/<name>` ([engine/pack_loader/pack-registry.mjs](../../../engine/pack_loader/pack-registry.mjs) `declTokenFor`). Rewrite any **bare**
+  local-pack declaration in the member's `.claudinite-checks.json` to that form: a declared id (string
   entry, or an entry object's `id`) without the `local_packs/` prefix whose pack lives in the member's
   own `.claudinite/local_packs/<id>/` gets the prefix; everything else on the entry stays verbatim, and
   a bare id with no such local pack is a canon declaration — leave it alone. Idempotent, and tracked by
