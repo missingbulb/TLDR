@@ -1,4 +1,4 @@
-name: Release
+name: Release to Chrome Store
 
 # The ONE thin stub of the chrome-extension-release standard. All the logic —
 # create-package, daily auto-release, and Chrome Web Store publish — lives in the
@@ -15,11 +15,15 @@ name: Release
 #   * push to main            → create-package (a clean no-op unless the manifest
 #                               version was bumped, so ordinary pushes don't cut a
 #                               release)
-#   * schedule (03:00 UTC)    → daily auto-release (ship a store update if a
-#                               shipped file changed since the last release)
+#   * dispatch (mode: daily)  → daily auto-release (ship a store update if a
+#                               shipped file changed since the last release). No
+#                               cron here: the Claudinite scheduler's store-release
+#                               task detects a deployable change and dispatches this
+#                               workflow in daily mode — the scheduler is the repo's
+#                               only cron (per-project-scheduling §3, §6).
 #   * "Run workflow" dispatch → pick a mode: publish (default), package, or daily
 #
-# The Actions-tab entry is named "Release"; the failure reporter keys its
+# The Actions-tab entry is named "Release to Chrome Store"; the failure reporter keys its
 # tracking issues on the per-operation names ("Release: Create Package", etc.)
 # baked into the canon reusable workflows.
 #
@@ -30,8 +34,6 @@ name: Release
 on:
   push:
     branches: [main]
-  schedule:
-    - cron: "0 3 * * *"
   workflow_dispatch:
     inputs:
       mode:
