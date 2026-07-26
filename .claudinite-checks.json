@@ -25,7 +25,8 @@
     "node",
     "spec-driven-product",
     "tidy-repo",
-    "grow_with_claudinite"
+    "grow_with_claudinite",
+    "local/tldr"
   ],
   "accept": [
     {
