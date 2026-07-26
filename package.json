@@ -8,7 +8,7 @@
   "scripts": {
     "build": "npm --prefix extension run build",
     "sync-shared": "node dev/build/tools/sync-shared.mjs",
-    "test": "node --test \"shared/test/**/*.test.mjs\" \"dev/build/tools/test/**/*.test.mjs\"",
+    "test": "node --test \"shared/test/**/*.test.mjs\" \"dev/build/tools/test/**/*.test.mjs\" \".claudinite/local/packs/**/*.test.mjs\"",
     "test:all": "npm test && npm --prefix server ci && npm --prefix server test && npm --prefix extension test && npm --prefix dev ci && npm --prefix dev test"
   }
 }

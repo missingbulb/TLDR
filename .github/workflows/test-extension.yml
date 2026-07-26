@@ -3,10 +3,10 @@ name: "test: extension"
 on:
   pull_request:
     branches: [main]
-    paths: ['extension/**', 'shared/**', 'dev/build/**', '.github/workflows/test-extension.yml']
+    paths: ['extension/**', 'shared/**', 'dev/build/**', 'package.json', '.claudinite/local/packs/**', '.github/workflows/test-extension.yml']
   push:
     branches: [main, 'claude/**']
-    paths: ['extension/**', 'shared/**', 'dev/build/**', '.github/workflows/test-extension.yml']
+    paths: ['extension/**', 'shared/**', 'dev/build/**', 'package.json', '.claudinite/local/packs/**', '.github/workflows/test-extension.yml']
 
 permissions:
   contents: read
@@ -21,7 +21,8 @@ jobs:
         with:
           node-version: 22
 
-      # Repo-level checks: the URL-normalizer corpus + the shared drift guard (root, no deps).
+      # Repo-level checks: the URL-normalizer corpus, the shared drift guard, and the local
+      # Claudinite packs' check fixtures (.claudinite/local/packs/**) — all root, no deps.
       - name: Repo-level tests
         run: npm test
 
