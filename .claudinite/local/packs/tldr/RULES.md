@@ -1,5 +1,24 @@
 # TLDR — repo rules
 
+## A pack carries how we work — never what the product does
+
+Claudinite packs, this one included, home **work procedures**: the conventions, gotchas and review
+discipline that recur across tasks, whatever the feature happens to be. They are not a home for the
+product's own feature definitions. A rule that describes what TLDR *does* — which categories exist,
+what a surface must render, how the parts of a feature must be wired to each other — is a
+**requirement**, and its home is the executable spec (`dev/requirements/`, one numbered leaf claimed
+by one case) and the suite that proves it. Encoding it as a pack rule instead splits one feature's
+definition across two systems and lands it in the one that no test of the product ever reads.
+
+The worked example: the weekly `growth-discover-packs` run authored a `tldr-categories` local pack
+(PR #121, closed unmerged) whose blocking checks asserted that every id in `shared/categories.mjs`
+carries its design descriptor, its scoped stylesheet, its registry entry and its `sidepanel.html`
+link. The silent-failure risk it named is real — but "a category is wired into all four presentation
+files" is a statement about the *feature*, so it belongs in `dev/requirements/` and the extension's
+own suite. **Pack-worthiness is a question about the work, not about how load-bearing the code is**;
+a genuine gap in *product* coverage is a requirements gap, and answering it with a pack is how a
+feature's spec ends up somewhere nothing executes it.
+
 ## The three version records, and the two the pipeline actually bumps
 
 This repo carries the extension version in **three** files, and only two of them move on their own:
