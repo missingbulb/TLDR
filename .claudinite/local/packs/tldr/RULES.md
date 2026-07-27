@@ -1,5 +1,30 @@
 # TLDR — repo rules
 
+## Nothing auto-merges here — the repo setting is off, so an unattended PR waits for the owner
+
+Every Claudinite growth/maintenance task tells you to open its PR and **arm auto-merge**, and this
+repo's `.claudinite-checks.json` declares `"maintenance": {"delivery": "auto-merge"}`. Both are
+aspirational: **GitHub auto-merge is not enabled on this repository**, so
+`mcp__github__enable_pr_auto_merge` hard-errors with *"Auto-merge is not enabled for this repository.
+Enable it in repository Settings → General → Pull Requests → Allow auto-merge."* It has failed that
+way on every unattended PR tried so far (#120, #121). Only the owner can flip it — it lives in repo
+Settings, out of reach of any commit.
+
+So an unattended run's PR **sits open until the owner says `lgtm <n>`**. Two things follow:
+
+- **Never report the run as "landed".** Arm auto-merge anyway (it's a one-call no-op when it fails,
+  and it starts working the day the setting is flipped), then say plainly in the PR body, the
+  tracker comment and your final summary that the PR is **open and awaiting the owner's merge**. PR
+  #120 was opened at 21:49 and merged only when the owner said `lgtm 120` at 22:17 — 28 minutes of
+  an "auto-merging" run's product sitting unmerged while the session reported success.
+- **Don't wait for CI to go green — for a `.claudinite/`-only PR there is no CI.** All three test
+  workflows (`test-extension`, `test-server`, `test-requirements`) are `paths:`-filtered to
+  `extension/`, `server/`, `shared/`, `dev/`, so a PR touching only `.claudinite/**` and
+  `.claudinite-checks.json` gets **zero** check runs — `get_check_runs` returned `total_count: 0` on
+  #120 and #123, and polling it never terminates. A growth PR that *also* touches a filtered path
+  (#121 edited `.github/workflows/test-extension.yml`) does get checks. Decide which case you're in
+  from the PR's own file list before waiting on anything.
+
 ## A pack carries how we work — never what the product does
 
 Claudinite packs, this one included, home **work procedures**: the conventions, gotchas and review
