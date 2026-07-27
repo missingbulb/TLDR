@@ -19,6 +19,27 @@ own suite. **Pack-worthiness is a question about the work, not about how load-be
 a genuine gap in *product* coverage is a requirements gap, and answering it with a pack is how a
 feature's spec ends up somewhere nothing executes it.
 
+## A green release run is not evidence the store publish works
+
+The daily auto-release short-circuits at `daily / check` when nothing under the release config's
+`ship_paths` changed since the last release tag, so `Release to Chrome Store` concludes **success**
+with the `daily / publish` job skipped entirely. Since the scheduler cutover (#107) the daily leg
+runs only when the Claudinite scheduler dispatches this workflow in `mode: daily`, so a real publish
+is rarer still — most green runs never touched the store.
+
+When triaging a publish-leg failure, read the **`daily / publish` job**, not the run conclusion. The
+open example is #93/#94 (run 29229001858): three separate triage passes (07-16, 07-18, 07-26) each
+re-derived that no later run had re-executed the step, and each re-nominated #87's version desync as
+the "suspected root cause, unconfirmed". Two things settle it and are worth not re-deriving a fourth
+time:
+
+- **`ITEM_NOT_UPDATABLE` is Chrome Web Store-side state** — a prior submission still pending review
+  or ready to publish — so **nothing in `main` can be "the fix"**, and no repo-side defect that
+  happened to be open at the time (a version desync, a stale secret) should be credited with it.
+- **The only closing evidence is a run that actually reaches `daily / publish` and goes green**, or
+  the Chrome Developer Dashboard showing the item out of pending/review. Absent that, the issue stays
+  open — resolving the co-occurring repo bug is not the same as verifying the publish path.
+
 ## The three version records, and the two the pipeline actually bumps
 
 This repo carries the extension version in **three** files, and only two of them move on their own:
