@@ -2,12 +2,10 @@
 
 ## A `.claudinite/`-only PR gets no CI — don't wait for checks that will never run
 
-All three test workflows (`test-extension`, `test-server`, `test-requirements`) are `paths:`-filtered
-to `extension/`, `server/`, `shared/`, `dev/`, so a PR touching only `.claudinite/**` and
-`.claudinite-checks.json` gets **zero** check runs — `get_check_runs` returned `total_count: 0` on
-#120 and #123, and polling it never terminates. A growth PR that *also* touches a filtered path
-(#121 edited `.github/workflows/test-extension.yml`) does get checks. Decide which case you're in
-from the PR's own file list before waiting on anything.
+The three test workflows (`test-extension`, `test-server`, `test-requirements`) are `paths:`-filtered
+to `extension/`, `server/`, `shared/`, `dev/`, so a PR touching only `.claudinite/**` gets **zero**
+check runs and polling for green never terminates. A PR that *also* touches a filtered path does get
+checks — check the PR's own file list before waiting on anything.
 
 If `mcp__github__enable_pr_auto_merge` ever hard-errors with *"Auto-merge is not enabled for this
 repository"*, that names a GitHub repo setting (Settings → General → Pull Requests → Allow
