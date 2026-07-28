@@ -38,6 +38,11 @@
       "rule": "barrier",
       "path": "extension/src/api.mjs",
       "reason": "a comment notes the server must allow X-Client-Version in CORS (template.yaml AllowHeaders) — documentation of the HTTP contract, not a code reference into server/"
+    },
+    {
+      "rule": "file-placement",
+      "path": ".claudinite/local/packs/tldr/ci-excludes-claudinite.mjs",
+      "reason": "a pack rule importing the shared checks engine's helpers (findings.mjs, minimal-yaml.mjs) is a structural cross-cutting dependency every pack rule takes, canon or local — canon pack rules reach the same helpers at comparable or greater distance under .claudinite/shared/, which this repo doesn't own to restructure"
     }
   ],
   "maintenance": {

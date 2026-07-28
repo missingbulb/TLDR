@@ -9,10 +9,12 @@
 // Longer-form, activity-scoped project guidance stays where this repo already
 // keeps it (dev/procedures/, routed from its CLAUDE.md); this pack is for the
 // short, always-on rules the engine injects into every session.
+import ciExcludesClaudinite from './ci-excludes-claudinite.mjs';
+
 export default {
   id: 'tldr',
   detect: null,
   marker: null,
   prose: 'RULES.md',
-  rules: [],
+  rules: [ciExcludesClaudinite],
 };

@@ -2,10 +2,10 @@
 
 ## A `.claudinite/`-only PR gets no CI — don't wait for checks that will never run
 
-The three test workflows (`test-extension`, `test-server`, `test-requirements`) are `paths:`-filtered
-to `extension/`, `server/`, `shared/`, `dev/`, so a PR touching only `.claudinite/**` gets **zero**
-check runs and polling for green never terminates. A PR that *also* touches a filtered path does get
-checks — check the PR's own file list before waiting on anything.
+The test workflows are `paths:`-filtered away from `.claudinite/`, so a PR touching only that tree
+gets **zero** check runs — don't poll for green on one; check the PR's file list first. (The
+`tldr/ci-excludes-claudinite` check flags if a workflow ever starts covering `.claudinite/`, so this
+stays true or the rule gets caught stale — see `ci-excludes-claudinite.mjs`.)
 
 If `mcp__github__enable_pr_auto_merge` ever hard-errors with *"Auto-merge is not enabled for this
 repository"*, that names a GitHub repo setting (Settings → General → Pull Requests → Allow
