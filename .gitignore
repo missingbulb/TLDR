@@ -21,3 +21,6 @@ dev/requirements/shared/.artifacts/
 *.log
 coverage/
 .DS_Store
+
+# Claude Code isolated-agent worktree checkouts (transient, per-agent)
+.claude/worktrees/
