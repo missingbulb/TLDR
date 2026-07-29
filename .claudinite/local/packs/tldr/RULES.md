@@ -19,6 +19,39 @@ own suite. **Pack-worthiness is a question about the work, not about how load-be
 a genuine gap in *product* coverage is a requirements gap, and answering it with a pack is how a
 feature's spec ends up somewhere nothing executes it.
 
+## Put the `Comment class:` line on its own line — naming the other classes on it declares them
+
+The classifier reads the **whole** classification line and adds *every* class token it finds
+(`classesIn()` in `.claudinite/shared/engine/checks/helpers/session-transcript.mjs` matches
+`correction|feature|process-change|other` globally). So the natural-sounding
+
+> `Comment class: other` — not a correction, feature request, or process-change
+
+declares **all four** classes, not `other`. The stray `feature` then arms
+`feature-requirements-first`, which files BLOCKING against whatever commits the branch carries for
+lacking a preceding `dev/requirements/requirements.md` commit — even when the session is a
+scheduled task that never touched a product feature.
+
+**It cannot be taken back.** The transcript is append-only; re-declaring cleanly on a later line
+does not override the poisoned one. Both sessions on 2026-07-26 tried and failed, and each had to
+pay in real work instead: the growth-extract run (#114) reverted its legitimate `.gitignore` fix and
+closed PR #119 unmerged (~8 min); the discover-packs run (#113) burned two Stop cycles before
+resetting its checkout (~4 min).
+
+Write the class alone — `Comment class: other` — and put any explanation on the **next** line. A
+genuinely mixed comment still names each part it really is, on that one line; the rule is against
+restating the *menu*, not against honest multi-class declarations.
+
+## Run a task subagent under `isolation: "worktree"`
+
+An `Agent` call without it leaves the parent session's checkout wherever the child left it — on the
+child's branch. The branch-scoped Stop checks then judge the **child's** commits against the
+**parent's** transcript, producing findings the parent cannot act on. That is exactly how #113's
+Stop cycle came to blame a subagent's `.claudinite-checks.json` commit; #114's run passed
+`isolation: "worktree"` for the same shape of dispatch and never saw it. Recovery is to `git
+checkout` the session's own assigned branch and re-verify — but pass the isolation flag and skip
+the detour.
+
 ## The three version records, and the two the pipeline actually bumps
 
 This repo carries the extension version in **three** files, and only two of them move on their own:
