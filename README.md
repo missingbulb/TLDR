@@ -1,5 +1,7 @@
 # TLDR
 
+<!-- claudinite:packs -->![basics](../../../../../tmp/claudinite-canon-XC44Kj/packs/basics/badge.svg "basics") ![barriers](../../../../../tmp/claudinite-canon-XC44Kj/packs/barriers/badge.svg "barriers") ![git-github](../../../../../tmp/claudinite-canon-XC44Kj/packs/git-github/badge.svg "git-github") ![chrome-extension](../../../../../tmp/claudinite-canon-XC44Kj/packs/chrome-extension/badge.svg "chrome-extension") ![chrome-extension-release](../../../../../tmp/claudinite-canon-XC44Kj/packs/chrome-extension-release/badge.svg "chrome-extension-release") ![executable-requirements](../../../../../tmp/claudinite-canon-XC44Kj/packs/executable-requirements/badge.svg "executable-requirements") ![github-actions](../../../../../tmp/claudinite-canon-XC44Kj/packs/github-actions/badge.svg "github-actions") ![node](../../../../../tmp/claudinite-canon-XC44Kj/packs/node/badge.svg "node") ![spec-driven-product](../../../../../tmp/claudinite-canon-XC44Kj/packs/spec-driven-product/badge.svg "spec-driven-product") ![tidy-repo](../../../../../tmp/claudinite-canon-XC44Kj/packs/tidy-repo/badge.svg "tidy-repo") ![grow_with_claudinite](../../../../../tmp/claudinite-canon-XC44Kj/packs/grow_with_claudinite/badge.svg "grow_with_claudinite")<!-- /claudinite:packs -->
+
 Get community-generated tl;dr notes for any link on the web — a Chrome extension where signed-in users
 read and post short notes ("comments") attached to any page, keyed by its normalized URL.
 
