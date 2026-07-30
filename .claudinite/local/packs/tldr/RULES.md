@@ -44,20 +44,24 @@ time:
 
 The classifier reads the **whole** classification line and adds *every* class token it finds
 (`classesIn()` in `.claudinite/shared/engine/checks/helpers/session-transcript.mjs` matches
-`correction|feature|process-change|other` globally), so an explanatory aside naming the other
-options on that line silently declares them too. The `tldr/comment-class-single-line` check
-(advisory) now flags a classification line naming more than one class — see it for the mechanics.
+`correction|feature|process-change|other` globally). So the natural-sounding
+
+> `Comment class: other` — not a correction, feature request, or process-change
+
+declares **all four** classes, not `other`. The stray `feature` then arms
+`feature-requirements-first`, which files BLOCKING against whatever commits the branch carries for
+lacking a preceding `dev/requirements/requirements.md` commit — even when the session is a
+scheduled task that never touched a product feature.
 
 **It cannot be taken back.** The transcript is append-only; re-declaring cleanly on a later line
-does not override the poisoned one — the check catches it in the same session, before the stray
-token has a chance to arm something else. Both sessions on 2026-07-26 learned this the hard way:
-the growth-extract run (#114) reverted its legitimate `.gitignore` fix and closed PR #119 unmerged
-(~8 min); the discover-packs run (#113) burned two Stop cycles before resetting its checkout (~4
-min) after a stray `feature` token armed `feature-requirements-first` BLOCKING.
+does not override the poisoned one. Both sessions on 2026-07-26 tried and failed, and each had to
+pay in real work instead: the growth-extract run (#114) reverted its legitimate `.gitignore` fix and
+closed PR #119 unmerged (~8 min); the discover-packs run (#113) burned two Stop cycles before
+resetting its checkout (~4 min).
 
-The check is advisory, not blocking: a genuinely mixed comment still names each part it really is,
-on that one line, and that's legitimate — the rule is against restating the *menu*, not against
-honest multi-class declarations. When it fires, judge which case you're in.
+Write the class alone — `Comment class: other` — and put any explanation on the **next** line. A
+genuinely mixed comment still names each part it really is, on that one line; the rule is against
+restating the *menu*, not against honest multi-class declarations.
 
 ## Run a task subagent under `isolation: "worktree"`
 
