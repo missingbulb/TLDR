@@ -1,0 +1,50 @@
+# The Claudinite world sweep, on every pull request.
+#
+# Deliberately UNFILTERED. This repo's other test workflows are path-filtered to
+# the product tree (`extension/**`, `server/**`, `dev/requirements/**`), which is
+# right for them and wrong for conformance: a change under `.claudinite/**`
+# matches none of those filters, so before this file existed a PR touching only
+# the vendored mount started no check at all.
+#
+# That had two consequences, both silent:
+#
+#   1. The nightly maintenance PR could never land. `maintenance.delivery` is
+#      `auto-merge`, and GitHub's auto-merge is a queue for CHECKS — the arm
+#      succeeded, no check ever ran, and the PR waited forever.
+#   2. Two blocking `claudinite-isolation` findings sat on `main` unnoticed,
+#      because nothing in CI had ever run the world sweep here.
+#
+# `workflow_dispatch` is not decoration: a branch pushed and a PR opened by the
+# Actions GITHUB_TOKEN emit no `pull_request` event (GitHub's recursion guard),
+# so baselining starts this workflow explicitly on its maintenance branch. Without
+# the dispatch trigger it cannot, and the PR is back to having no checks.
+#
+# The WORK scope is deliberately absent: it judges a session's own change against
+# that session's transcript and runs at the Stop hook, not in CI.
+name: Claudinite conformance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  conformance:
+    name: Claudinite world sweep
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      # The engine's always-vendored Node CLI, invoked as the standalone command
+      # — never as a test file a language runner discovers.
+      - name: Claudinite world scope
+        run: node .claudinite/shared/engine/checks/check_the_world.mjs
