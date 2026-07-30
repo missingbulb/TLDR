@@ -11,8 +11,12 @@
 // short, always-on rules the engine injects into every session.
 export default {
   id: 'tldr',
+  ruleRoutingGuidance: {
+    belongs: "TLDR's repo-level lessons — which file is authoritative, which direction a fix goes, release-pipeline gotchas",
+    excludes: 'general software-engineering practice and portable procedure — those live in the vendored Claudinite canon',
+  },
   detect: null,
   marker: null,
   prose: 'RULES.md',
-  rules: [],
+  worldRules: [],
 };
