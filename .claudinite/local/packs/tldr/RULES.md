@@ -59,10 +59,6 @@ pay in real work instead: the growth-extract run (#114) reverted its legitimate 
 closed PR #119 unmerged (~8 min); the discover-packs run (#113) burned two Stop cycles before
 resetting its checkout (~4 min).
 
-Write the class alone — `Comment class: other` — and put any explanation on the **next** line. A
-genuinely mixed comment still names each part it really is, on that one line; the rule is against
-restating the *menu*, not against honest multi-class declarations.
-
 ## Run a task subagent under `isolation: "worktree"`
 
 An `Agent` call without it leaves the parent session's checkout wherever the child left it — on the
