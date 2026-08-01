@@ -85,3 +85,24 @@ Two traps this has already cost time on:
 
 - **Don't read `extension/manifest.json` == `extension/package.json` as "resolved".** That is the pair the release config keeps in sync and the pair the offline suite checks — not the pair `cer/version-sync` compares. Triage has twice called the finding resolved on that basis while the root file was still stale.
 - **Don't guard it by asserting the root version in `extension-test/manifest.test.mjs`.** That suite *is* the release config's `test_command` (`npm --prefix extension test`), and it runs after the bump has moved only the two extension files — the assertion would fail every auto-release. Closing the loop properly means changing what the bump touches, not what the test asserts.
+
+## When converting mandated prose to a check, assert the mandated form — never infer the author's intent
+
+A rule that tells the agent to write something **verbatim** ("write the class alone on its own
+line") is already a form, and the check should anchor the whole artifact against that form. The
+tempting alternative — ask whether the author *meant* the thing the rule forbids — is not
+observable, so it can only be approximated by a heuristic, and the heuristic is where the hole goes.
+
+The worked example is `tldr/comment-class-menu`. Its first draft (PR #162, opened 2026-07-31)
+fired only on a class token appearing *after* a negation word from a hand-picked list (`not`,
+`never`, `besides`, …). Probed against the classifier's real `classesIn()` helper, it was **silent**
+on three lines that all really do declare a stray class — including `Comment class: correction |
+feature | process-change | other`, the menu pasted verbatim out of the classifier's own prompt, and
+the likeliest way anyone reproduces the bug the check is *named for*. Rewritten to anchor the line
+against the conforming form (`^<class>(, <class>)*\.?$`), all three fire and the fixture
+mutation-proves in both directions.
+
+So: **when the prose names a literal form, match that form and reject everything else** — one
+anchored regex, no word list to keep current. Reserve intent-inference for rules whose prose really
+is directional. The tell that you have picked the wrong framing: you are assembling a list of words
+that "signal" what the author had in mind.
