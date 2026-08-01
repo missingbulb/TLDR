@@ -1,4 +1,5 @@
 import commentClassMenu from './comment-class-menu.mjs';
+import releaseSuiteRootVersion from './release-suite-root-version.mjs';
 
 // TLDR's own pack — the repo-level lessons that aren't a canon rule and have no
 // home in the mounted canon. Most are prose because their deterministic half is
@@ -20,6 +21,6 @@ export default {
   detect: null,
   marker: null,
   prose: 'RULES.md',
-  worldRules: [],
+  worldRules: [releaseSuiteRootVersion],
   workRules: [commentClassMenu],
 };
