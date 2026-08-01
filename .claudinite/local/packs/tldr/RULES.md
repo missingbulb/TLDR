@@ -81,10 +81,9 @@ So the root version diverges again after every daily patch bump, and the nightly
 
 **Resolve it by aligning the root `package.json` up to the manifest.** Never edit the manifest down to match, and never increment past the shipped version — a drift correction is not a release bump.
 
-Two traps this has already cost time on:
+A trap this has already cost time on:
 
 - **Don't read `extension/manifest.json` == `extension/package.json` as "resolved".** That is the pair the release config keeps in sync and the pair the offline suite checks — not the pair `cer/version-sync` compares. Triage has twice called the finding resolved on that basis while the root file was still stale.
-- **Don't guard it by asserting the root version in `extension-test/manifest.test.mjs`.** That suite *is* the release config's `test_command` (`npm --prefix extension test`), and it runs after the bump has moved only the two extension files — the assertion would fail every auto-release. Closing the loop properly means changing what the bump touches, not what the test asserts.
 
 ## When a rule mandates a form, the check asserts that form — never the intent behind it
 
@@ -129,12 +128,13 @@ No npm script globs `.claudinite/local/packs/**`. Root `npm test` covers `shared
 `dev/build/tools/test/`; the three sub-suites `test:all` chains cover `extension-test/`,
 `server/test/` and `dev/requirements/`. `claudinite-conformance.yml` runs
 `check_the_world.mjs`, which *loads* every rule module (so a broken import surfaces) but never
-executes a fixture — and never runs a `scope: 'work'` rule at all, which is what this pack's checks
-are.
+executes a fixture — and never runs a `scope: 'work'` rule at all, which is what this pack's
+conversation checks are.
 
 So a green `npm run test:all` says nothing about a rule in here. Run its fixture directly when you
 touch one:
 
 ```
 node --test .claudinite/local/packs/tldr/comment-class-menu.test.mjs
+node --test .claudinite/local/packs/tldr/release-suite-root-version.test.mjs
 ```
