@@ -79,8 +79,6 @@ This repo carries the extension version in **three** files, and only two of them
 
 So the root version diverges again after every daily patch bump, and the nightly alignment sweep re-files it BLOCKING. That is expected drift, not a new bug.
 
-**Resolve it by aligning the root `package.json` up to the manifest.** Never edit the manifest down to match, and never increment past the shipped version — a drift correction is not a release bump.
-
 Two traps this has already cost time on:
 
 - **Don't read `extension/manifest.json` == `extension/package.json` as "resolved".** That is the pair the release config keeps in sync and the pair the offline suite checks — not the pair `cer/version-sync` compares. Triage has twice called the finding resolved on that basis while the root file was still stale.

@@ -1,4 +1,5 @@
 import commentClassMenu from './comment-class-menu.mjs';
+import versionDriftDirection from './version-drift-direction.mjs';
 
 // TLDR's own pack — the repo-level lessons that aren't a canon rule and have no
 // home in the mounted canon. Most are prose because their deterministic half is
@@ -21,5 +22,5 @@ export default {
   marker: null,
   prose: 'RULES.md',
   worldRules: [],
-  workRules: [commentClassMenu],
+  workRules: [commentClassMenu, versionDriftDirection],
 };
