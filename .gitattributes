@@ -4,3 +4,4 @@
 # merge=ours: a conflicting merge auto-resolves to our copy instead of a hand-edit
 #   that would desync it from shared/ (see generated-merge-driver).
 *.GENERATED.mjs linguist-generated merge=ours
+usage.GENERATED.json merge=ours
