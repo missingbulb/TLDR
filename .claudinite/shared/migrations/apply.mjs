@@ -3,6 +3,7 @@
 //   - file aliases  — "prefer Y, fall back to X, and rename X -> Y"
 //   - materialize   — vendor pack templates into the repo's own tree
 //   - rewrite       — repoint refs in place (idempotent literal replacements)
+//   - declarePacks  — declare a pack (and its config) the member does not carry yet
 // Idempotent: a no-op once everything has been applied. Dependency-free.
 //
 // Two roots. The DEST is the repo being healed (CLAUDE_PROJECT_DIR / cwd). The
@@ -13,14 +14,14 @@
 // in the consumer's own .github/). The two coincide in the canon repo.
 //
 // Runs against a local checkout (a session, CI, or a future SessionStart
-// self-heal hook wired via bootstrap). In the fleet the identical writes are
-// performed over the GitHub API by migrations/fleet-apply.mjs (phase 1 of the
-// daily routine); migrations/fleet-retire.mjs then confirms fleet-wide completion
-// (0 repos on the legacy shape, quiet for a cycle) and retires the record (phase 3).
+// self-heal hook wired via bootstrap). Each member migrates ITSELF: baselining
+// runs this applier from the fresh canon clone it fetched, so even a dormant
+// project catches up on every record ever landed — there is no fleet-wide
+// apply pass and no retirement; the records simply accumulate.
 import { existsSync, renameSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { loadMigrations, applyFileAliases, applyMaterializations, applyRewrites } from './registry.mjs';
+import { loadMigrations, applyFileAliases, applyMaterializations, applyRewrites, applyPackDeclarations } from './registry.mjs';
 
 async function main() {
   const repoRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -44,6 +45,7 @@ async function main() {
     applied.push(...(await applyFileAliases(m, { exists, move })));
     applied.push(...(await applyMaterializations(m, { readTemplate, read, write })));
     applied.push(...(await applyRewrites(m, { read, write })));
+    applied.push(...(await applyPackDeclarations(m, { read, write })));
   }
   if (applied.length) console.log(`Applied migrations:\n${applied.map((x) => `  ${x}`).join('\n')}`);
 }
