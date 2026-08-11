@@ -26,7 +26,13 @@
     "spec-driven-product",
     "tidy-repo",
     "grow_with_claudinite",
-    "local/tldr"
+    "local/tldr",
+    {
+      "id": "claude-code-web-users-support",
+      "config": {
+        "repo": "missingbulb/Sheepdog"
+      }
+    }
   ],
   "accept": [
     {
@@ -59,7 +65,7 @@
     "monthlyDay": 1
   },
   "claudinite": {
-    "updated": "2026-08-07T14:46:57.005Z",
-    "ref": "7bf58aa03f3ea4684aa6777cb7c837293f08cd46"
+    "updated": "2026-08-10T00:00:00.000Z",
+    "ref": "8deaaef39a6d9b283d0909ec9d694228735b5402"
   }
 }
