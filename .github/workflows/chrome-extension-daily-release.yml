@@ -138,6 +138,27 @@ jobs:
           manifest_path: ${{ steps.cfg.outputs.manifest_path }}
           package_json_path: ${{ steps.cfg.outputs.package_json_path }}
 
+      # The repo-root package.json is the third version record and is not one of
+      # the release config's bump paths, so the action above leaves it behind.
+      # Align it in the same commit: the sharedConstants entry in
+      # .claudinite-checks.json holds all three identical, and cer/version-sync
+      # compares the manifest against this file by name — without this step both
+      # go BLOCKING after every daily patch bump. Replaces the exact one-line
+      # version token (same discipline as bump.mjs) so the diff stays one line.
+      - name: Align the root package.json to the bumped version
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const token = /"version": "\d+\.\d+\.\d+"/g;
+            const text = fs.readFileSync("package.json", "utf8");
+            const hits = text.match(token) || [];
+            if (hits.length !== 1) {
+              console.error(`expected exactly one version token in the root package.json, found ${hits.length}`);
+              process.exit(1);
+            }
+            fs.writeFileSync("package.json", text.replace(token, `"version": "${process.argv[1]}"`));
+          ' "${{ steps.bump.outputs.version }}"
+
       - name: Push the bump to main
         id: push
         run: |

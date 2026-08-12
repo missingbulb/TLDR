@@ -10,33 +10,16 @@ is rarer still — most green runs never touched the store.
 
 When triaging a publish-leg failure, read the **`daily / publish` job**, not the run conclusion. The
 open example is #93/#94 (run 29229001858): three separate triage passes (07-16, 07-18, 07-26) each
-re-derived that no later run had re-executed the step, and each re-nominated #87's version desync as
-the "suspected root cause, unconfirmed". Two things settle it and are worth not re-deriving a fourth
-time:
+re-derived that no later run had re-executed the step, and each re-nominated whichever repo-side bug
+happened to be open at the time as the "suspected root cause, unconfirmed". Two things settle it and
+are worth not re-deriving a fourth time:
 
 - **`ITEM_NOT_UPDATABLE` is Chrome Web Store-side state** — a prior submission still pending review
   or ready to publish — so **nothing in `main` can be "the fix"**, and no repo-side defect that
-  happened to be open at the time (a version desync, a stale secret) should be credited with it.
+  happened to be open at the time (a stale secret, a half-landed config) should be credited with it.
 - **The only closing evidence is a run that actually reaches `daily / publish` and goes green**, or
   the Chrome Developer Dashboard showing the item out of pending/review. Absent that, the issue stays
   open — resolving the co-occurring repo bug is not the same as verifying the publish path.
-
-## The three version records, and the two the pipeline actually bumps
-
-This repo carries the extension version in **three** files, and only two of them move on their own:
-
-- `extension/manifest.json` — the shipped, user-visible version.
-- `extension/package.json` — kept in lockstep by the daily auto-release, which patch-bumps exactly the two paths named in `.github/release.config` (`manifest_path`, `package_json_path`). `extension-test/manifest.test.mjs` asserts this pair agrees.
-- the **root** `package.json` — nothing automated touches it. But the `cer/version-sync` alignment check reads the repo-root `package.json` by name (not the release-config path) and compares it to the manifest.
-
-So the root version diverges again after every daily patch bump, and the nightly alignment sweep re-files it BLOCKING. That is expected drift, not a new bug.
-
-**Resolve it by aligning the root `package.json` up to the manifest.** Never edit the manifest down to match, and never increment past the shipped version — a drift correction is not a release bump.
-
-Two traps this has already cost time on:
-
-- **Don't read `extension/manifest.json` == `extension/package.json` as "resolved".** That is the pair the release config keeps in sync and the pair the offline suite checks — not the pair `cer/version-sync` compares. Triage has twice called the finding resolved on that basis while the root file was still stale.
-- **Don't guard it by asserting the root version in `extension-test/manifest.test.mjs`.** That suite *is* the release config's `test_command` (`npm --prefix extension test`), and it runs after the bump has moved only the two extension files — the assertion would fail every auto-release. Closing the loop properly means changing what the bump touches, not what the test asserts.
 
 ## When a rule mandates a form, the check asserts that form — never the intent behind it
 
