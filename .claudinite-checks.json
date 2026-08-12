@@ -56,6 +56,18 @@
       "reason": "same orientation pointer — the working-instructions router says the general discipline is auto-injected from the vendored corpus rather than restated here, which is the sentence that stops the doc duplicating canon prose"
     }
   ],
+  "sharedConstants": [
+    {
+      "what": "the extension version, carried in three JSON files that can't share an import: extension/manifest.json is the shipped, user-visible number; extension/package.json is the npm record the release config names as package_json_path; the repo-root package.json is what cer/version-sync reads by name. The daily auto-release bumps all three in one commit (the two release-config paths via .github/actions/bump-extension-patch, the root file via the align step in chrome-extension-daily-release.yml), so any disagreement here means a bump landed in some files but not all",
+      "regex": true,
+      "value": "\"version\": \"\\d+\\.\\d+\\.\\d+\"",
+      "counts": {
+        "extension/manifest.json": 1,
+        "extension/package.json": 1,
+        "package.json": 1
+      }
+    }
+  ],
   "maintenance": {
     "delivery": "auto-merge"
   },
