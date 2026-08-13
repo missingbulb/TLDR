@@ -21,6 +21,22 @@ are worth not re-deriving a fourth time:
   the Chrome Developer Dashboard showing the item out of pending/review. Absent that, the issue stays
   open — resolving the co-occurring repo bug is not the same as verifying the publish path.
 
+## This repo's copy of the daily-release workflow is deliberately not the canon stub
+
+`.github/workflows/chrome-extension-daily-release.yml` is vendored from `chrome-extension-release`,
+and the canon line for a vendored file — *never hand-edit these copies, the template is canon* —
+does **not** hold for this one: since #241 it carries a local step aligning the repo-root
+`package.json`, and `chrome-release-vendoring`'s materialize is an unconditional verbatim overwrite
+with no per-repo exemption seam. `tldr/release-root-version-align` reds if the step goes missing;
+#245 is the open decision on the real fix. So when baselining §2b hands you this path as a withheld
+workflow file, **diff it against the stub and land the union, never the stub**.
+
+Reproducing what preprocessing wanted to write takes the **full canon clone**, not this repo's
+mount: `node .claudinite/shared/engine/migrations/apply.mjs` writes nothing here, because the
+`chrome-release-vendoring` record has aged out of the vendored subset. Clone
+`missingbulb/Claudinite` shallow and run *its* `apply.mjs` with `CLAUDE_PROJECT_DIR` and
+`CLAUDINITE_CAN_WITHHOLD_WORKFLOWS=1` pointed at a worktree of `main`.
+
 ## When a rule mandates a form, the check asserts that form — never the intent behind it
 
 Where the prose says *write it exactly like this* ("the class alone on its own line"), the check's
