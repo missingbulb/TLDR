@@ -5,3 +5,4 @@
 #   that would desync it from shared/ (see generated-merge-driver).
 *.GENERATED.mjs linguist-generated merge=ours
 usage.GENERATED.json merge=ours
+claudinite-rules.GENERATED.md merge=ours
