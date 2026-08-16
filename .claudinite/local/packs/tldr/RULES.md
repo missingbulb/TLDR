@@ -37,43 +37,6 @@ mount: `node .claudinite/shared/engine/migrations/apply.mjs` writes nothing here
 `missingbulb/Claudinite` shallow and run *its* `apply.mjs` with `CLAUDE_PROJECT_DIR` and
 `CLAUDINITE_CAN_WITHHOLD_WORKFLOWS=1` pointed at a worktree of `main`.
 
-## When a rule mandates a form, the check asserts that form — never the intent behind it
-
-Where the prose says *write it exactly like this* ("the class alone on its own line"), the check's
-job is to decide whether the artifact is that form. Inferring what the author meant is unbounded in
-the wrong direction, and this pack has already paid for it: the first draft of
-`comment-class-menu.mjs` (PR #162) fired only on a class token following a negation word from a
-hand-picked list, so it stayed **silent** on
-
-```
-Comment class: other — unrelated to any feature request        (declares feature)
-Comment class: other, setting the feature question to one side (declares feature)
-Comment class: correction | feature | process-change | other   (declares all four)
-```
-
-— the last being the menu pasted verbatim out of the classifier's own prompt, i.e. the likeliest
-way the bug reproduces, missed by the check named for it. The harm came from a class token being
-**present**, and prose smuggles tokens in without negating anything, so no marker list could ever
-close the gap.
-
-The form test needs no word list to keep extending, and a conforming artifact has nowhere to hide a
-violation. Expect it to fire on a line that breaks the form while causing no harm
-(`Comment class: correction — fixed the typo` smuggles nothing) — that is the rule as written doing
-its job. Don't re-add intent-guessing to soften it.
-
-## A finding no edit can retract ships `advisory`
-
-The canon's severity call is "blocking for a defect, advisory only when the rule is directional by
-kind". This repo has a third case: the condition is real and blocking-grade, but by the time it is
-observable it **cannot be undone**. The session transcript is append-only, so a blocking
-`Comment class:` finding could never converge — it would spend the session's Stop cycles on
-something no edit can fix, which is exactly the waste the lesson records. PR #151 shipped it
-blocking and was reverted the same day; PR #162 shipped it advisory and merged.
-
-An advisory finding on an irreversible condition is **diagnostic**: it names the cause the moment it
-appears, so the session doesn't re-derive it from an unexplained downstream failure (here, a
-`feature-requirements-first` BLOCKING nobody can trace to a stray word).
-
 ## Nothing in CI runs this pack's fixtures — invoke them by hand
 
 No npm script globs `.claudinite/local/packs/**`. Root `npm test` covers `shared/test/` and
