@@ -37,6 +37,35 @@ mount: `node .claudinite/shared/engine/migrations/apply.mjs` writes nothing here
 `missingbulb/Claudinite` shallow and run *its* `apply.mjs` with `CLAUDE_PROJECT_DIR` and
 `CLAUDINITE_CAN_WITHHOLD_WORKFLOWS=1` pointed at a worktree of `main`.
 
+## `npm run test:all` chains four sub-suites — never pipe it through `tail`
+
+`test:all` is `npm test && npm --prefix server ci && npm --prefix server test && npm --prefix
+extension test && npm --prefix dev ci && npm --prefix dev test` — six commands, four sub-suites
+(root, `server`, `extension`, `dev/requirements`). Piping the combined output through `tail -N` (to
+keep a huge log readable) throws away two things a verification step needs: the real exit code
+(`$?` becomes `tail`'s own, not `test:all`'s, so a mid-chain failure goes unnoticed) and every
+earlier sub-suite's own pass/fail summary line, which a bounded `tail` truncates off on a long run.
+Two independent runs hit exactly this and paid for it with a full, ~13-15s re-run just to see what
+the first run's own output already contained. Redirect to a file (or `tee`) and check `$?` from that
+same invocation instead:
+
+```
+npm run test:all > /tmp/test-all.log 2>&1
+echo "exit: $?"; grep -E '^# (pass|fail)|failing' /tmp/test-all.log
+```
+
+## `actions_list list_workflow_runs` ignores `per_page` for this repo's busiest workflows
+
+Confirmed directly: `per_page: 3` against `chrome-extension-release.yml` (93 runs) still returns the
+tool's default page of 30 — `per_page` has no effect on this method. Each run object embeds full
+`repository`/`head_repository`/`head_commit` sub-objects (~14KB per run), so 30 of them is ~410KB,
+which blows the MCP result token cap on the **first** call, every time, for this repo's release and
+daily-release workflows. Shrinking `per_page` and retrying wastes a call for nothing — go straight
+to reading the tool's own saved raw-JSON overflow file (the error message names the path) and
+filter it with `python`/`jq`. (A `total_count: 0` for `chrome-extension-daily-release.yml` or
+`chrome-extension-publish-store.yml` is **not** this bug — they're `workflow_call`-only reusable
+workflows with no runs of their own, so that result is correct, not a trap.)
+
 ## Nothing in CI runs this pack's fixtures — invoke them by hand
 
 No npm script globs `.claudinite/local/packs/**`. Root `npm test` covers `shared/test/` and
