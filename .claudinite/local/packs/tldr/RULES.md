@@ -66,6 +66,18 @@ filter it with `python`/`jq`. (A `total_count: 0` for `chrome-extension-daily-re
 `chrome-extension-publish-store.yml` is **not** this bug — they're `workflow_call`-only reusable
 workflows with no runs of their own, so that result is correct, not a trap.)
 
+## Parallel background agents reading conversation logs need their own scratch filename
+
+`growth-extract`'s conversation half can dispatch several background subagents at once, one per
+`conversation-logs` file. Subagents share the parent session's scratchpad directory, so if each is
+told (or defaults to) the same generic output path — `.../scratchpad/log.jsonl` — their concurrent
+`git show origin/conversation-logs:<file> > .../scratchpad/log.jsonl` writes collide: one agent's
+write can land mid-read by another, producing a truncated or mixed-content file with no error.
+2026-08-17's growth-extract run (dispatch #271, 9 parallel readers) hit exactly this and had to
+detect it (line-count/md5 mismatches) and recover with a fresh unique filename per agent. Give each
+subagent's dump a name that can't collide — the log's own filename, or the subagent's own session id
+— never the bare `log.jsonl` default.
+
 ## Nothing in CI runs this pack's fixtures — invoke them by hand
 
 No npm script globs `.claudinite/local/packs/**`. Root `npm test` covers `shared/test/` and
