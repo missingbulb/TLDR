@@ -93,3 +93,17 @@ touch one:
 ```
 node --test .claudinite/local/packs/tldr/comment-class-menu.test.mjs
 ```
+
+## A pack carries how we work — never what the product does
+
+`growth-discover-packs`'s #113 run authored a `tldr-categories` local pack whose checks asserted
+the category taxonomy's presentation-lockstep contract — every id in `shared/categories.mjs`
+carrying its design descriptor, scoped stylesheet, registry entry and `sidepanel.html` link. That
+is a statement about what the product *does*, not about how we work here: its home is the
+executable spec (`dev/requirements/`) and the extension's own suite, not a pack — encoding it as
+a pack rule splits one feature's definition across two systems and lands it where no test of the
+product ever reads. #121 (the pack) was closed unmerged over this; #123 landed the correction as
+this same rule. #220's growth-dedup later pruned it, on the claim that "the canon now carries
+it" — that claim doesn't hold (the canon has no rule on this distinction), so the prune was a
+mistake and this restores it. The `categories.mjs` presentation-lockstep gap `tldr-categories`
+was reaching for is real and still unaddressed in `dev/requirements/`.
