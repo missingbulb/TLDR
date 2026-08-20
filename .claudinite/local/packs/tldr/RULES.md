@@ -78,6 +78,20 @@ detect it (line-count/md5 mismatches) and recover with a fresh unique filename p
 subagent's dump a name that can't collide — the log's own filename, or the subagent's own session id
 — never the bare `log.jsonl` default.
 
+## Don't re-derive what a dispatched analysis subagent is already doing
+
+`growth-extract`'s conversation half dispatches one background subagent per captured log and is
+meant to wait for its report (`ScheduleWakeup` fallback + task-notification), per the existing
+scratch-filename rule above. The 2026-08-19 run (dispatch #305) dispatched two such subagents,
+said explicitly it would wait for them, then — before either reported back — spent several
+minutes itself re-parsing the same issue-113 transcript into a scratch digest and
+grepping it for the same candidate phrases the subagent was already tasked to find. Both subagents
+finished shortly after with equivalent findings, making that manual pass pure duplicate work: the
+whole analysis got done twice, once delegated and once redone inline while "waiting". Once an
+analysis subagent is dispatched for a file, wait for its report rather than re-reading that same
+file directly; do targeted verification only against the subagent's specific claims once it
+reports (as this same run correctly did afterward, confirming candidate 1 against the live repo).
+
 ## Nothing in CI runs this pack's fixtures — invoke them by hand
 
 No npm script globs `.claudinite/local/packs/**`. Root `npm test` covers `shared/test/` and
