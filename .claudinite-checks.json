@@ -19,13 +19,12 @@
       }
     },
     "chrome-extension",
-    "chrome-extension-release",
     "executable-requirements",
-    "github-actions",
+    "git-github",
     "node",
     "spec-driven-product",
     "tidy-repo",
-    "grow_with_claudinite",
+    "claudinite-growth",
     "local/tldr",
     {
       "id": "claude-code-web-users-support",
@@ -33,7 +32,7 @@
         "repo": "missingbulb/Shepherd"
       }
     },
-    "core"
+    "claudinite-lifecycle"
   ],
   "accept": [
     {
@@ -87,7 +86,7 @@
   "claudinite": {
     "updated": "2026-08-12T23:02:53.209Z",
     "ref": "631a067f5a0413e154a0d4c1a66275f18b255af9",
-    "engineVersion": 4,
+    "engineVersion": 6,
     "packVersions": {
       "basics": 5,
       "barriers": 2,
