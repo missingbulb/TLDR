@@ -21,15 +21,29 @@ are worth not re-deriving a fourth time:
   the Chrome Developer Dashboard showing the item out of pending/review. Absent that, the issue stays
   open — resolving the co-occurring repo bug is not the same as verifying the publish path.
 
-## This repo's copy of the daily-release workflow is deliberately not the canon stub
+## This repo's copy of the bump-version workflow is deliberately not the canon stub
 
-`.github/workflows/chrome-extension-daily-release.yml` is vendored from `chrome-extension-release`,
-and the canon line for a vendored file — *never hand-edit these copies, the template is canon* —
-does **not** hold for this one: since #241 it carries a local step aligning the repo-root
-`package.json`, and `chrome-release-vendoring`'s materialize is an unconditional verbatim overwrite
-with no per-repo exemption seam. `tldr/release-root-version-align` reds if the step goes missing;
-#245 is the open decision on the real fix. So when baselining §2b hands you this path as a withheld
-workflow file, **diff it against the stub and land the union, never the stub**.
+The canon line for a vendored file — *never hand-edit these copies, the template is canon* —
+does **not** hold for whichever workflow carries the repo's one local delta: a step that aligns
+the repo-root `package.json` to a version the pipeline just bumped, load-bearing since the
+release config only bumps `manifest_path` and `package_json_path`. `chrome-release-vendoring`'s
+materialize is an unconditional verbatim overwrite with no per-repo exemption seam, so the step
+is fragile in a specific, repeating way; `tldr/release-root-version-align` reds if it goes
+missing. #245 is the open decision on the real fix.
+
+The chrome-extension pack's 2026-08-21 release-model overhaul (engine 4 → 60820.1 line, pack 2 →
+60821.1) moved the delta: `.github/workflows/chrome-extension-daily-release.yml` no longer bumps
+anything — a PR touching a shipped file now raises the patch itself (`cer/version-bumped`), with
+`cer/version-sync` catching a forgotten root file since a human is in that loop. The only
+remaining automated, unattended version-write is the deliberate minor/major dispatch,
+`.github/workflows/chrome-extension-bump-version.yml` — **that** is now the file carrying the
+align step and the one `tldr/release-root-version-align` watches.
+`chrome-extension-daily-release.yml` is back to a pure, un-diverged stub copy.
+
+So when baselining §2b hands you a withheld workflow file, check which one carries the align step
+**now** (`tldr/release-root-version-align`'s own `WORKFLOW` constant is the source of truth) —
+**diff that one against its stub and land the union, never the stub; every other withheld file is
+a plain copy.**
 
 Reproducing what preprocessing wanted to write takes the **full canon clone**, not this repo's
 mount: `node .claudinite/shared/engine/migrations/apply.mjs` writes nothing here, because the

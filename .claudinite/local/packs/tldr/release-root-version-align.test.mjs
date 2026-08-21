@@ -18,8 +18,8 @@ import { fileURLToPath } from 'node:url';
 import rule from './release-root-version-align.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
-const WORKFLOW = '.github/workflows/chrome-extension-daily-release.yml';
-const STUB = '.claudinite/shared/packs/chrome-extension-release/stubs/workflows/chrome-extension-daily-release.yml';
+const WORKFLOW = '.github/workflows/chrome-extension-bump-version.yml';
+const STUB = '.claudinite/shared/packs/chrome-extension/stubs/workflows/chrome-extension-bump-version.yml';
 
 // A minimal world context: the rule reads exactly one path.
 const ctxServing = (text) => ({ read: (path) => (path === WORKFLOW ? text : null) });
