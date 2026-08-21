@@ -1,9 +1,9 @@
 {
   "version": 3,
-  "generated": "2026-08-21T21:00:55.506Z",
+  "generated": "2026-08-21T23:01:13.341Z",
   "foldedThrough": "2026-08-20",
-  "runsFoldedThrough": "2026-08-21T21:00:02Z",
-  "queueFoldedThrough": "2026-08-21T20:12:43Z",
+  "runsFoldedThrough": "2026-08-21T23:00:18Z",
+  "queueFoldedThrough": "2026-08-21T21:01:25Z",
   "fields": {
     "day": ["captures","merges","sessions","userMessages","userCommands","ruleTokens","ruleTokenSessions","tokensIn","tokensOut","tokenSessions","commits","linesAdded","linesRemoved","releases"],
     "week": ["days","captures","merges","sessionDays","userMessages","userCommands","ruleTokens","ruleTokenSessions","tokensIn","tokensOut","tokenSessions","commits","linesAdded","linesRemoved","releases"],
@@ -35,7 +35,8 @@
     "2026-08-21T18": {"totals":[2,1,1,0],"taskExec":{"claudinite-lifecycle/update":[1,0,0,0]}},
     "2026-08-21T19": {"totals":[2,2,0,0]},
     "2026-08-21T20": {"totals":[1,1,0,0]},
-    "2026-08-21T21": {"totals":[1,0,0,0]}
+    "2026-08-21T21": {"totals":[2,2,0,0]},
+    "2026-08-21T23": {"totals":[1,0,0,0]}
   },
   "days": {
     "2026-07-23": {"totals":[0,0,0,0,0,0,0,null,null,null,null,null,null,0]},
@@ -67,7 +68,7 @@
     "2026-08-18": {"totals":[0,0,0,0,0,0,0,null,null,null,null,null,null,0],"queue":{"basics/task-janitor":[1,0,0,0],"chrome-extension/store-release":[1,0,0,0],"claudinite-growth/growth-extract":[1,0,0,0],"claudinite-growth/usage-fold":[1,0,0,0],"claudinite-lifecycle/update":[2,0,0,0]}},
     "2026-08-19": {"totals":[1,1,1,0,0,14000,1,37019001,88106,1,null,null,null,0],"checks":{"world":[2,0,0,0,82,0,0]},"checkFindings":{"file-placement":[0,4],"rules-line-length":[0,1]},"taskExec":{"grow_with_claudinite/growth-extract":[1,0,0,0]},"queue":{"basics/task-janitor":[1,0,0,0],"chrome-extension/store-release":[1,0,0,0],"claudinite-growth/growth-extract":[1,0,0,0],"claudinite-growth/usage-fold":[1,0,0,0],"claudinite-lifecycle/update":[1,0,0,0]}},
     "2026-08-20": {"totals":[2,2,2,3,0,28000,2,41598889,155451,2,null,null,null,0],"checks":{"work":[3,1,0,1,0,0,0],"world":[2,0,0,0,41,0,0]},"checkFindings":{"comment-classification":[1,0],"rules-line-length":[0,1]},"taskExec":{"grow_with_claudinite/growth-extract":[1,0,0,0]},"queue":{"basics/task-janitor":[1,0,0,0],"chrome-extension/store-release":[1,0,0,0],"claudinite-growth/growth-extract":[1,0,0,0],"claudinite-growth/usage-fold":[1,0,0,0]}},
-    "2026-08-21": {"totals":[2,2,2,0,0,28000,2,57896719,186312,2,1,48753,0,0],"skillLoads":{"extract-from-activity":1,"extract-from-conversations":1},"checks":{"work":[3,3,0,3,0,0,0],"world":[4,2,0,3,164,0,0]},"checkFindings":{"feature-requirements-first":[3,0],"file-placement":[0,15],"rules-line-length":[0,1]},"taskExec":{"claudinite-lifecycle/update":[1,0,0,0],"grow_with_claudinite/growth-extract":[1,0,0,0]},"queue":{"basics/task-janitor":[1,0,0,0],"chrome-extension/store-release":[1,0,0,0],"claudinite-growth/growth-extract":[0,0,0,1],"claudinite-growth/logs-prune":[0,0,1,0],"claudinite-growth/usage-fold":[2,0,0,0],"claudinite-lifecycle/update":[1,0,0,0]}}
+    "2026-08-21": {"totals":[2,2,2,0,0,28000,2,57896719,186312,2,1,48754,0,0],"skillLoads":{"extract-from-activity":1,"extract-from-conversations":1},"checks":{"work":[3,3,0,3,0,0,0],"world":[4,2,0,3,164,0,0]},"checkFindings":{"feature-requirements-first":[3,0],"file-placement":[0,15],"rules-line-length":[0,1]},"taskExec":{"claudinite-lifecycle/update":[1,0,0,0],"grow_with_claudinite/growth-extract":[1,0,0,0]},"queue":{"basics/task-janitor":[1,0,0,0],"chrome-extension/store-release":[1,0,0,0],"claudinite-growth/growth-extract":[0,0,0,1],"claudinite-growth/logs-prune":[0,0,1,0],"claudinite-growth/usage-fold":[3,0,0,0],"claudinite-lifecycle/update":[1,0,0,0]}}
   },
   "weeks": {
     "2026-W30": {"totals":[1,2,2,2,3,1,null,null,null,null,null,null,null,null,null],"checks":{"work":[6,5,0,5,0,0,0],"world":[6,3,0,6,120,0,0]},"checkFindings":{"claudinite-isolation":[4,0],"comment-classification":[2,0],"feature-requirements-first":[3,0],"file-placement":[0,14]}},
