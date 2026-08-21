@@ -16,7 +16,7 @@ description: >-
   and an action step adds no level. Platform-agnostic by design — any publish
   standard's workflows (Chrome extension or otherwise) report through it.
 
-  Vendored into the extension repo by the chrome-extension-release pack, so a
+  Vendored into the extension repo by the chrome-extension pack, so a
   caller references it by the local path:
 
     report-failure:
