@@ -19,13 +19,12 @@
       }
     },
     "chrome-extension",
-    "chrome-extension-release",
     "executable-requirements",
-    "github-actions",
+    "git-github",
     "node",
     "spec-driven-product",
     "tidy-repo",
-    "grow_with_claudinite",
+    "claudinite-growth",
     "local/tldr",
     {
       "id": "claude-code-web-users-support",
@@ -33,7 +32,7 @@
         "repo": "missingbulb/Shepherd"
       }
     },
-    "core"
+    "claudinite-lifecycle"
   ],
   "accept": [
     {
@@ -87,21 +86,19 @@
   "claudinite": {
     "updated": "2026-08-12T23:02:53.209Z",
     "ref": "631a067f5a0413e154a0d4c1a66275f18b255af9",
-    "engineVersion": 4,
+    "engineVersion": "60820.1",
     "packVersions": {
-      "basics": 5,
-      "barriers": 2,
-      "git-github": 3,
-      "chrome-extension": 2,
-      "chrome-extension-release": 3,
-      "executable-requirements": 2,
-      "github-actions": 3,
-      "node": 2,
-      "spec-driven-product": 2,
-      "tidy-repo": 4,
-      "grow_with_claudinite": 6,
-      "claude-code-web-users-support": 2,
-      "core": 6
+      "basics": "60821.4",
+      "barriers": "60820.1",
+      "git-github": "60821.1",
+      "chrome-extension": "60821.1",
+      "executable-requirements": "60820.1",
+      "node": "60820.1",
+      "spec-driven-product": "60820.1",
+      "tidy-repo": "60820.1",
+      "claudinite-growth": "60821.2",
+      "claude-code-web-users-support": "60821.2",
+      "claudinite-lifecycle": "60821.3"
     }
   }
 }
