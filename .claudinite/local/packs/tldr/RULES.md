@@ -2,11 +2,12 @@
 
 ## A green release run is not evidence the store publish works
 
-The daily auto-release short-circuits at `daily / check` when nothing under the release config's
-`ship_paths` changed since the last release tag, so `Release to Chrome Store` concludes **success**
-with the `daily / publish` job skipped entirely. Since the scheduler cutover (#107) the daily leg
-runs only when the Claudinite scheduler dispatches this workflow in `mode: daily`, so a real publish
-is rarer still — most green runs never touched the store.
+The daily auto-release short-circuits at `daily / check` when the version currently on `main`
+already has a matching GitHub Release or git tag — nothing new to ship, not a diff against
+`ship_paths` — so `Release to Chrome Store` concludes **success** with the `daily / publish` job
+skipped entirely. Since the scheduler cutover (#107) the daily leg runs only when the Claudinite
+scheduler dispatches this workflow in `mode: daily`, so a real publish is rarer still — most green
+runs never touched the store.
 
 When triaging a publish-leg failure, read the **`daily / publish` job**, not the run conclusion. The
 open example is #93/#94 (run 29229001858): three separate triage passes (07-16, 07-18, 07-26) each
