@@ -51,17 +51,11 @@ mount: `node .claudinite/shared/engine/migrations/apply.mjs` writes nothing here
 `missingbulb/Claudinite` shallow and run *its* `apply.mjs` with `CLAUDE_PROJECT_DIR` and
 `CLAUDINITE_CAN_WITHHOLD_WORKFLOWS=1` pointed at a worktree of `main`.
 
-## `npm run test:all` chains four sub-suites — never pipe it through `tail`
+## `npm run test:all` chains four sub-suites
 
 `test:all` is `npm test && npm --prefix server ci && npm --prefix server test && npm --prefix
 extension test && npm --prefix dev ci && npm --prefix dev test` — six commands, four sub-suites
-(root, `server`, `extension`, `dev/requirements`). Piping the combined output through `tail -N` (to
-keep a huge log readable) throws away two things a verification step needs: the real exit code
-(`$?` becomes `tail`'s own, not `test:all`'s, so a mid-chain failure goes unnoticed) and every
-earlier sub-suite's own pass/fail summary line, which a bounded `tail` truncates off on a long run.
-Two independent runs hit exactly this and paid for it with a full, ~13-15s re-run just to see what
-the first run's own output already contained. Redirect to a file (or `tee`) and check `$?` from that
-same invocation instead:
+(root, `server`, `extension`, `dev/requirements`):
 
 ```
 npm run test:all > /tmp/test-all.log 2>&1
