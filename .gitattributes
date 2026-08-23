@@ -6,3 +6,4 @@
 *.GENERATED.mjs linguist-generated merge=ours
 usage.GENERATED.json merge=ours
 claudinite-rules.GENERATED.md merge=ours
+.claudinite/shared/** linguist-vendored
