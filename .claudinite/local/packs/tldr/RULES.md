@@ -64,13 +64,15 @@ echo "exit: $?"; grep -E '^# (pass|fail)|failing' /tmp/test-all.log
 
 ## `actions_list list_workflow_runs` ignores `per_page` for this repo's busiest workflows
 
-Confirmed directly: `per_page: 3` against `chrome-extension-release.yml` (93 runs) still returns the
-tool's default page of 30 — `per_page` has no effect on this method. Each run object embeds full
-`repository`/`head_repository`/`head_commit` sub-objects (~14KB per run), so 30 of them is ~410KB,
-which blows the MCP result token cap on the **first** call, every time, for this repo's release and
-daily-release workflows. Shrinking `per_page` and retrying wastes a call for nothing — go straight
-to reading the tool's own saved raw-JSON overflow file (the error message names the path) and
-filter it with `python`/`jq`. (A `total_count: 0` for `chrome-extension-daily-release.yml` or
+Confirmed directly: `per_page: 3` against `chrome-extension-release.yml` still returns the tool's
+default page of 30 — `per_page` has no effect on this method. Run objects no longer carry full
+`repository`/`head_repository` sub-objects — only a slim `head_commit` (just the commit message)
+survives — so a single run runs closer to 2.5KB than the 14KB once assumed; but 30 of them still
+lands around 75KB of JSON, which still blows the MCP result token cap on the **first** call, every
+time, for this repo's release and daily-release workflows. Shrinking `per_page` and retrying wastes
+a call for nothing — go straight to reading the tool's own saved raw-JSON overflow file (the error
+message names the path) and filter it with `python`/`jq`. (A `total_count: 0` for
+`chrome-extension-daily-release.yml` or
 `chrome-extension-publish-store.yml` is **not** this bug — they're `workflow_call`-only reusable
 workflows with no runs of their own, so that result is correct, not a trap.)
 
