@@ -102,6 +102,18 @@ touch one:
 node --test .claudinite/local/packs/tldr/comment-class-menu.test.mjs
 ```
 
+## `issue_read`'s `get_labels` (and its other `get_*` methods) reject a PR number
+
+`mcp__github__issue_read` resolves only true issues and errors "Could not resolve to an Issue with
+the number of N" when N is actually a PR — resolve a PR's labels or metadata via
+`mcp__github__pull_request_read` (or `search_pull_requests`) instead.
+
+## Grep this repo's local-pack `RULES.md` before reverse-engineering from engine source
+
+This file is injected wholesale into every session's context via `CLAUDE.md`, so a repo-specific
+mechanism (a withheld workflow, a pagination quirk) is often already documented here — grep it for
+the phenomenon's keywords before tracing engine source to rediscover what's already in front of you.
+
 ## A pack carries how we work — never what the product does
 
 `growth-discover-packs`'s #113 run authored a `tldr-categories` local pack whose checks asserted
