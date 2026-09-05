@@ -2,33 +2,31 @@
   "packs": [
     {
       "id": "basics",
-      "version": "60903.5"
-    },
-    {
-      "id": "barriers",
-      "version": "60823.1",
+      "version": "60904.3",
       "config": {
-        "rules": [
-          {
-            "between": [
-              "server",
-              "extension"
-            ],
-            "allow": [
-              "shared"
-            ],
-            "reason": "the extension and its server integrate only through shared/ (the vendored single-source of categories/normalizeUrl) and the HTTP contract — never by referencing each other's code"
-          }
-        ]
+        "barriers": {
+          "rules": [
+            {
+              "between": [
+                "server",
+                "extension"
+              ],
+              "allow": [
+                "shared"
+              ],
+              "reason": "the extension and its server integrate only through shared/ (the vendored single-source of categories/normalizeUrl) and the HTTP contract — never by referencing each other's code"
+            }
+          ]
+        }
       }
     },
     {
       "id": "chrome-extension",
-      "version": "60903.5"
+      "version": "60903.6"
     },
     {
       "id": "executable-requirements",
-      "version": "60902.1"
+      "version": "60903.1"
     },
     {
       "id": "git-github",
@@ -36,11 +34,11 @@
     },
     {
       "id": "node",
-      "version": "60902.1"
+      "version": "60903.1"
     },
     {
       "id": "spec-driven-product",
-      "version": "60902.1"
+      "version": "60903.1"
     },
     {
       "id": "tidy-repo",
@@ -48,7 +46,7 @@
     },
     {
       "id": "claudinite-growth",
-      "version": "60903.5"
+      "version": "60904.4"
     },
     "local/tldr",
     {
@@ -60,11 +58,11 @@
     },
     {
       "id": "claudinite-lifecycle",
-      "version": "60903.5"
+      "version": "60904.1"
     },
     {
       "id": "claudinite-tasks",
-      "version": "60903.4"
+      "version": "60904.2"
     }
   ],
   "accept": [
