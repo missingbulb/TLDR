@@ -54,17 +54,17 @@ npm run test:all > /tmp/test-all.log 2>&1
 echo "exit: $?"; grep -E '^# (pass|fail)|failing' /tmp/test-all.log
 ```
 
-## `actions_list list_workflow_runs` ignores `per_page` for this repo's busiest workflows
+## `actions_list list_workflow_runs` needs an explicit `perPage` for this repo's busiest workflows
 
-Confirmed directly: `per_page: 3` against `chrome-extension-release.yml` (93 runs) still returns the
-tool's default page of 30 — `per_page` has no effect on this method. Each run object embeds full
-`repository`/`head_repository`/`head_commit` sub-objects (~14KB per run), so 30 of them is ~410KB,
-which blows the MCP result token cap on the **first** call, every time, for this repo's release and
-daily-release workflows. Shrinking `per_page` and retrying wastes a call for nothing — go straight
-to reading the tool's own saved raw-JSON overflow file (the error message names the path) and
-filter it with `python`/`jq`. (A `total_count: 0` for `chrome-extension-daily-release.yml` or
-`chrome-extension-publish-store.yml` is **not** this bug — they're `workflow_call`-only reusable
-workflows with no runs of their own, so that result is correct, not a trap.)
+Confirmed directly: called with no `perPage` against `chrome-extension-release.yml` (118 runs), the
+tool's default page still blows the MCP result token cap on the **first** call, every time, for this
+repo's release and daily-release workflows — each run object embeds full
+`repository`/`head_repository`/`head_commit` sub-objects (~14KB per run). But `perPage` **is honored**:
+passing `perPage: 3` returns exactly 3 runs, not the default page. Pass a small `perPage` up front
+rather than calling without one and falling back to the tool's saved raw-JSON overflow file. (A
+`total_count: 0` for `chrome-extension-daily-release.yml` or `chrome-extension-publish-store.yml` is
+**not** this bug — they're `workflow_call`-only reusable workflows with no runs of their own, so that
+result is correct, not a trap.)
 
 ## Parallel background agents reading conversation logs need their own scratch filename
 
