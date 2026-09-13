@@ -2,11 +2,13 @@
 
 ## A green release run is not evidence the store publish works
 
-The daily auto-release short-circuits at `daily / check` when nothing under the release config's
-`ship_paths` changed since the last release tag, so `Release to Chrome Store` concludes **success**
-with the `daily / publish` job skipped entirely, and the daily leg only runs when the Claudinite
-scheduler dispatches this workflow in `mode: daily` — so a real publish is rarer still, and most
-green runs never touched the store.
+The daily auto-release's `daily / check` job gates on whether the version currently on `main` has
+already been released — not, since the 2026-08-21 release-model overhaul, on whether anything
+under `ship_paths` changed since the last tag (that key now only feeds `cer/version-bumped`'s
+PR-time check) — so `Release to Chrome Store` concludes **success** with the `release` and
+`daily / publish` jobs skipped entirely when nothing new is due, and the daily leg only runs when
+the Claudinite scheduler dispatches this workflow in `mode: daily` — so a real publish is rarer
+still, and most green runs never touched the store.
 
 When triaging a publish-leg failure, read the **`daily / publish` job**, not the run conclusion. (1)
 
@@ -54,17 +56,15 @@ npm run test:all > /tmp/test-all.log 2>&1
 echo "exit: $?"; grep -E '^# (pass|fail)|failing' /tmp/test-all.log
 ```
 
-## `actions_list list_workflow_runs` ignores `per_page` for this repo's busiest workflows
+## `actions_list list_workflow_runs` now honors `per_page` for this repo's busiest workflows
 
-Confirmed directly: `per_page: 3` against `chrome-extension-release.yml` (93 runs) still returns the
-tool's default page of 30 — `per_page` has no effect on this method. Each run object embeds full
-`repository`/`head_repository`/`head_commit` sub-objects (~14KB per run), so 30 of them is ~410KB,
-which blows the MCP result token cap on the **first** call, every time, for this repo's release and
-daily-release workflows. Shrinking `per_page` and retrying wastes a call for nothing — go straight
-to reading the tool's own saved raw-JSON overflow file (the error message names the path) and
-filter it with `python`/`jq`. (A `total_count: 0` for `chrome-extension-daily-release.yml` or
-`chrome-extension-publish-store.yml` is **not** this bug — they're `workflow_call`-only reusable
-workflows with no runs of their own, so that result is correct, not a trap.)
+Reconfirmed directly against `chrome-extension-release.yml` (118 runs): `perPage: 3` and
+`perPage: 5` each returned exactly that many runs, not the tool's former default page of 30 — the
+MCP server has fixed the bug this rule used to route around. Ask for only the runs you actually
+need; there is no longer a reason to over-fetch and filter client-side. (A `total_count: 0` for
+`chrome-extension-daily-release.yml` or `chrome-extension-publish-store.yml` is still **not** a
+bug — they're `workflow_call`-only reusable workflows with no runs of their own, so that result is
+correct, not a trap.)
 
 ## Parallel background agents reading conversation logs need their own scratch filename
 
