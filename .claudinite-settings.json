@@ -2,7 +2,7 @@
   "packs": [
     {
       "id": "basics",
-      "version": "60908.1",
+      "version": "60913.1",
       "config": {
         "barriers": {
           "rules": [
@@ -26,7 +26,7 @@
     },
     {
       "id": "executable-requirements",
-      "version": "60903.1"
+      "version": "60913.1"
     },
     {
       "id": "git-github",
@@ -34,27 +34,27 @@
     },
     {
       "id": "node",
-      "version": "60906.2"
+      "version": "60913.1"
     },
     {
       "id": "spec-driven-product",
-      "version": "60903.1"
+      "version": "60913.1"
     },
     {
       "id": "claudinite-growth",
-      "version": "60913.1"
+      "version": "60913.4"
     },
     "local/tldr",
     {
       "id": "claude-code-web-users-support",
-      "version": "60902.1",
+      "version": "60913.1",
       "config": {
         "repo": "missingbulb/Shepherd"
       }
     },
     {
       "id": "claudinite-lifecycle",
-      "version": "60911.1"
+      "version": "60913.3"
     },
     {
       "id": "claudinite-tasks",
