@@ -56,25 +56,12 @@ echo "exit: $?"; grep -E '^# (pass|fail)|failing' /tmp/test-all.log
 
 ## `actions_list list_workflow_runs` ignores `per_page` for this repo's busiest workflows
 
-Confirmed directly: `per_page: 3` against `chrome-extension-release.yml` (93 runs) still returns the
-tool's default page of 30 — `per_page` has no effect on this method. Each run object embeds full
-`repository`/`head_repository`/`head_commit` sub-objects (~14KB per run), so 30 of them is ~410KB,
-which blows the MCP result token cap on the **first** call, every time, for this repo's release and
-daily-release workflows. Shrinking `per_page` and retrying wastes a call for nothing — go straight
-to reading the tool's own saved raw-JSON overflow file (the error message names the path) and
-filter it with `python`/`jq`. (A `total_count: 0` for `chrome-extension-daily-release.yml` or
-`chrome-extension-publish-store.yml` is **not** this bug — they're `workflow_call`-only reusable
-workflows with no runs of their own, so that result is correct, not a trap.)
-
-## Parallel background agents reading conversation logs need their own scratch filename
-
-`growth-extract`'s conversation half can dispatch several background subagents at once, one per
-`conversation-logs` file. Subagents share the parent session's scratchpad directory, so if each is
-told (or defaults to) the same generic output path — `.../scratchpad/log.jsonl` — their concurrent
-`git show origin/conversation-logs:<file> > .../scratchpad/log.jsonl` writes collide: one agent's
-write can land mid-read by another, producing a truncated or mixed-content file with no error. Give
-each subagent's dump a name that can't collide — the log's own filename, or the subagent's own
-session id — never the bare `log.jsonl` default. (4)
+Each run object embeds full `repository`/`head_repository`/`head_commit` sub-objects
+(~14KB per run), which is why even the default page overruns the MCP result token cap on the
+first call, every time, for `chrome-extension-release.yml` (93 runs) and this repo's other
+release workflows. A `total_count: 0` for `chrome-extension-daily-release.yml` or
+`chrome-extension-publish-store.yml` is **not** the same issue — they're `workflow_call`-only
+reusable workflows with no runs of their own, so that result is correct, not a trap.
 
 ## Nothing in CI runs this pack's fixtures — invoke them by hand
 
@@ -91,12 +78,6 @@ touch one:
 ```
 node --test .claudinite/local/packs/tldr/comment-class-menu.test.mjs
 ```
-
-## `issue_read`'s `get_labels` (and its other `get_*` methods) reject a PR number
-
-`mcp__github__issue_read` resolves only true issues and errors "Could not resolve to an Issue with
-the number of N" when N is actually a PR — resolve a PR's labels or metadata via
-`mcp__github__pull_request_read` (or `search_pull_requests`) instead.
 
 ## Grep this repo's local-pack `RULES.md` before reverse-engineering from engine source
 
