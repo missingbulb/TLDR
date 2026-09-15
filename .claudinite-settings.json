@@ -2,7 +2,7 @@
   "packs": [
     {
       "id": "basics",
-      "version": "60913.3",
+      "version": "60915.4",
       "config": {
         "barriers": {
           "rules": [
@@ -30,7 +30,7 @@
     },
     {
       "id": "git-github",
-      "version": "60913.1"
+      "version": "60915.2"
     },
     {
       "id": "node",
@@ -42,7 +42,7 @@
     },
     {
       "id": "claudinite-growth",
-      "version": "60914.1"
+      "version": "60915.4"
     },
     "local/tldr",
     {
@@ -54,11 +54,11 @@
     },
     {
       "id": "claudinite-lifecycle",
-      "version": "60914.1"
+      "version": "60915.2"
     },
     {
       "id": "claudinite-tasks",
-      "version": "60915.1"
+      "version": "60915.8"
     }
   ],
   "accept": [
