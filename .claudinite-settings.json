@@ -2,7 +2,7 @@
   "packs": [
     {
       "id": "basics",
-      "version": "60915.4",
+      "version": "60915.8",
       "config": {
         "barriers": {
           "rules": [
@@ -34,7 +34,7 @@
     },
     {
       "id": "node",
-      "version": "60913.3"
+      "version": "60915.1"
     },
     {
       "id": "spec-driven-product",
@@ -42,7 +42,7 @@
     },
     {
       "id": "claudinite-growth",
-      "version": "60915.4"
+      "version": "60915.5"
     },
     "local/tldr",
     {
@@ -54,11 +54,11 @@
     },
     {
       "id": "claudinite-lifecycle",
-      "version": "60915.2"
+      "version": "60915.4"
     },
     {
       "id": "claudinite-tasks",
-      "version": "60915.8"
+      "version": "60915.11"
     }
   ],
   "accept": [
