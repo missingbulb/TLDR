@@ -18,9 +18,6 @@ mounted canon) for the convention this file serves.
   with `cer/version-sync` catching a forgotten root file since a human is in that loop. Reaffirm by
   checking `tldr/release-root-version-align`'s `WORKFLOW` constant still names
   `chrome-extension-bump-version.yml`.
-- **(RULES-4)** 2026-08-17's `growth-extract` run (dispatch #271, 9 parallel readers) hit the
-  collision directly and had to detect it via line-count/md5 mismatches, then recover with a fresh
-  unique filename per agent.
 - **(RULES-5)** `growth-discover-packs`'s #113 run authored the `tldr-categories` local pack
   encoding this contract as a pack rule; #121 (the pack) was closed unmerged over this, #123 landed
   the correction as this same rule, and #220's `growth-dedup` later pruned it on the mistaken claim
