@@ -93,6 +93,14 @@
         "extension/package.json": 1,
         "package.json": 1
       }
+    },
+    {
+      "what": "the root package.json test:all script's exact command, restated in tldr/RULES.md so a session can see which four sub-suites it chains without re-deriving it from package.json — a JSON script value and Markdown prose can't share an import, so an edit to the script (a sub-suite added, dropped or reordered) silently goes stale in the docs unless the two are held byte-identical",
+      "value": "npm test && npm --prefix server ci && npm --prefix server test && npm --prefix extension test && npm --prefix dev ci && npm --prefix dev test",
+      "counts": {
+        "package.json": 1,
+        ".claudinite/local/packs/tldr/RULES.md": 1
+      }
     }
   ],
   "taskScheduler": {

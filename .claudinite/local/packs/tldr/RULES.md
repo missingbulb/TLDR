@@ -45,9 +45,10 @@ mount: `node .claudinite/shared/engine/migrations/apply.mjs` writes nothing here
 
 ## `npm run test:all` chains four sub-suites
 
-`test:all` is `npm test && npm --prefix server ci && npm --prefix server test && npm --prefix
-extension test && npm --prefix dev ci && npm --prefix dev test` — six commands, four sub-suites
-(root, `server`, `extension`, `dev/requirements`):
+`test:all` is `npm test && npm --prefix server ci && npm --prefix server test && npm --prefix extension test && npm --prefix dev ci && npm --prefix dev test`.
+
+Six commands, four sub-suites (root, `server`, `extension`, `dev/requirements`) — a
+`shared-constants` entry keeps this byte-identical with `package.json`'s script. Run:
 
 ```
 npm run test:all > /tmp/test-all.log 2>&1
