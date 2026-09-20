@@ -2,11 +2,11 @@
 
 ## A green release run is not evidence the store publish works
 
-The daily auto-release short-circuits at `daily / check` when nothing under the release config's
-`ship_paths` changed since the last release tag, so `Release to Chrome Store` concludes **success**
-with the `daily / publish` job skipped entirely, and the daily leg only runs when the Claudinite
-scheduler dispatches this workflow in `mode: daily` — so a real publish is rarer still, and most
-green runs never touched the store.
+The daily auto-release short-circuits at `daily / check` when the version currently in the
+manifest already has a release/tag (`v$version` already exists), so `Release to Chrome Store`
+concludes **success** with the `daily / publish` job skipped entirely, and the daily leg only runs
+when the Claudinite scheduler dispatches this workflow in `mode: daily` — so a real publish is
+rarer still, and most green runs never touched the store.
 
 When triaging a publish-leg failure, read the **`daily / publish` job**, not the run conclusion. (1)
 
@@ -54,14 +54,14 @@ npm run test:all > /tmp/test-all.log 2>&1
 echo "exit: $?"; grep -E '^# (pass|fail)|failing' /tmp/test-all.log
 ```
 
-## `actions_list list_workflow_runs` ignores `per_page` for this repo's busiest workflows
+## `actions_list list_workflow_runs`'s default page overruns the token cap for the busiest workflows
 
-Each run object embeds full `repository`/`head_repository`/`head_commit` sub-objects
-(~14KB per run), which is why even the default page overruns the MCP result token cap on the
-first call, every time, for `chrome-extension-release.yml` (93 runs) and this repo's other
-release workflows. A `total_count: 0` for `chrome-extension-daily-release.yml` or
-`chrome-extension-publish-store.yml` is **not** the same issue — they're `workflow_call`-only
-reusable workflows with no runs of their own, so that result is correct, not a trap.
+The default 30-run page (each run ~2.7KB, no `repository`/`head_repository` sub-object) overruns
+the MCP result token cap for `chrome-extension-release.yml` (125+ runs) and this repo's other
+release workflows — pass an explicit low `perPage` (it is honored, not ignored) to stay under it.
+A `total_count: 0` for `chrome-extension-daily-release.yml` or `chrome-extension-publish-store.yml`
+is **not** the same issue — they're `workflow_call`-only reusable workflows with no runs of their
+own, so that result is correct, not a trap.
 
 ## Nothing in CI runs this pack's fixtures — invoke them by hand
 
