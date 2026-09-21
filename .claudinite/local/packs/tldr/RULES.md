@@ -13,9 +13,11 @@ When triaging a publish-leg failure, read the **`daily / publish` job**, not the
 - **`ITEM_NOT_UPDATABLE` is Chrome Web Store-side state** — a prior submission still pending review
   or ready to publish — so **nothing in `main` can be "the fix"**, and no repo-side defect that
   happened to be open at the time (a stale secret, a half-landed config) should be credited with it.
+  (itemnotupdatable-chrome-web)
 - **The only closing evidence is a run that actually reaches `daily / publish` and goes green**, or
   the Chrome Developer Dashboard showing the item out of pending/review. Absent that, the issue stays
   open — resolving the co-occurring repo bug is not the same as verifying the publish path.
+  (only-closing-evidence)
 
 ## This repo's copy of the bump-version workflow is deliberately not the canon stub
 

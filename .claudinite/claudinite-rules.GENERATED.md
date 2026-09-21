@@ -8,3 +8,4 @@
 @shared/packs/node/RULES.md
 @shared/packs/spec-driven-product/RULES.md
 @local/packs/tldr/RULES.md
+@temp/packs/current_user/RULES.md
