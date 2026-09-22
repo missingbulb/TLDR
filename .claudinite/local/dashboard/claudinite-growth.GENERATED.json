@@ -1,0 +1,59 @@
+{
+  "usage-findings": {
+    "value": 8,
+    "previous": null,
+    "note": "2026-08-25 to 2026-09-21"
+  },
+  "usage-newest": {
+    "rows": [
+      {
+        "subject": "changing-pack-elements",
+        "rule": "skill-triggered-missing-moments",
+        "cause": "known",
+        "since": "2026-09-22"
+      },
+      {
+        "subject": "committing",
+        "rule": "skill-forced-only-small",
+        "cause": "known",
+        "since": "2026-09-22"
+      },
+      {
+        "subject": "committing",
+        "rule": "skill-triggered-missing-moments",
+        "cause": "known",
+        "since": "2026-09-22"
+      },
+      {
+        "subject": "merge-to-main",
+        "rule": "skill-triggered-missing-moments",
+        "cause": "known",
+        "since": "2026-09-22"
+      },
+      {
+        "subject": "searching-for-a-tool",
+        "rule": "skill-forced-only-small",
+        "cause": "known",
+        "since": "2026-09-22"
+      },
+      {
+        "subject": "searching-for-a-tool",
+        "rule": "skill-triggered-missing-moments",
+        "cause": "known",
+        "since": "2026-09-22"
+      },
+      {
+        "subject": "writing-pack-prose",
+        "rule": "skill-triggered-missing-moments",
+        "cause": "known",
+        "since": "2026-09-22"
+      },
+      {
+        "subject": "writing-tests",
+        "rule": "skill-triggered-missing-moments",
+        "cause": "known",
+        "since": "2026-09-22"
+      }
+    ]
+  }
+}
