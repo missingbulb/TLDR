@@ -2,7 +2,7 @@
   "packs": [
     {
       "id": "basics",
-      "version": "60920.3",
+      "version": "60922.3",
       "config": {
         "barriers": {
           "rules": [
@@ -22,43 +22,43 @@
     },
     {
       "id": "chrome-extension",
-      "version": "60920.3"
+      "version": "60922.2"
     },
     {
       "id": "executable-requirements",
-      "version": "60920.1"
+      "version": "60922.1"
     },
     {
       "id": "git-github",
-      "version": "60921.1"
+      "version": "60922.5"
     },
     {
       "id": "node",
-      "version": "60920.1"
+      "version": "60922.1"
     },
     {
       "id": "spec-driven-product",
-      "version": "60920.1"
+      "version": "60922.2"
     },
     {
       "id": "claudinite-growth",
-      "version": "60921.3"
+      "version": "60922.4"
     },
     "local/tldr",
     {
       "id": "claude-code-web-users-support",
-      "version": "60921.1",
+      "version": "60921.2",
       "config": {
         "repo": "missingbulb/Shepherd"
       }
     },
     {
       "id": "claudinite-lifecycle",
-      "version": "60921.2"
+      "version": "60922.5"
     },
     {
       "id": "claudinite-tasks",
-      "version": "60920.4"
+      "version": "60922.4"
     }
   ],
   "accept": [
