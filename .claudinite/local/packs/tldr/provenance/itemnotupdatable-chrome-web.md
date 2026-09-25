@@ -16,3 +16,9 @@
   longer name it.
 - **Actor:** @missingbulb (owner).
 - **Landed:** #241.
+
+## 2026-09-25 · reworded · brought onto the marker convention (#614)
+- **Reason:** the sub-bullet under the green-run section became its own block keyed to the symptom;
+  strength unchanged.
+- **Actor:** @missingbulb (owner), approving the restructure in a Claude Code session.
+- **Landed:** #614

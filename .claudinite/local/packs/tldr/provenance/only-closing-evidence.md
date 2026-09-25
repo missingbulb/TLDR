@@ -10,3 +10,9 @@
   about reading Actions history, not a testable property of a repo file.
 - **Retire when:** later publish-leg triages stop re-deriving this.
 - **Landed:** #147, Refs #97.
+
+## 2026-09-25 · reworded · brought onto the marker convention (#614)
+- **Reason:** the sub-bullet under the green-run section became its own block keyed to the closing
+  act; strength unchanged.
+- **Actor:** @missingbulb (owner), approving the restructure in a Claude Code session.
+- **Landed:** #614
