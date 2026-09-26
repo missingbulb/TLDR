@@ -41,7 +41,7 @@ const ROOT_PACKAGE_JSON = /(["'])package\.json\1/;
 
 const rule = {
   id: 'tldr/release-root-version-align',
-  severity: 'blocking',
+  on_fail: 'block',
   description: "The daily-release workflow must keep aligning the repo-root package.json to the bumped version — it is this repo's local delta over the vendored stub",
   doc: '.claudinite/local/packs/tldr/RULES.md',
   scope: 'world',

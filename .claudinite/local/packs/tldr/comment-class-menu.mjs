@@ -50,7 +50,7 @@ const CONFORMING_RE = new RegExp(String.raw`^\s*${CLASS}(?:\s*(?:,|&|\+|and)\s*$
 
 const rule = {
   id: 'tldr/comment-class-menu',
-  severity: 'advisory',
+  on_fail: 'advise',
   description: 'The `Comment class:` line must carry the class alone — every class token on it is declared, however the line phrases them',
   doc: '.claudinite/local/packs/tldr/RULES.md',
   scope: 'work',
