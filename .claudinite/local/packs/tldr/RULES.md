@@ -29,9 +29,9 @@
   `node .claudinite/shared/engine/migrations/apply.mjs` writes nothing, because the
   `chrome-release-vendoring` record has aged out of the vendored subset. (canon-clone-apply)
 
-- **Running `npm run test:all`** — it is `npm test && npm --prefix server ci && npm --prefix
-  server test && npm --prefix extension test && npm --prefix dev ci && npm --prefix dev test`, six
-  commands over four sub-suites (root, `server`, `extension`, `dev/requirements`); capture and read
+- **Running `npm run test:all`** — it is `npm test && npm --prefix server ci && npm --prefix server test && npm --prefix extension test && npm --prefix dev ci && npm --prefix dev test`, six
+  commands over four sub-suites (root, `server`, `extension`, `dev/requirements`) — a
+  `shared-constants` entry keeps this byte-identical with `package.json`'s script. Capture and read
   it with:
 
   ```

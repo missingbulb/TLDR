@@ -22,3 +22,16 @@
   and the fenced invocation kept verbatim.
 - **Actor:** @missingbulb (owner), approving the restructure in a Claude Code session.
 - **Landed:** #614
+
+## 2026-09-27 · converted · a shared-constants guard keeps it byte-identical with package.json (#625)
+- **Reason:** the rule restated package.json's `test:all` script in prose so a session could see the
+  four sub-suites without re-deriving them — always-testable, so it converts. The prose stays: it
+  explains what the sub-suites are and gives the runnable capture command, neither of which the
+  check's finding message carries. Only the guarded literal was reflowed onto one physical line,
+  since a value split across a line break is invisible to the byte-count guard.
+- **Actor:** the prose-to-checks-sweep task, running as work item #625.
+- **Model:** Claude, per the commit trailer.
+- **Mechanism:** a `sharedConstants` entry in `.claudinite-settings.json` (flat literal, not regex
+  — the script is fixed rather than version-bumped), enforced by the basics pack's generic
+  `shared-constants` world check; proven by `test-all-script-sync.test.mjs`.
+- **Landed:** #625
