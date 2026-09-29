@@ -1,5 +1,5 @@
-import { finding } from '../../../shared/engine/checks/helpers/findings.mjs';
-import { classificationLine, classesIn } from '../../../shared/engine/checks/helpers/session-transcript.mjs';
+import { finding } from '../../../../shared/engine/checks/helpers/findings.mjs';
+import { classificationLine, classesIn } from '../../../../shared/engine/checks/helpers/session-transcript.mjs';
 
 // The testable half of RULES.md's "Put the `Comment class:` line on its own
 // line": the classifier reads the WHOLE classification line and adds EVERY class

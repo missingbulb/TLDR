@@ -1,4 +1,4 @@
-import { finding } from '../../../shared/engine/checks/helpers/findings.mjs';
+import { finding } from '../../../../shared/engine/checks/helpers/findings.mjs';
 
 // A VENDORED workflow under `.github/workflows/` carries this repo's one
 // deliberate delta over its canon stub: a step that aligns the repo-root

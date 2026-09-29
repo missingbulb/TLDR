@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 
 import rule from './release-root-version-align.mjs';
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '..');
 const WORKFLOW = '.github/workflows/chrome-extension-bump-version.yml';
 const STUB = '.claudinite/shared/packs/chrome-extension/stubs/workflows/chrome-extension-bump-version.yml';
 
