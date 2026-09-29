@@ -17,10 +17,10 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import rule from './comment-class-menu.mjs';
-import { buildContext } from '../../../shared/engine/checks/helpers/repo-context.mjs';
-import { runRule } from '../../../shared/engine/checks/helpers/work.mjs';
+import { buildContext } from '../../../../shared/engine/checks/helpers/repo-context.mjs';
+import { runRule } from '../../../../shared/engine/checks/helpers/work.mjs';
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '..');
 const scratch = mkdtempSync(join(tmpdir(), 'tldr-comment-class-'));
 
 // A minimal Claude Code transcript: one owner turn, then the assistant reply
