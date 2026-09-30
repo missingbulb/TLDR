@@ -81,6 +81,11 @@
       "rule": "claudinite-isolation",
       "path": "dev/procedures/working-instructions.md",
       "reason": "same orientation pointer — the working-instructions router says the general discipline is auto-injected from the vendored corpus rather than restated here, which is the sentence that stops the doc duplicating canon prose"
+    },
+    {
+      "rule": "scheduler-workflow-shape",
+      "path": ".github/workflows/claudinite-scheduler.yml",
+      "reason": "the owner turned this repo's scheduled runs off; the scheduler still runs on workflow_dispatch. Restore the cron to resume scheduled upkeep."
     }
   ],
   "sharedConstants": [
