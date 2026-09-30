@@ -5,8 +5,6 @@
 name: Claudinite scheduler
 
 on:
-  schedule:
-    - cron: '45 4,16 * * *'
   workflow_dispatch:
     inputs:
       wake:
