@@ -1,0 +1,9 @@
+{
+  "version": "1.61004.1",
+  "minEngineVersion": "1.61001.1",
+  "ruleRoutingGuidance": {
+    "belongs": "server-side Google Sign-In ID token validation: audience pinning, issuer and email_verified checks, JWT authorizer/OIDC verifier config",
+    "excludes": "obtaining the token in a browser or extension client — chrome-extension; Firebase Auth usage — firebase"
+  },
+  "pitch": "A backend that accepts Google Sign-In tokens is only as safe as its validator, and the common mistakes are easy to miss in review: an audience that is never pinned, an email trusted before it is verified. This pack gives Claude Code sessions one focused skill for wiring server-side Google ID token validation and handling its claims, and the skill brings a few checks that run on every change, blocking an unpinned audience or unverified email before it ships. It adds no always-on prose to sessions."
+}

@@ -40,6 +40,8 @@ packs:
       answers:
         store: "missingbulb/Shepherd"
     - "claudinite-lifecycle"
+    - "aws-sam"
+    - "google-identity"
 checks:
   accept:
     - rule: "barrier"

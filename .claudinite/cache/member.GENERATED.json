@@ -72,11 +72,18 @@
       },
       {
         "id": "claudinite-lifecycle"
+      },
+      {
+        "id": "aws-sam"
+      },
+      {
+        "id": "google-identity"
       }
     ]
   },
   "dormant": false,
   "held": {
+    "aws-sam": "1.61004.1",
     "basics": "1.61008.1",
     "chrome-extension": "1.61008.1",
     "claude-code-web-users-support": "1.61005.1",
@@ -84,6 +91,7 @@
     "claudinite-lifecycle": "1.61008.1",
     "executable-requirements": "1.61004.1",
     "git-github": "1.61008.2",
+    "google-identity": "1.61004.1",
     "node": "1.61004.1",
     "spec-driven-product": "1.61004.1"
   }

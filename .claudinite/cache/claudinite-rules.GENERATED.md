@@ -1,3 +1,4 @@
+@../shared/packs/aws-sam/RULES.md
 @../shared/packs/basics/RULES.md
 @../shared/packs/chrome-extension/RULES.md
 @../shared/packs/claude-code-web-users-support/RULES.md
