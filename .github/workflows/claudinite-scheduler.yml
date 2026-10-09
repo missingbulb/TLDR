@@ -6,8 +6,8 @@
 name: claudinite-scheduler
 
 on:
-  schedule:
-    - cron: "45 11,23 * * *"
+  # The owner turned the scheduled runs off (#658); restore the cron
+  # "45 11,23 * * *" to resume them.
   workflow_dispatch:
     inputs:
       wake:
