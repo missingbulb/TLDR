@@ -1,0 +1,15 @@
+[
+  {
+    "id": "release-root-version-align",
+    "on_fail": "block",
+    "failureMessage": "without the align step the repo-root package.json falls behind after every bump, and the version sharedConstants entry and cer/version-sync go blocking (#241, #245)",
+    "scanFiles": ".github/workflows/chrome-extension-bump-version.yml",
+    "checkEachFile": [
+      {
+        "require": "/([\"'])package\\.json\\1/",
+        "what": "the bump job no longer writes the repo-root package.json; the \"Align the root package.json to the bumped version\" step is gone, so the next bump moves only the two release-config paths",
+        "fix": "restore the align step from commit 2529b63 (PR #241); if a vendoring overwrite removed it, re-apply it rather than accept the stub, and say so on #245"
+      }
+    ]
+  }
+]

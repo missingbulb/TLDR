@@ -1,7 +1,3 @@
-# Claudinite hook logs (the only untracked Claudinite artifacts — the mount is tracked)
-/.claudinite-hooks.log
-/.claudinite-hooks.log.tmp
-
 # Dependencies
 node_modules/
 
