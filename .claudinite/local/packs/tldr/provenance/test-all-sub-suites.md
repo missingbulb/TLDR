@@ -31,7 +31,14 @@
   since a value split across a line break is invisible to the byte-count guard.
 - **Actor:** the prose-to-checks-sweep task, running as work item #625.
 - **Model:** Claude, per the commit trailer.
-- **Mechanism:** a `sharedConstants` entry in `.claudinite/settings.yaml` (flat literal, not regex
+- **Mechanism:** a `sharedConstants` entry in `.claudinite-settings.json` (flat literal, not regex
   — the script is fixed rather than version-bumped), enforced by the basics pack's generic
-  `shared-constants` world check.
+  `shared-constants` world check; proven by `test-all-script-sync.test.mjs`.
 - **Landed:** #625
+
+## 2026-10-09 · reworded · the guard's carrier followed the repo off the Node engine (#665)
+- **Reason:** `.claudinite-settings.json` and the Node fixture are gone; the same `sharedConstants`
+  entry now lives in `.claudinite/settings.yaml`, and the Go `shared-constants` check is the proof.
+- **Actor:** the prose-to-checks-sweep task, running as work item #665.
+- **Model:** Claude Sonnet 5.5.
+- **Landed:** #516
