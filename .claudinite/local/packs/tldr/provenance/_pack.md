@@ -26,3 +26,9 @@
 - **Actor:** the prose-to-checks sweep, merged by @missingbulb (owner).
 - **Model:** Claude, per the commit trailer.
 - **Landed:** #162, Refs #159.
+
+## 2026-09-29 · reworded · the manifest is pack.json and states only what the folder cannot
+- **Reason:** the id, prose file, rule lists and skill list repeated the directory, and detect and
+  marker were retired fields nothing read.
+- **Actor:** @missingbulb (owner).
+- **Model:** claude-opus-5-5

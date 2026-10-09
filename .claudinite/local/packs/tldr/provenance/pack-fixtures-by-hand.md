@@ -17,3 +17,9 @@
   coverage inventory moved to this file, the fenced invocation kept.
 - **Actor:** @missingbulb (owner), approving the restructure in a Claude Code session.
 - **Landed:** #614
+
+## 2026-10-09 · retired · the rule is deleted
+- **Reason:** cn runs no JavaScript checks, so the move off the Node engine leaves this pack with no JavaScript fixtures to run by hand.
+- **Mechanism:** none.
+- **Actor:** @missingbulb (owner), via the re-adoption request.
+- **Model:** claude-opus-5-5

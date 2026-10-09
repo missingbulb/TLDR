@@ -5,7 +5,7 @@ environment — the shape a harness call accepts, what the Action's token may re
 exists, how a platform behaves — and correct what no longer holds.
 
 **The corpus is `.claudinite/local/packs/` and nothing else.** A canon pack this repo only mounts
-under `.claudinite/shared/` is revalidated in the repo that owns it: the next converge replaces that
+under `.claudinite/shared/` is revalidated in the repo that owns it: the next update replaces that
 tree whole, so an edit there is lost either way.
 
 ## The method lives in the skill
@@ -22,7 +22,7 @@ frames the unattended run around it.
    pack is judgment prose and out of scope, so this set is far smaller than the corpus.
 2. **Probe each**, per the skill's two probe rules, and record what you ran and what came back.
 3. **Correct what is stale**, as far as each probe reaches and no further.
-4. **Deliver by the shared procedure — [deliver-pr.md](../../../claudinite-tasks/src/deliver/deliver-pr.md)**.
+4. **Deliver as your instructions say to deliver a pull request**.
    Title the commit and the PR `Claudinite growth: rule revalidation`; the commit references the
    tracking issue so the `task-lifecycle` gate passes, and the repo's offline test suite is green
    before you push.

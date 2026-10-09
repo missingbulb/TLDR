@@ -1,6 +1,7 @@
 ---
 name: revalidating-rules
-description: Re-probe the pack rules whose truth lives outside the repository — harness tool contracts, token reach, whether an MCP tool exists, a platform's behaviour — and correct the ones that have gone stale. Use when a revalidation sweep runs over a corpus of packs, or when asked whether a rule's environmental claim still holds.
+description: Re-probe pack rules whose truth lives outside the repository and correct the stale ones. Use on a revalidation sweep, or when asked whether a rule's environmental claim still holds.
+disable-model-invocation: true
 metadata:
   body: workflow
   usage:
@@ -74,14 +75,13 @@ of the environment alone cannot know. For each element in the corpus, read its f
 - An **owner decision** entry is not probeable — verify only that the decision hasn't been superseded
   in the repo's own record, and otherwise report it `doc-verified`.
 
-What the run writes back, through `provenance.mjs append` in the same change: `reaffirmed` only
+What the run writes back, through `cn provenance append` in the same change: `reaffirmed` only
 where the probe produced **new** evidence or changed `Retire when` - a rule found still true on the
 old evidence gets no entry, and the run's pull request body is its record; `reworded` or `retired`
 where the probe corrected the rule. An entry is never edited: a stale reason is answered by a new
 entry. An **empty** file met on the way - an element whose history is not yet written - is filled
-first, from `provenance.mjs history <pack> <element>`, source-first, as the
-[backfilling-provenance](../backfilling-provenance/SKILL.md) skill describes; that is how a
-member's local pack backfills on this cadence with no pass of its own.
+first, from `cn provenance history <pack> <element>`, source-first, as the
+[backfilling-provenance](../backfilling-provenance/SKILL.md) skill describes.
 
 ## Correcting what is stale
 

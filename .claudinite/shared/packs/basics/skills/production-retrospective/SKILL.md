@@ -1,6 +1,6 @@
 ---
 name: production-retrospective
-description: Design and file the review that comes back on its own once a larger element has lived in production. Use when designing a larger element, when filing a migration plan's chain, when a merge completes a design-doc'd element, or when defining a new retrospective class for a pack, a repo, or the fleet.
+description: Design and file the review that comes back once a larger element has lived in production. Use when designing such an element, or when its merge completes it.
 metadata:
   body: workflow
   usage:
@@ -9,7 +9,7 @@ metadata:
 
 # Production retrospective
 
-[verify-in-production](../verify-in-production/SKILL.md) proves a **point assertion**, once:
+The task-flow pack's `verify-in-production` proves a **point assertion**, once:
 artifact X reads Y, pass or fail. An element big enough to have a design deserves a second look of
 a different kind — not "did it go live" but "did the design survive contact". Once it has worked
 *as planned* for about a week, somebody should read its production record and answer four
@@ -41,7 +41,7 @@ Two triggers own the filing today:
 
 - **A migration plan's chain.** The retrospective is the chain's **last link**, filed with the
   rest of the chain when the plan is agreed —
-  [writing-migration-plans](../writing-migration-plans/SKILL.md) owns the chain's mechanics. It
+  task-flow's `writing-migration-plans` owns the chain's mechanics. It
   rides `Blocked-by:` on the final execution step, so the queue holds it until the migration is
   actually done.
 - **A merge that completes a design-doc'd element outside any chain.** File it at the merge,
@@ -82,7 +82,7 @@ and a number nobody thought to record cannot be read back. The brief answers, co
 ## What you file
 
 One issue on the ad-hoc lane — the same lane and the same first-lines field-block placement
-[`/do-later`](../do-later/SKILL.md) files under, with the mark it applies: **`task:origin:ad-hoc`**.
+task-flow's `/do-later` files under, with the mark it applies: **`task:origin:ad-hoc`**.
 Title `Retrospective: <the element, in a few words>`. Make it a **sub-issue** of the element's
 tracking issue (or, with no tracker, of the design's own issue), so the element shows the review
 still owed on it.
@@ -145,7 +145,7 @@ rule this skill sets:
 |---|---|---|
 | Post-adoption | a repo adopts Claudinite or a pack | did its tasks run, did checks stay green, did the owner fight it |
 | New scheduled task | a new task's first week of runs | is the cadence right, do runs converge, is it filing noise |
-| Fleet rollout | a fleet-baseline force, or a pack seeded across members | did every member converge, what parked, what stayed `unknown` |
+| Fleet rollout | a fleet-update force, or a pack seeded across members | did every member update, what parked, what stayed `unknown` |
 | Rule effectiveness | a growth-extract batch lands | did the friction recur, are the rules loaded but ignored |
 | Grant of a credential or permission | a token created or widened | is it used at all, is it still least-privilege |
 | Retirement | a mechanism removed or a repo handed off | do references dangle, did anything break silently |

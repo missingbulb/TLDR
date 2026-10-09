@@ -9,7 +9,7 @@ declarations rather than by code, and writes what it found.
 
 ## What it writes
 
-`.claudinite/local/usage-review.GENERATED.json`, on one accumulating pull request
+`.claudinite/usage/element-review-findings.json`, on one accumulating pull request
 that merges only when a person merges it:
 
 | | |
@@ -19,7 +19,7 @@ that merges only when a person merges it:
 | `notEvaluated` | the rule/subject pairs held back by a floor, with the figure that fell short. *No findings* means something only when this is empty |
 | `unstated` | the skills declaring no expectation. Only *always loaded* is evaluated for those, and the list is the nudge to declare |
 
-Beside it, `.claudinite/local/dashboard/claudinite-growth.GENERATED.json` - the
+Beside it, `.claudinite/usage/claudinite-growth-dashboard-values.json` - the
 values for the two widgets [dashboard.json](../../dashboard.json) declares.
 
 ## The rules
@@ -42,10 +42,9 @@ the window than about its subject.
 
 ## What happens to a finding
 
-It appears in the file and on the dashboard. If it is still there two weeks later and
-its cause is `known` or `probable`, the review files one `usage-finding` issue for it,
-updates that issue while the finding persists, and closes it with the clearing figures
-the day it goes. A finding with an `unknown` cause never files.
+It appears in the file, on the dashboard and in the review's pull request, and nowhere
+else: the review files no issue. A finding still there two weeks later with a `known`
+or `probable` cause is what the triage reads.
 
 Proposing a change is a different task: [usage-triage](../usage-triage/README.md)
 reads the lasting findings and opens a pull request carrying the edit itself, which

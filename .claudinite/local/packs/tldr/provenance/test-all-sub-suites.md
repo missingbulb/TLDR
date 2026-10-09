@@ -31,7 +31,7 @@
   since a value split across a line break is invisible to the byte-count guard.
 - **Actor:** the prose-to-checks-sweep task, running as work item #625.
 - **Model:** Claude, per the commit trailer.
-- **Mechanism:** a `sharedConstants` entry in `.claudinite-settings.json` (flat literal, not regex
+- **Mechanism:** a `sharedConstants` entry in `.claudinite/settings.yaml` (flat literal, not regex
   — the script is fixed rather than version-bumped), enforced by the basics pack's generic
-  `shared-constants` world check; proven by `test-all-script-sync.test.mjs`.
+  `shared-constants` world check.
 - **Landed:** #625

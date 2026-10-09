@@ -1,6 +1,7 @@
 ---
 name: growth-dedup
-description: Prune a repo's local packs of items the mounted Claudinite canon now covers — remove, strip to residue, or track a wording drift, never grow an entry. Use when the growth dedup task runs, or when asked to reconcile or dedup local packs against the canon.
+description: Prune a repo's local packs of items the mounted canon now covers. Use when asked to reconcile or dedup local packs against the canon.
+disable-model-invocation: true
 metadata:
   body: workflow
   usage:
@@ -16,7 +17,7 @@ human-gated PR and the tracking issue.
 
 **The yardstick is the mounted canon** — the exact revision the repo currently consumes, what
 `.claudinite/shared/` holds at the mount's stamp — never a live fetch (a promotion is visible
-here only once baselining has converged the mount to include it). The mount is never a prune
+here only once the update has brought the mount to include it). The mount is never a prune
 *target*, only what you prune *against*.
 
 ## Start from the canon's diff, not the canon
@@ -61,8 +62,8 @@ spends its attention where the new coverage actually is.
 An edit that leaves an entry the same size or larger, re-quotes the now-canon rule, or names the
 owning pack's fix is a **corruption, not a dedup**. When in doubt about a kept item, leave it
 byte-for-byte unchanged rather than "reconcile" its wording. The `dedup-prune-integrity` check
-([dedup-integrity.mjs](../../workRules/dedup-integrity.mjs)) is the machine backstop: it reds the session
-when a dedup-labeled commit grows a local-pack prose file, or when any change adds a line that
+([dedup_prune_integrity.go](../../checks/dedup_prune_integrity.go)) is the machine backstop: it reds the session
+when a dedup-labeled commit grows a local-pack prose file other than a provenance log, or when any change adds a line that
 restates a canon rule.
 
 ## The keep-test: says *more*, not merely says it more specifically
@@ -85,11 +86,11 @@ general point, or does it make a point the canon doesn't?" Prune the first; keep
 The canon carries rules as **conformance checks**, not only prose. A local item is covered when
 a canon check *enforces* it — stronger coverage than a stated line, since the rule runs on every
 session and CI pass. Consult the machine-readable rule catalog
-(`node .claudinite/shared/engine/checks/check_the_world.mjs --list`: id, severity, description,
+(`node .claudinite/shared/engine/checks/check_the_world.mjs --list`: id, on_fail, description,
 doc pointer — it lists the active local packs' own checks too) alongside the prose corpus, and
 when a check covers the item, **quote the rule id** where you'd otherwise quote a canon line.
 This cuts both ways: a **local pack's own check** is redundant once a canon check enforces the
-same rule — prune the local `.mjs` (and drop it from `pack.mjs` + its fixture) exactly as you'd
+same rule - prune the local `.mjs` (and its fixture) exactly as you'd
 prune a duplicated prose line. The keep-test above is unchanged.
 
 ## Discipline
@@ -99,10 +100,10 @@ prune a duplicated prose line. The keep-test above is unchanged.
   real local lesson.
 - **Write only inside the local packs.** A dedup run's whole surface is
   `.claudinite/local/packs/` — never the canon it prunes against, never the project's own code. The
-  `growth-write-scope` check ([growth-write-scope.mjs](../../workRules/growth-write-scope.mjs)) keys on the
+  `growth-write-scope` check ([growth_write_scope.go](../../checks/growth_write_scope.go)) keys on the
   run's pinned `Claudinite growth: dedup local packs` title and reds any path outside that surface.
 - **Record each prune on the element's provenance file**, in the same change, through
-  `provenance.mjs append`: `retired` (superseded by the canon element it names) for a removal -
+  `cn provenance append`: `retired` (superseded by the canon element it names) for a removal -
   the file stays - `weakened` for a strip, `reworded` for a rephrase; the changing-pack-elements
   skill has the grammar.
 - If an edit touches something a test reads, run the repo's offline test suite and keep it green
