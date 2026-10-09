@@ -124,7 +124,7 @@ async function handlePost(event) {
   const authorSub = claims.sub;
   if (!authorSub) throw new HttpError(401, 'missing authenticated identity');
   // Google encodes email_verified as a boolean; API Gateway surfaces claims as strings.
-  if (claims.email_verified !== 'true' && claims.email_verified !== true) {
+  if (String(claims.email_verified) !== 'true') {
     throw new HttpError(403, 'a verified Google email is required to post');
   }
   const authorName = claims.name || 'Someone';
@@ -197,7 +197,7 @@ async function handleVote(event, method) {
   const voterSub = claims.sub;
   if (!voterSub) throw new HttpError(401, 'missing authenticated identity');
   // Same bar as posting: a verified Google email. (API Gateway surfaces the boolean claim as a string.)
-  if (claims.email_verified !== 'true' && claims.email_verified !== true) {
+  if (String(claims.email_verified) !== 'true') {
     throw new HttpError(403, 'a verified Google email is required to vote');
   }
 

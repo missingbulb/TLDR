@@ -135,6 +135,13 @@ test('POST without a verified email is rejected (403)', async () => {
   assert.equal(ddbMock.commandCalls(PutCommand).length, 0);
 });
 
+test('POST accepts email_verified as a raw boolean as well as the authorizer\'s string', async () => {
+  const res = await handler(
+    postEvent({ claims: { ...VALID_CLAIMS, email_verified: true }, body: { pageUrl: 'https://e.com', body: 'hi' } }),
+  );
+  assert.equal(res.statusCode, 201);
+});
+
 test('POST without an identity is rejected (401)', async () => {
   const res = await handler(postEvent({ claims: {}, body: { pageUrl: 'https://e.com', body: 'hi' } }));
   assert.equal(res.statusCode, 401);
