@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "settings": {
+    "path": ".claudinite/settings.yaml",
+    "format": "yaml"
+  },
+  "engine": {
+    "package": "@claudinite/cli",
+    "version": "1.61009.1",
+    "channel": "staging"
+  },
+  "packs": {
+    "channel": "canary",
+    "declared": [
+      {
+        "id": "basics",
+        "config": {
+          "barriers": {
+            "rules": [
+              {
+                "allow": [
+                  "shared"
+                ],
+                "between": [
+                  "server",
+                  "extension"
+                ],
+                "reason": "the extension and its server integrate only through shared/ (the vendored single-source of categories/normalizeUrl) and the HTTP contract — never by referencing each other's code"
+              }
+            ]
+          },
+          "sharedConstants": [
+            {
+              "counts": {
+                "extension/manifest.json": 1,
+                "extension/package.json": 1,
+                "package.json": 1
+              },
+              "regex": true,
+              "value": "\"version\": \"\\d+\\.\\d+\\.\\d+\"",
+              "what": "the extension version, carried in three JSON files that can't share an import: extension/manifest.json is the shipped, user-visible number; extension/package.json is the npm record the release config names as package_json_path; the repo-root package.json is what cer/version-sync reads by name. The daily auto-release bumps all three in one commit (the two release-config paths via .github/actions/bump-extension-patch, the root file via the align step in chrome-extension-daily-release.yml), so any disagreement here means a bump landed in some files but not all"
+            }
+          ]
+        }
+      },
+      {
+        "id": "chrome-extension"
+      },
+      {
+        "id": "executable-requirements"
+      },
+      {
+        "id": "git-github"
+      },
+      {
+        "id": "node"
+      },
+      {
+        "id": "spec-driven-product"
+      },
+      {
+        "id": "claudinite-growth"
+      },
+      {
+        "id": "local/tldr"
+      },
+      {
+        "id": "claude-code-web-users-support",
+        "config": {
+          "repo": "missingbulb/Shepherd"
+        }
+      },
+      {
+        "id": "claudinite-lifecycle"
+      }
+    ]
+  },
+  "dormant": false,
+  "held": {
+    "basics": "1.61008.1",
+    "chrome-extension": "1.61008.1",
+    "claude-code-web-users-support": "1.61005.1",
+    "claudinite-growth": "1.61009.1",
+    "claudinite-lifecycle": "1.61008.1",
+    "executable-requirements": "1.61004.1",
+    "git-github": "1.61008.2",
+    "node": "1.61004.1",
+    "spec-driven-product": "1.61004.1"
+  }
+}

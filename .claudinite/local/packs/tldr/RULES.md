@@ -17,17 +17,11 @@
   verifying the publish path. (only-closing-evidence)
 
 - **Baselining §2b hands you a withheld workflow file** — the one carrying the repo-root
-  `package.json` align step (the file `tldr/release-root-version-align`'s `WORKFLOW` constant names,
+  `package.json` align step (the file the `tldr-release-root-version-align` check scans,
   now `.github/workflows/chrome-extension-bump-version.yml`, and the check reds if the step goes
   missing) is deliberately not the canon stub, so the canon's *never hand-edit these copies* does
   **not** hold for it: diff it against its stub and land the union, never the stub; every other
   withheld file is a plain copy. (withheld-workflow-union)
-
-- **Reproducing what preprocessing wanted to write** — use a shallow clone of
-  `missingbulb/Claudinite` and run *its* `apply.mjs` with `CLAUDE_PROJECT_DIR` and
-  `CLAUDINITE_CAN_WITHHOLD_WORKFLOWS=1` pointed at a worktree of `main`; this repo's
-  `node .claudinite/shared/engine/migrations/apply.mjs` writes nothing, because the
-  `chrome-release-vendoring` record has aged out of the vendored subset. (canon-clone-apply)
 
 - **Running `npm run test:all`** — it is `npm test && npm --prefix server ci && npm --prefix
   server test && npm --prefix extension test && npm --prefix dev ci && npm --prefix dev test`, six
@@ -40,17 +34,6 @@
   ```
 
   (test-all-sub-suites)
-
-- **Touching a rule in this pack** — run its fixture by hand, because nothing in CI does: no npm
-  script globs `.claudinite/local/packs/**`, so a green `npm run test:all` says nothing about it,
-  and `claudinite-conformance.yml`'s `check_the_world.mjs` only loads rule modules, never executing
-  a fixture or a `scope: 'work'` rule, which is what this pack's checks are:
-
-  ```
-  node --test .claudinite/local/packs/tldr/comment-class-menu.test.mjs
-  ```
-
-  (pack-fixtures-by-hand)
 
 - **Listing runs of `chrome-extension-release.yml` or this repo's other release workflows with
   `actions_list list_workflow_runs`** — pass an explicit low `perPage` (it is honored, not

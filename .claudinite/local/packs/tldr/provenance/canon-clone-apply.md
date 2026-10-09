@@ -13,3 +13,9 @@
   reproducing preprocessing.
 - **Actor:** @missingbulb (owner), approving the restructure in a Claude Code session.
 - **Landed:** #614
+
+## 2026-10-09 · retired · the rule is deleted
+- **Reason:** it reproduced the Node engine's migration preprocessing, which cn does not run, so the move off the Node engine leaves it nothing to describe.
+- **Mechanism:** none.
+- **Actor:** @missingbulb (owner), via the re-adoption request.
+- **Model:** claude-opus-5-5
