@@ -17,7 +17,7 @@
   verifying the publish path. (only-closing-evidence)
 
 - **Baselining §2b hands you a withheld workflow file** — the one carrying the repo-root
-  `package.json` align step (the file `tldr/release-root-version-align` scans,
+  `package.json` align step (the file the `tldr-release-root-version-align` check scans,
   now `.github/workflows/chrome-extension-bump-version.yml`, and the check reds if the step goes
   missing) is deliberately not the canon stub, so the canon's *never hand-edit these copies* does
   **not** hold for it: diff it against its stub and land the union, never the stub; every other

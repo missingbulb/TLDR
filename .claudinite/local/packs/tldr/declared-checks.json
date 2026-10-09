@@ -1,6 +1,6 @@
 [
   {
-    "id": "release-root-version-align",
+    "id": "tldr-release-root-version-align",
     "on_fail": "block",
     "failureMessage": "without the align step the repo-root package.json falls behind after every bump, and the version sharedConstants entry and cer/version-sync go blocking (#241, #245)",
     "scanFiles": ".github/workflows/chrome-extension-bump-version.yml",
