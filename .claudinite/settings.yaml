@@ -42,6 +42,8 @@ packs:
     - "claudinite-lifecycle"
     - "aws-sam"
     - "google-identity"
+  sources:
+    - "missingbulb/Shepherd"
 checks:
   accept:
     - rule: "barrier"
