@@ -1,8 +1,8 @@
 engine:
   channel: "staging"
   releases: "missingbulb/ClaudiniteStagingDistro"
-  version: "1.61020.6"
-  manifest: "sha512-iRC85eNt6WA/NqrZfTo3YfULKPGzWZ69JKmuLc/1ML/+UOCwzCzm7l3WgZ3S69Vycwk3g5CByRvEf9tmGFN17Q=="
+  version: "1.61020.7"
+  manifest: "sha512-CqJqOwKChEX63GRO3uFh90hs6E9dmU40a60FCtAXytfdG8L18nM/wTnHieSZNaWIrmrTUkBHpjfd/KJy/bk6gg=="
 packs:
   channel: "canary"
   declared:
@@ -33,7 +33,8 @@ packs:
     - "node"
     - "spec-driven-product"
     - "claudinite-growth"
-    - "local/tldr"
+    - id: "tldr"
+      source: "local"
     - id: "claude-code-web-users-support"
       config:
         repo: "missingbulb/Shepherd"
@@ -44,6 +45,8 @@ packs:
     - "google-identity"
   sources:
     - "missingbulb/Shepherd"
+  manager:
+    repo: "missingbulb/Shepherd"
 checks:
   accept:
     - rule: "barrier"
@@ -66,3 +69,7 @@ tasks:
     default:
       url: "https://api.anthropic.com/v1/claude_code/routines/trig_01Mc7CqWE5qtLinA84GhBecU/fire"
       tokenSecret: "CCR_ROUTINE_TOKEN"
+  merge:
+    "engine/update": "merge-safe-changes"
+  frequency:
+    "engine/update": "weekly"
