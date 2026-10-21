@@ -1,0 +1,72 @@
+name: "test: extension"
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ['extension/**', 'shared/**', 'dev/build/**', '.github/workflows/test-extension.yml']
+  push:
+    branches: [main, 'claude/**']
+    paths: ['extension/**', 'shared/**', 'dev/build/**', '.github/workflows/test-extension.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      # Repo-level checks: the URL-normalizer corpus + the shared drift guard (root, no deps).
+      - name: Repo-level tests
+        run: npm test
+
+      - name: Validate manifest.json is parseable
+        run: node -e "JSON.parse(require('fs').readFileSync('extension/manifest.json'))"
+
+      # The extension has no runtime/test dependencies (the UI requirements suite + its deps live in dev/).
+      - name: Extension tests (logic + manifest/packaging guards)
+        working-directory: extension
+        run: npm test
+
+      # The chrome.* glue can't run under node; syntax-check it so a typo can't ship.
+      - name: Syntax-check extension modules
+        run: |
+          for f in extension/src/*.mjs extension/config.mjs; do node --check "$f"; done
+
+      - name: Build the extension zip
+        working-directory: extension
+        run: npm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tldr
+          path: dist/tldr.zip
+          if-no-files-found: error
+      # Claudinite's checks; the engine update keeps these steps current.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/claudinite
+            ~/.npm/_cacache
+          key: cn-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.claudinite/settings.yaml') }}
+          restore-keys: cn-${{ runner.os }}-${{ runner.arch }}-
+      - name: install the engine settings.yaml pins
+        run: npx --yes --prefer-offline @claudinite/setup@1.0.1
+      - name: name the Claudinite checks build
+        id: claudinite-checks
+        continue-on-error: true
+        run: .claudinite/bin/cn check key >> "$GITHUB_OUTPUT"
+      - if: steps.claudinite-checks.outputs.key != ''
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.claudinite-checks.outputs.dir }}
+          key: claudinite-checks-${{ runner.os }}-${{ runner.arch }}-${{ steps.claudinite-checks.outputs.key }}
+      - name: cn check work-and-world
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: .claudinite/bin/cn check work-and-world
