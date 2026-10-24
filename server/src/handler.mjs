@@ -1,11 +1,14 @@
 // TLDR backend — the only component that contains logic.
 //
-// One Lambda behind an HTTP API (payload format 2.0) serves two routes:
-//   POST /comments  — authenticated (JWT authorizer attached at the API). Writes one comment.
-//   GET  /comments  — PUBLIC (no authorizer). Reads all comments for a page.
+// One Lambda behind an HTTP API (payload format 2.0) serves these routes:
+//   POST   /comments                    — authenticated (JWT authorizer attached at the API). Writes one comment.
+//   GET    /comments                    — PUBLIC (no authorizer). Reads the comments for a page.
+//   GET    /comments/top                — PUBLIC. Reads the leading comment for a page+category.
+//   POST   /comments/{commentId}/vote   — authenticated. Casts the caller's vote.
+//   DELETE /comments/{commentId}/vote   — authenticated. Removes the caller's vote.
 //
 // The authorizer has already verified the Google ID token's signature/issuer/audience/expiry
-// before we run, so for POST we trust event.requestContext.authorizer.jwt.claims.
+// before we run, so for the authenticated routes we trust event.requestContext.authorizer.jwt.claims.
 
 import { createHash } from 'node:crypto';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
@@ -32,7 +35,7 @@ const EMAIL_HASH_SALT = process.env.EMAIL_HASH_SALT ?? '';
 // key is `VOTE#<commentId>#<voterSub>`; the `VOTE#` prefix sorts strictly ABOVE every comment SK,
 // because a comment SK is a canonical ULID whose first char is always a digit '0'–'7' (the 48-bit
 // timestamp high bits) and 'V' > '7'. So the read Query bounds the sort key `< VOTE#` to read only
-// comments, never votes (issue #22). This is the frozen-format-preserving sentinel the plan flagged.
+// comments, never votes (issue #22).
 const VOTE_SK_PREFIX = 'VOTE#';
 
 // One-way, salted hash of the verified email — stored for moderation/abuse correlation only, NEVER
@@ -169,7 +172,7 @@ async function handlePost(event) {
     // The CategoryRankIndex GSI's key (issue #26, link-hover preview: "the leading comment for this
     // page+category"). categoryPageId is written ONLY here, on comment items — vote items and
     // rate-limit counters never get it, which is what keeps the (sparse) GSI free of them. voteCount
-    // is written explicitly as 0 (not left absent, unlike the old read-time-defaulted convention) so a
+    // is written explicitly as 0 (not left absent) so a
     // never-voted comment is STILL indexed from creation — a page with exactly one note should surface
     // it as the leading comment even before anyone votes, not stay invisible to the hover preview until
     // its first vote. handleVote's `ADD voteCount :one` then increments this same attribute in place.
@@ -355,10 +358,9 @@ async function handleGet(event) {
 }
 
 // The leading (top-voted) comment for a page+category (issue #26, the link-hover preview). PUBLIC,
-// same as GET /comments. Queries the CategoryRankIndex GSI (see template.yaml) for the single
-// highest-voteCount item; `{ comment: null
-// }` (a 200, not a 404) is the correct, expected shape for "nothing posted in this category yet" — an
-// absent leader isn't an error.
+// same as GET /comments. Queries the CategoryRankIndex GSI for the single highest-voteCount item;
+// `{ comment: null }` (a 200, not a 404) is the correct, expected shape for "nothing posted in this
+// category yet" — an absent leader isn't an error.
 async function handleGetTop(event) {
   const params = event.queryStringParameters ?? {};
   let pageId;
