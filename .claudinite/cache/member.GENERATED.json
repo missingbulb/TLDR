@@ -53,7 +53,13 @@
         "id": "git-github"
       },
       {
-        "id": "node"
+        "id": "node",
+        "config": {
+          "dirs": [
+            "server",
+            "dev"
+          ]
+        }
       },
       {
         "id": "spec-driven-product"
