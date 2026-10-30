@@ -1,0 +1,7 @@
+{
+  "certificate": {
+    "payload": "eyJ2IjoxLCJrZXlJZCI6IjgyZGUxYWY1OWJmYjRhZDgiLCJwdWJsaWNLZXkiOiJ2Sm05VWk4bWgtSm5BelB5amt1V0l4LVpibEY5MGNaa1JqX05yb3lnVWJvIiwidXNlIjoiZmxlZXQiLCJpc3N1ZXIiOiI4MmRlMWFmNTliZmI0YWQ4Iiwibm90QmVmb3JlIjoiMjAyNi0xMC0zMFQxODoyNzo0MFoiLCJub3RBZnRlciI6IjIwMjctMTAtMzBUMTg6Mjc6NDBaIn0",
+    "signature": "J24De9ItOpR3Xii09RRw6_xozjN0uk6cgZZJ5xwR02QUSiwsKM00swDWKwxGGu3lnuk0Kf6esPOasewNsHb9Bw"
+  },
+  "signature": "kUQfivBntHNUqrYy_86iHhRV_pQQCKZheEO9mbBoODAkFr3NlmCHLDYPjWiqdZZktTlgxfPHCd_c_wart4ZpDA"
+}
