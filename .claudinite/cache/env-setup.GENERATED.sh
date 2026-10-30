@@ -7,17 +7,17 @@ cd "$(dirname "$0")/../.." || exit 1
 npx --yes --prefer-offline @claudinite/setup@1.0.1 >/dev/null || echo 'cn env: the engine was not pre-warmed; SessionStart fetches it' >&2
 failed=0
 
-echo '=== Node dependencies (npm ci) (pack node) ==='
+echo '=== Node dependencies (npm) (pack node) ==='
 if ! (
-( cd "server" && npm ci ) || true
-( cd "dev" && npm ci ) || true
+( cd "server" && if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then npm ci; else npm install --no-package-lock --no-audit --no-fund; fi ) || true
+( cd "dev" && if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then npm ci; else npm install --no-package-lock --no-audit --no-fund; fi ) || true
 ); then
-  echo 'cn env: Node dependencies (npm ci) (pack node): setup failed' >&2
+  echo 'cn env: Node dependencies (npm) (pack node): setup failed' >&2
   failed=1
 elif ! (
-[ -d "server/node_modules" ] && [ -d "dev/node_modules" ]
+[ -d "server/node_modules" ] || ( cd "server" && node -e "const p=require('./package.json');process.exit(['dependencies','devDependencies','optionalDependencies'].some(k=>Object.keys(p[k]||0).length)?1:0)" ) && [ -d "dev/node_modules" ] || ( cd "dev" && node -e "const p=require('./package.json');process.exit(['dependencies','devDependencies','optionalDependencies'].some(k=>Object.keys(p[k]||0).length)?1:0)" )
 ); then
-  echo 'cn env: Node dependencies (npm ci) (pack node): setup ran, but its probe still fails' >&2
+  echo 'cn env: Node dependencies (npm) (pack node): setup ran, but its probe still fails' >&2
   failed=1
 fi
 

@@ -6,12 +6,13 @@ the capabilities that depend on knowing *who* is here — or on the managed cont
 live. Today that is two: the pack each person brings with them, which the engine copies into
 the repo at session start from a configured store repo wherever this pack is declared; and
 [`environment-setup-command.sh`](environment-setup-command.sh), the generic body a project pastes
-into its web environment's **Setup script** field so the image carries the toolchains the base image
-doesn't ship. The script's content is the same for every project — it just runs every active pack's
-declared `env` install through the engine's `env-requirements.mjs`, so it never changes as
-requirements do (bootstrap.md Part 9 walks the setup). Nobody has to go looking for that body:
-the pack's `adoptionHandover` step has the filing session quote it inline, so the issue asking
-for the paste carries the block to copy.
+into its web environment's **Setup script** field so the image already holds the engine the repo
+pins, and SessionStart downloads nothing. The setup script starts in the checkout's parent
+directory, so the body runs every checkout's generated env setup script,
+`.claudinite/cache/env-setup.GENERATED.sh`, which fetches the pinned engine and runs the packs'
+env setup, and it never fails. The body is the same for every
+project, and it is the same line `cn init` and the move quote in their HANDOVER block, so the
+issue asking for the paste carries it whether or not the repo declares this pack.
 
 Declared, and seeded by `--init`. The pack holds an **address**, not the content: `config.repo` (and
 an optional `config.path`, default `preferences`) name the store that holds one `<login>/` directory
@@ -97,9 +98,9 @@ they work in, and two people on one project can want different things.
 
 ## Checks
 
-All four are advisory: a personal pack is a nice-to-have, and nothing here may block a session.
+The first four are advisory: a personal pack is a nice-to-have, and nothing here may block a session.
 A directory missing its CODEOWNERS line falls to the admin's `/<path>/` line, so that drift fails
-safe.
+safe. `preferences-nothing-to-run` blocks a personal pack's `tasks/` directory and a manifest's `env` key: nothing runs either from a personal pack, so they only read as work that happens.
 
 | Check | Severity | Reason | Enforcement |
 |---|---|---|---|
@@ -107,3 +108,4 @@ safe.
 | `preferences-store-file-names` | high | correctness | check: advisory |
 | `preferences-store-codeowners` | high | correctness | check: advisory |
 | `preferences-provenance` | low | complexity | check: advisory |
+| `preferences-nothing-to-run` | medium | correctness | check: blocking |
