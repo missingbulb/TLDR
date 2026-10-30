@@ -29,7 +29,9 @@ packs:
         ui_testing: "DOM-level golden rendering through the real code: dev/requirements kinds (dom, component, behavior) drive the extension's UI and compare committed owner-approved goldens; see dev/docs/ui-testing-guideline.md"
         requirements_source: "the existing executable spec dev/requirements/requirements.md, with its leaf-to-case bijection"
     - "git-github"
-    - "node"
+    - id: "node"
+      config:
+        dirs: ["server", "dev"]
     - "spec-driven-product"
     - "claudinite-growth"
     - id: "tldr"
